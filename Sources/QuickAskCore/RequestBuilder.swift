@@ -9,9 +9,12 @@ public struct RequestOptions: Equatable, Sendable {
     public var maxTokens: Int?
     /// Shown to OpenRouter as the calling app (`X-Title`).
     public var appName: String
+    /// Idle timeout: the longest silence allowed between bytes. Reasoning models can stay
+    /// silent for minutes before the first token; `ChatClient`'s 600s resource timeout still
+    /// caps the whole request.
     public var timeout: TimeInterval
 
-    public init(maxTokens: Int? = nil, appName: String = "QuickAsk", timeout: TimeInterval = 120) {
+    public init(maxTokens: Int? = nil, appName: String = "QuickAsk", timeout: TimeInterval = 600) {
         self.maxTokens = maxTokens
         self.appName = appName
         self.timeout = timeout

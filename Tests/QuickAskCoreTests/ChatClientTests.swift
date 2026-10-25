@@ -126,5 +126,51 @@ final class ChatClientTests: XCTestCase {
         StubURLProtocol.stub = .init(status: 200, body: Data("data: {\"choices\":[{\"delta\":{\"content\":\"OK\"}}]}\n\n".utf8))
         try await ConnectionTester.test(client: makeClient(), provider: .xAI, apiKey: "k", model: "")
         XCTAssertEqual(StubURLProtocol.lastRequest?.url?.host, "api.x.ai")
+        XCTAssertEqual(StubURLProtocol.lastRequest?.timeoutInterval, ConnectionTester.timeout)
+    }
+
+    func testConnectionTesterFailsWhenStreamHasNoText() async {
+        // Role header, a reasoning-only chunk, then [DONE]: HTTP 200 but no answer.
+        StubURLProtocol.stub = .init(status: 200, body: Data("""
+        data: {"choices":[{"delta":{"role":"assistant","content":""}}]}
+
+        data: {"choices":[{"delta":{"reasoning_content":"Thinking"}}]}
+
+        data: [DONE]
+
+
+        """.utf8))
+        do {
+            try await ConnectionTester.test(client: makeClient(), provider: .deepSeek, apiKey: "k", model: "")
+            XCTFail("expected an error")
+        } catch {
+            XCTAssertEqual(error as? ConnectionTesterError, .noText)
+        }
+    }
+
+    func testConnectionTesterFailsOnEmptyAnthropicStream() async {
+        StubURLProtocol.stub = .init(status: 200, body: Data("""
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_1","role":"assistant","content":[]}}
+
+        event: message_stop
+        data: {"type":"message_stop"}
+
+
+        """.utf8))
+        do {
+            try await ConnectionTester.test(client: makeClient(), provider: .anthropic, apiKey: "k", model: "")
+            XCTFail("expected an error")
+        } catch {
+            XCTAssertEqual(error as? ConnectionTesterError, .noText)
+        }
+    }
+
+    func testChatRequestsAllowLongIdleGaps() throws {
+        let request = try RequestBuilder.streamingRequest(
+            provider: .xAI, apiKey: "k", model: "",
+            messages: [ChatMessage(role: .user, content: "hi")]
+        )
+        XCTAssertEqual(request.timeoutInterval, 600)
     }
 }
