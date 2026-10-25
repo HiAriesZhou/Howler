@@ -154,7 +154,12 @@ final class PanelController {
             let consumed: Bool = MainActor.assumeIsolated {
                 guard let self, event.window === self.panel else { return false }
                 // Let Esc cancel an in-progress input-method composition (e.g. Pinyin) first.
-                if let editor = self.panel.firstResponder as? NSTextView, editor.hasMarkedText() {
+                // SwiftUI's text field may not leave its editor as first responder, so also ask
+                // the window's shared field editor.
+                if let editor = self.panel.firstResponder as? NSTextInputClient, editor.hasMarkedText() {
+                    return false
+                }
+                if let editor = self.panel.fieldEditor(false, for: nil) as? NSTextView, editor.hasMarkedText() {
                     return false
                 }
                 self.hide()
