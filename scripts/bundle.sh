@@ -70,7 +70,10 @@ plutil -lint "$APP/Contents/Info.plist"
 echo "==> ad-hoc codesign"
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --strict --verbose=2 "$APP"
-lipo -info "$APP/Contents/MacOS/$APP_NAME" || true
+lipo -info "$APP/Contents/MacOS/$APP_NAME"
+# shellcheck disable=SC2086 # ARCHS is a space-separated list
+lipo "$APP/Contents/MacOS/$APP_NAME" -verify_arch $ARCHS \
+    || { echo "error: binary does not contain every architecture in: $ARCHS" >&2; exit 1; }
 
 echo "==> zip"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
