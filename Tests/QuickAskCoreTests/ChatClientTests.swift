@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import XCTest
 @testable import QuickAskCore
 
@@ -22,10 +25,16 @@ final class StubURLProtocol: URLProtocol {
             headerFields: ["Content-Type": "text/event-stream"]
         )!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        // Deliver in small chunks to exercise incremental parsing.
+        // Deliver in small chunks to exercise incremental parsing. swift-corelibs-foundation
+        // keeps only the last chunk a custom URLProtocol loads, so send it whole there.
+        #if canImport(Darwin)
+        let chunkSize = 7
+        #else
+        let chunkSize = max(Self.stub.body.count, 1)
+        #endif
         var offset = 0
         while offset < Self.stub.body.count {
-            let end = min(offset + 7, Self.stub.body.count)
+            let end = min(offset + chunkSize, Self.stub.body.count)
             client?.urlProtocol(self, didLoad: Self.stub.body.subdata(in: offset..<end))
             offset = end
         }

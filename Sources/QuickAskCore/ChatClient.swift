@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public enum ChatClientError: Error, Equatable, LocalizedError {
     case http(status: Int, message: String)
@@ -65,7 +68,7 @@ public final class ChatClient: @unchecked Sendable {
         format: WireFormat,
         onText: @escaping (String) -> Void
     ) async throws {
-        let (bytes, response) = try await session.bytes(for: request)
+        let (bytes, response) = try await responseBytes(for: request)
         guard let http = response as? HTTPURLResponse else { throw ChatClientError.invalidResponse }
 
         guard (200..<300).contains(http.statusCode) else {
@@ -98,4 +101,21 @@ public final class ChatClient: @unchecked Sendable {
         try Task.checkCancellation()
         if let event = parser.finish() { _ = try handle(event) }
     }
+
+    #if canImport(Darwin)
+    private func responseBytes(for request: URLRequest) async throws -> (URLSession.AsyncBytes, URLResponse) {
+        try await session.bytes(for: request)
+    }
+    #else
+    /// swift-corelibs-foundation has no `URLSession.bytes(for:)`. The app ships on macOS only;
+    /// this buffered path exists so the core library and its tests build and run on Linux.
+    private func responseBytes(for request: URLRequest) async throws -> (AsyncStream<UInt8>, URLResponse) {
+        let (data, response) = try await session.data(for: request)
+        let bytes = AsyncStream<UInt8> { continuation in
+            for byte in data { continuation.yield(byte) }
+            continuation.finish()
+        }
+        return (bytes, response)
+    }
+    #endif
 }
