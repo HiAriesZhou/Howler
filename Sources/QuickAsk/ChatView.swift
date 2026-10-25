@@ -68,8 +68,15 @@ struct ChatView: View {
         }
         .padding(.horizontal, 18)
         .frame(minHeight: PanelController.compactHeight)
-        .onAppear { inputFocused = true }
-        .onChange(of: viewModel.focusRequest) { _, _ in inputFocused = true }
+        .onAppear { focusInput() }
+        .onChange(of: viewModel.focusRequest) { _, _ in focusInput() }
+    }
+
+    /// The panel may not be key yet when this runs, and assigning `true` to a focus state
+    /// that is already `true` does nothing, so clear it and set it again on the next turn.
+    private func focusInput() {
+        inputFocused = false
+        DispatchQueue.main.async { inputFocused = true }
     }
 
     private var transcript: some View {
