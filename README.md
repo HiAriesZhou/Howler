@@ -48,7 +48,7 @@
    | Anthropic | `api.anthropic.com/v1/messages` | `claude-opus-5-5` |
    | Google Gemini | `generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse` | `gemini-3.6-flash` |
    | xAI | `api.x.ai/v1/chat/completions` | `grok-4.6` |
-   | DeepSeek | `api.deepseek.com/chat/completions` | `deepseek-chat` |
+   | DeepSeek | `api.deepseek.com/chat/completions` | `deepseek-flash` |
    | OpenRouter | `openrouter.ai/api/v1/chat/completions` | `openrouter/auto` |
 
 4. 点击 **Save**：Key 写入钥匙串，然后发送一次极小的真实请求进行测试，结果显示为 `OpenAI · ✓ Connected` 或 `OpenAI · ✗ 错误信息`。

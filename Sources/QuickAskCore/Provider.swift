@@ -64,7 +64,7 @@ public enum Provider: String, CaseIterable, Identifiable, Codable, Sendable {
         case .anthropic: return "claude-opus-5-5"
         case .gemini: return "gemini-3.6-flash"
         case .xAI: return "grok-4.6"
-        case .deepSeek: return "deepseek-chat"
+        case .deepSeek: return "deepseek-flash"
         case .openRouter: return "openrouter/auto"
         }
     }

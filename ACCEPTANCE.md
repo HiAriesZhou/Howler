@@ -55,7 +55,7 @@ For each provider: save a key (default model), open the panel, send the prompts 
 | OpenRouter | | | | | | |
 
 额外 / Extra：
-- [ ] DeepSeek 使用 `deepseek-reasoner`：只显示最终回答，不显示推理内容
+- [ ] DeepSeek 使用会输出推理内容的模型（如 `deepseek-v4-pro`）：只显示最终回答，不显示推理内容
 - [ ] OpenRouter 使用其他模型（如 `anthropic/claude-sonnet-5.5` 或任一可用模型）正常流式
 - [ ] 生成中点击 ⏹：立即停止，已生成内容保留，可继续提问
 

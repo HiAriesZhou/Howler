@@ -65,6 +65,13 @@ final class RequestBuilderTests: XCTestCase {
         XCTAssertTrue(try build(.gemini).url!.path.hasSuffix("/models/\(Provider.gemini.defaultModel):streamGenerateContent"))
     }
 
+    func testDeepSeekDefaultIsNotARetiredModel() throws {
+        // deepseek-chat / deepseek-reasoner were removed on 2026-07-24.
+        XCTAssertEqual(Provider.deepSeek.defaultModel, "deepseek-flash")
+        let body = try json(build(.deepSeek, model: ""))
+        XCTAssertEqual(body["model"] as? String, "deepseek-flash")
+    }
+
     func testOpenRouterAttributionHeaders() throws {
         let request = try build(.openRouter, options: RequestOptions(appName: "Renamed"))
         XCTAssertEqual(request.value(forHTTPHeaderField: "X-Title"), "Renamed")
