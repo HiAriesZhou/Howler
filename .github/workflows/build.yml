@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Test
+        run: swift test
+
+      - name: Build app bundle
+        run: ./scripts/bundle.sh
+
+      - name: Inspect bundle
+        run: |
+          source app.config
+          plutil -p "build/$APP_NAME.app/Contents/Info.plist"
+          codesign -dv "build/$APP_NAME.app" 2>&1
+          ls -la build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QuickAsk
+          path: build/*.zip
+          if-no-files-found: error
