@@ -11,6 +11,7 @@ final class SettingsWindowController {
     }
 
     func show() {
+        settings.refreshKeyPresence()
         if window == nil {
             let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(settings: settings)))
             window.title = "\(AppInfo.name) Settings"

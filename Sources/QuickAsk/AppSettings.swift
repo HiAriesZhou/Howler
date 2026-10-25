@@ -30,9 +30,19 @@ final class AppSettings: ObservableObject {
         self.client = client
         self.defaults = defaults
         activeProvider = defaults.string(forKey: DefaultsKey.provider).flatMap(Provider.init(rawValue:))
+        refreshKeyPresence()
+    }
+
+    /// Re-reads which providers have a stored key. Called whenever the panel or Settings
+    /// opens, so a keychain lookup that failed once (e.g. while locked) is not final.
+    func refreshKeyPresence() {
+        var presence: [Provider: Bool] = [:]
         for provider in Provider.allCases {
-            keyPresence[provider] = Keychain.exists(account: provider.rawValue)
+            let present = Keychain.exists(account: provider.rawValue)
+            presence[provider] = present
+            if !present { keyCache[provider] = nil }
         }
+        if presence != keyPresence { keyPresence = presence }
     }
 
     var isConfigured: Bool {

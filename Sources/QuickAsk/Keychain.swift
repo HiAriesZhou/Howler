@@ -30,8 +30,21 @@ enum Keychain {
             query as CFDictionary,
             [kSecValueData as String: data] as CFDictionary
         )
-        if updateStatus == errSecSuccess { return }
-        guard updateStatus == errSecItemNotFound else { throw KeychainError(status: updateStatus) }
+        switch updateStatus {
+        case errSecSuccess:
+            return
+        case errSecItemNotFound:
+            break
+        case errSecAuthFailed, errSecInteractionNotAllowed:
+            // The item's access list names an earlier code identity (ad-hoc signatures change
+            // on every rebuild). Replace it so the key is stored under the current identity.
+            let deleteStatus = SecItemDelete(query as CFDictionary)
+            guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
+                throw KeychainError(status: deleteStatus)
+            }
+        default:
+            throw KeychainError(status: updateStatus)
+        }
 
         var item = query
         item[kSecValueData as String] = data

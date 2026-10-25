@@ -99,6 +99,7 @@ final class PanelController {
     }
 
     func show() {
+        settings.refreshKeyPresence()
         updateHeight(animated: false)
         positionOnActiveScreen()
         panel.makeKeyAndOrderFront(nil)
