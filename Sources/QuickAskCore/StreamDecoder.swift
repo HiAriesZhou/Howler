@@ -77,10 +77,17 @@ public enum StreamDecoder {
             }
             return .ignore
         case "message_delta":
-            if payload.delta?.stop_reason == "refusal" {
+            switch payload.delta?.stop_reason {
+            case "refusal":
                 return .error("The model declined to answer this request.")
+            case "max_tokens":
+                // Thinking shares the budget, so this can happen on long answers.
+                return .error("The reply was cut off: it reached the output token limit.")
+            case "model_context_window_exceeded":
+                return .error("The reply was cut off: the conversation reached the model's context limit.")
+            default:
+                return .ignore
             }
-            return .ignore
         case "message_stop":
             return .done
         case "error":

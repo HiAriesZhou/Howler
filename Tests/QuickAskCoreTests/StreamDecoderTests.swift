@@ -124,6 +124,16 @@ final class StreamDecoderTests: XCTestCase {
         guard case .error = decode(data, .anthropic) else { return XCTFail("refusal should surface as an error") }
     }
 
+    func testAnthropicTruncationIsReported() {
+        for reason in ["max_tokens", "model_context_window_exceeded"] {
+            let data = #"{"type":"message_delta","delta":{"stop_reason":"\#(reason)"},"usage":{"output_tokens":64000}}"#
+            guard case .error(let message) = decode(data, .anthropic) else {
+                return XCTFail("\(reason) should surface as an error")
+            }
+            XCTAssertTrue(message.contains("cut off"), message)
+        }
+    }
+
     func testAnthropicFallbackBlockIsTransparent() {
         let data = #"{"type":"content_block_start","index":0,"content_block":{"type":"fallback","from":{"model":"claude-opus-5-5"},"to":{"model":"claude-opus-4-8"}}}"#
         XCTAssertEqual(decode(data, .anthropic), .ignore)
