@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public struct RequestOptions: Equatable, Sendable {
     /// Output cap. Required by Anthropic; optional for Gemini; not sent to
@@ -93,7 +96,7 @@ public enum RequestBuilder {
             var components = URLComponents(
                 url: provider.baseURL, resolvingAgainstBaseURL: false
             )!
-            components.path += "/models/\(modelPath):streamGenerateContent"
+            components.percentEncodedPath += "/models/\(modelPath):streamGenerateContent"
             components.queryItems = [URLQueryItem(name: "alt", value: "sse")]
             request = URLRequest(url: components.url!)
             // Header rather than `?key=` so the key never appears in a URL.
@@ -135,9 +138,7 @@ public enum RequestBuilder {
         return result
     }
 
-    private static let geminiModelAllowed: CharacterSet = {
-        var set = CharacterSet.alphanumerics
-        set.insert(charactersIn: "-._")
-        return set
-    }()
+    private static let geminiModelAllowed = CharacterSet(
+        charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._"
+    )
 }

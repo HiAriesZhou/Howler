@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// What one SSE event means for the chat transcript.
 public enum StreamDelta: Equatable, Sendable {

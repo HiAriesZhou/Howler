@@ -150,15 +150,16 @@ final class PanelController {
         guard escapeMonitor == nil else { return }
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard event.keyCode == 53 else { return event } // kVK_Escape
-            return MainActor.assumeIsolated {
-                guard let self, event.window === self.panel else { return event }
+            let consumed: Bool = MainActor.assumeIsolated {
+                guard let self, event.window === self.panel else { return false }
                 // Let Esc cancel an in-progress input-method composition (e.g. Pinyin) first.
                 if let editor = self.panel.firstResponder as? NSTextView, editor.hasMarkedText() {
-                    return event
+                    return false
                 }
                 self.hide()
-                return nil
+                return true
             }
+            return consumed ? nil : event
         }
     }
 
