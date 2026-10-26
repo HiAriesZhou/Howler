@@ -2,27 +2,27 @@
 import PackageDescription
 
 var products: [Product] = [
-    .library(name: "QuickAskCore", targets: ["QuickAskCore"]),
+    .library(name: "NapkinCore", targets: ["NapkinCore"]),
 ]
 var targets: [Target] = [
-    .target(name: "QuickAskCore"),
-    .testTarget(name: "QuickAskCoreTests", dependencies: ["QuickAskCore"]),
+    .target(name: "NapkinCore"),
+    .testTarget(name: "NapkinCoreTests", dependencies: ["NapkinCore"]),
 ]
 
 // The menu bar app needs AppKit/Carbon; elsewhere (Linux CI) only the core library and tests build.
 #if os(macOS)
-products.append(.executable(name: "QuickAsk", targets: ["QuickAsk"]))
+products.append(.executable(name: "Napkin", targets: ["Napkin"]))
 targets.append(
     .executableTarget(
-        name: "QuickAsk",
-        dependencies: ["QuickAskCore"],
+        name: "Napkin",
+        dependencies: ["NapkinCore"],
         linkerSettings: [.linkedFramework("Carbon")]
     )
 )
 #endif
 
 let package = Package(
-    name: "QuickAsk",
+    name: "Napkin",
     platforms: [.macOS(.v14)],
     products: products,
     targets: targets

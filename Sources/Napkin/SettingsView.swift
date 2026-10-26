@@ -1,4 +1,4 @@
-import QuickAskCore
+import NapkinCore
 import SwiftUI
 
 struct SettingsView: View {

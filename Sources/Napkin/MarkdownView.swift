@@ -1,5 +1,5 @@
 import AppKit
-import QuickAskCore
+import NapkinCore
 import SwiftUI
 
 /// Renders a reply: prose via `AttributedString(markdown:)` (inline syntax, whitespace kept),

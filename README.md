@@ -1,4 +1,4 @@
-# QuickAsk
+# Napkin
 
 一个极简的 macOS 菜单栏 AI 对话小工具：按 **⌥Space（Option+空格）** 呼出类似 Spotlight 的浮动输入框，提问、流式看到回答，按 **Esc** 关闭，对话随即清空。
 
@@ -8,16 +8,17 @@
 - 不保存任何对话；API Key 存在系统钥匙串（Keychain）
 - 纯 Swift + SwiftUI/AppKit，无第三方依赖，要求 macOS 14+
 
-> 名称 “QuickAsk” 只是占位名，改名方法见下文。
+> **从 QuickAsk 升级？** 项目已从 QuickAsk 更名为 Napkin，GitHub 仓库也随之改名：本地克隆请执行 `git remote set-url origin https://github.com/HiAriesZhou/Napkin.git`。
+> 新的 Bundle ID `com.hiarieszhou.napkin` 与旧的 `io.github.hiarieszhou.quickask` 互不相通：钥匙串中的 API Key、`UserDefaults` 设置以及系统授予的隐私权限（TCC）都**不会**沿用，升级后需在 Settings 中重新填入 API Key。请删除旧的 `QuickAsk.app`（否则两者会争抢 ⌥Space）；旧的钥匙串条目可在“钥匙串访问”中搜索 `io.github.hiarieszhou.quickask` 手动删除。
 
 ## 安装
 
-1. 从 [Releases](https://github.com/HiAriesZhou/QuickAsk/releases) 下载 `QuickAsk.zip` 并解压，把 `QuickAsk.app` 拖进“应用程序”。
+1. 从 [Releases](https://github.com/HiAriesZhou/Napkin/releases) 下载 `Napkin.zip` 并解压，把 `Napkin.app` 拖进“应用程序”。
 2. 应用只做了 ad-hoc 签名，未经过 Apple 公证，首次打开会被 Gatekeeper 拦截。任选一种方式放行：
-   - 在 Finder 中**右键点击 `QuickAsk.app` → 打开**，在弹窗中再点“打开”（macOS 15 起可能需要到“系统设置 → 隐私与安全性”中点“仍要打开”）；
+   - 在 Finder 中**右键点击 `Napkin.app` → 打开**，在弹窗中再点“打开”（macOS 15 起可能需要到“系统设置 → 隐私与安全性”中点“仍要打开”）；
    - 或在终端执行：
      ```bash
-     xattr -dr com.apple.quarantine /Applications/QuickAsk.app
+     xattr -dr com.apple.quarantine /Applications/Napkin.app
      ```
 3. 启动后菜单栏会出现 💬 图标。首次启动若未配置，会自动打开设置窗口。
 
@@ -34,7 +35,7 @@
 
 面板内同一次会话支持多轮上下文；关闭面板即丢弃。生成过程中可点输入框右侧的 ⏹ 停止。
 
-若 ⌥Space 已被其他应用占用，菜单中会提示，此时可通过菜单 “Open QuickAsk” 打开面板。
+若 ⌥Space 已被其他应用占用，菜单中会提示，此时可通过菜单 “Open Napkin” 打开面板。
 
 ## 配置
 
@@ -76,15 +77,15 @@
 应用身份集中在仓库根目录的 [`app.config`](app.config)：
 
 ```bash
-APP_NAME="QuickAsk"                          # 应用名 / .app 名 / zip 名 / 菜单与窗口标题
-BUNDLE_ID="io.github.hiarieszhou.quickask"   # Bundle ID（也是钥匙串 service）
-VERSION="0.1.0"
+APP_NAME="Napkin"                    # 应用名 / .app 名 / zip 名 / 菜单与窗口标题
+BUNDLE_ID="com.hiarieszhou.napkin"   # Bundle ID（也是钥匙串 service）
+VERSION="0.1.1"
 ```
 
 修改后重新执行 `make app`。`scripts/bundle.sh` 会据此生成 `Info.plist`，应用运行时从 `Info.plist` 读取名称，界面文字会自动跟随。注意：
 
 - 修改 `BUNDLE_ID` 后，钥匙串中旧 Key 与旧的 `UserDefaults` 不会被新 ID 读取，需要重新配置。
-- SwiftPM 的 target/product 名仍为 `QuickAsk`（内部名称，不影响用户看到的名字）；如也想改，同时修改 `Package.swift`、`Sources/QuickAsk` 目录名和 `app.config` 中的 `EXECUTABLE_PRODUCT`。
+- SwiftPM 的 target/product 名（`Napkin` / `NapkinCore`）是内部名称，不随 `APP_NAME` 变化，也不影响用户看到的名字；如也想改，同时修改 `Package.swift`、`Sources/`、`Tests/` 下的目录名、`import` 语句和 `app.config` 中的 `EXECUTABLE_PRODUCT`。
 - 若 CI 产物名需要变化，同步修改 `.github/workflows/build.yml` 中的 artifact `name`。
 
 ## 从源码构建
@@ -93,7 +94,7 @@ VERSION="0.1.0"
 
 ```bash
 make test   # swift test：请求构建、SSE 解析、各服务商增量解析的单元测试
-make app    # 构建 universal release，组装并 ad-hoc 签名 build/QuickAsk.app，打包 build/QuickAsk.zip
+make app    # 构建 universal release，组装并 ad-hoc 签名 build/Napkin.app，打包 build/Napkin.zip
 make run    # 构建并打开
 ```
 
@@ -102,9 +103,9 @@ make run    # 构建并打开
 ```
 app.config                 应用名 / Bundle ID / 版本（唯一需要改的地方）
 Package.swift
-Sources/QuickAskCore/      纯逻辑库：Provider、RequestBuilder、SSEParser、StreamDecoder、ChatClient、MarkdownBlocks
-Sources/QuickAsk/          App：菜单栏、Carbon 全局快捷键、浮动面板、设置、Keychain
-Tests/QuickAskCoreTests/   XCTest
+Sources/NapkinCore/        纯逻辑库：Provider、RequestBuilder、SSEParser、StreamDecoder、ChatClient、MarkdownBlocks
+Sources/Napkin/            App：菜单栏、Carbon 全局快捷键、浮动面板、设置、Keychain
+Tests/NapkinCoreTests/     XCTest
 scripts/bundle.sh          组装 .app、Info.plist（LSUIElement）、codesign、zip
 .github/workflows/build.yml  macos-latest 上测试 + 打包 + 上传 artifact
 ```
@@ -115,10 +116,12 @@ scripts/bundle.sh          组装 .app、Info.plist（LSUIElement）、codesign�
 
 ## English
 
-**QuickAsk** is a minimal macOS (14+) menu-bar AI chat shell. Press **Option+Space** for a Spotlight-like floating panel, ask, watch the answer stream in, press **Esc** to close — the conversation is discarded.
+**Napkin** is a minimal macOS (14+) menu-bar AI chat shell. Press **Option+Space** for a Spotlight-like floating panel, ask, watch the answer stream in, press **Esc** to close — the conversation is discarded.
+
+> **Upgrading from QuickAsk?** The project and its GitHub repo were renamed from QuickAsk to Napkin; update old clones with `git remote set-url origin https://github.com/HiAriesZhou/Napkin.git`. The new bundle ID `com.hiarieszhou.napkin` does not share state with the old `io.github.hiarieszhou.quickask`: Keychain entries, UserDefaults and any TCC (privacy) grants are reset, so re-enter your API key in Settings after upgrading. Delete the old `QuickAsk.app` (both would compete for ⌥Space); its Keychain items can be removed in Keychain Access by searching `io.github.hiarieszhou.quickask`.
 
 - **Providers:** OpenAI, Anthropic, Google Gemini, xAI, DeepSeek, OpenRouter — real SSE streaming against each official API (OpenAI-compatible `chat/completions`, Anthropic `/v1/messages`, Gemini `streamGenerateContent?alt=sse`).
-- **Install:** download `QuickAsk.zip` from Releases, unzip, move `QuickAsk.app` to Applications. It is ad-hoc signed (not notarized), so right-click → **Open** the first time, or run `xattr -dr com.apple.quarantine /Applications/QuickAsk.app`.
+- **Install:** download `Napkin.zip` from Releases, unzip, move `Napkin.app` to Applications. It is ad-hoc signed (not notarized), so right-click → **Open** the first time, or run `xattr -dr com.apple.quarantine /Applications/Napkin.app`.
 - **Configure:** menu-bar icon → Settings… → pick a provider → paste the API key (optionally a model) → **Save**. The key goes to the Keychain and a tiny live request verifies it: `Provider · ✓ Connected` / `✗ error`.
 - **Privacy:** no chat history is ever written to disk; only the provider/model (UserDefaults) and the API key (Keychain) are stored. No logging, no telemetry.
 - **Glyphs:** SF Symbols / monochrome letter marks only — no trademarked provider logos are bundled.

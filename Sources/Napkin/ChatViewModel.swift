@@ -1,5 +1,5 @@
 import Foundation
-import QuickAskCore
+import NapkinCore
 
 /// One in-memory conversation. Cleared whenever the panel closes; never written anywhere.
 @MainActor

@@ -1,7 +1,7 @@
 import AppKit
 
 @main
-enum QuickAskApp {
+enum NapkinApp {
     @MainActor
     static func main() {
         let app = NSApplication.shared

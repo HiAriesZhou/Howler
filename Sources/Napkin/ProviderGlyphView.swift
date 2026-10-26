@@ -1,4 +1,4 @@
-import QuickAskCore
+import NapkinCore
 import SwiftUI
 
 /// Monochrome provider mark: an SF Symbol or a letter in a rounded square.

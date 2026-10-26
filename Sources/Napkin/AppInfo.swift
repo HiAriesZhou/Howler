@@ -5,11 +5,11 @@ import Foundation
 /// running the bare executable (e.g. `swift run`) outside a bundle.
 enum AppInfo {
     static var name: String {
-        string(for: "CFBundleDisplayName") ?? string(for: "CFBundleName") ?? "QuickAsk"
+        string(for: "CFBundleDisplayName") ?? string(for: "CFBundleName") ?? "Napkin"
     }
 
     static var bundleIdentifier: String {
-        Bundle.main.bundleIdentifier ?? "io.github.hiarieszhou.quickask"
+        Bundle.main.bundleIdentifier ?? "com.hiarieszhou.napkin"
     }
 
     static var version: String {

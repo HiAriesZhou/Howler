@@ -1,5 +1,5 @@
 import XCTest
-@testable import QuickAskCore
+@testable import NapkinCore
 
 final class SSEParserTests: XCTestCase {
     func testParsesEventsSeparatedByBlankLines() {

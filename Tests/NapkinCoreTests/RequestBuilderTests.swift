@@ -3,7 +3,7 @@ import Foundation
 import FoundationNetworking
 #endif
 import XCTest
-@testable import QuickAskCore
+@testable import NapkinCore
 
 final class RequestBuilderTests: XCTestCase {
     private let conversation = [

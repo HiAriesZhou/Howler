@@ -1,5 +1,5 @@
 import AppKit
-import QuickAskCore
+import NapkinCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
