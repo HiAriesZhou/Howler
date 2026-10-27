@@ -83,7 +83,7 @@ final class PanelController {
                 settings: settings,
                 margins: EdgeInsets(top: margins.top, leading: margins.left, bottom: margins.bottom, trailing: margins.right),
                 openSettings: openSettings,
-                showProviderMenu: { [weak self] in self?.showProviderMenu() },
+                showProviderMenu: { [weak self] in self?.showServiceMenu() },
                 showAttachMenu: { [weak self] in self?.showAttachMenu() },
                 onDesiredHeight: { [weak self] height in self?.setDesiredPaperHeight(height) }
             )
@@ -120,7 +120,7 @@ final class PanelController {
 
     func show() {
         if isHiding { finishHiding() } // summoned again mid-burn: a fresh letter
-        settings.refreshKeyPresence()
+        settings.reload()
         positionOnActiveScreen()
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
@@ -222,23 +222,18 @@ final class PanelController {
         )
     }
 
-    // MARK: Provider menu
+    // MARK: Service menu
 
-    /// Pressing the stamp offers every provider that has a key, plus Settings.
-    private func showProviderMenu() {
+    /// Pressing the stamp names the model writing the letter and offers Settings.
+    private func showServiceMenu() {
         let menu = NSMenu()
-        let header = NSMenuItem(title: "Write with…", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(header)
-        for provider in settings.configuredProviders {
-            let item = ClosureMenuItem(title: provider.displayName) { [weak self] in
-                self?.settings.setActiveProvider(provider)
-            }
-            item.state = provider == settings.activeProvider ? .on : .off
-            item.toolTip = settings.model(for: provider)
-            menu.addItem(item)
+        if let service = settings.service {
+            let header = NSMenuItem(title: "Written by \(service.model)", action: nil, keyEquivalent: "")
+            header.isEnabled = false
+            header.toolTip = service.summary
+            menu.addItem(header)
+            menu.addItem(.separator())
         }
-        menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(title: "Settings…") { [weak self] in self?.openSettings() })
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }

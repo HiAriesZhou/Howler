@@ -155,12 +155,12 @@ final class ChatViewModel: ObservableObject {
         var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty, attachment != nil { text = Self.attachmentOnlyQuestion }
         guard !text.isEmpty, !isStreaming else { return }
-        guard let provider = settings.activeProvider else {
-            errorText = "No provider configured. Open Settings to choose one."
+        guard let service = settings.service else {
+            errorText = "No model set up. Open Settings to set one up."
             return
         }
-        guard let stream = makeStream(provider: provider, history: messages + [userTurn(text)]) else {
-            errorText = "No API key found. Open Settings to configure a provider."
+        guard let stream = makeStream(service: service, history: messages + [userTurn(text)]) else {
+            errorText = "No API key found. Open Settings to finish the setup."
             return
         }
 
@@ -217,15 +217,14 @@ final class ChatViewModel: ObservableObject {
         ChatMessage(role: .user, content: text, attachment: attachment)
     }
 
-    private func makeStream(provider: Provider, history: [ChatMessage]) -> AsyncThrowingStream<String, Error>? {
+    private func makeStream(service: ModelService, history: [ChatMessage]) -> AsyncThrowingStream<String, Error>? {
         #if DEBUG
         if let demoStream { return demoStream() }
         #endif
-        guard let apiKey = settings.apiKey(for: provider), !apiKey.isEmpty else { return nil }
+        guard let apiKey = settings.apiKey(), !apiKey.isEmpty else { return nil }
         return settings.client.stream(
-            provider: provider,
+            service: service,
             apiKey: apiKey,
-            model: settings.model(for: provider),
             messages: history,
             options: RequestOptions(appName: AppInfo.name)
         )

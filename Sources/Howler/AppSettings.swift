@@ -2,21 +2,22 @@ import Foundation
 import HowlerCore
 import ServiceManagement
 
-/// The only persisted state: the active provider, per-provider model and the hotkey
-/// (UserDefaults) plus API keys (Keychain). Conversations are never
-/// stored.
+/// The only persisted state: the model service, its last check and the hotkey
+/// (UserDefaults) plus the API key (Keychain). Conversations are never stored.
+/// The model service is set up from the command line (see `CLI`); this object mirrors it
+/// and reloads whenever the command line changes it.
 @MainActor
 final class AppSettings: ObservableObject {
-    enum ConnectionStatus: Equatable {
-        case untested
-        case testing
-        case connected
+    enum CheckState: Equatable {
+        case unchecked
+        case checking
+        case passed(Date)
         case failed(String)
     }
 
-    @Published private(set) var activeProvider: Provider?
-    @Published private(set) var status: [Provider: ConnectionStatus] = [:]
-    @Published private(set) var keyPresence: [Provider: Bool] = [:]
+    @Published private(set) var service: ModelService?
+    @Published private(set) var hasKey = false
+    @Published private(set) var checkState: CheckState = .unchecked
     @Published private(set) var hotKey: HotKeyCombo
     /// Set by the app delegate after trying to register `hotKey`.
     @Published var hotKeyRegistered = true
@@ -26,12 +27,12 @@ final class AppSettings: ObservableObject {
 
     let client: ChatClient
     private let defaults: UserDefaults
-    /// Keys read this session, so the keychain is queried at most once per provider.
-    private var keyCache: [Provider: String] = [:]
+    private let store: ServiceStore
+    /// The key read this session, so the keychain is queried once until the setup changes.
+    private var keyCache: String?
+    private var observer: NSObjectProtocol?
 
     private enum DefaultsKey {
-        static let provider = "provider"
-        static let models = "models"
         static let hotKey = "hotKey"
     }
 
@@ -46,54 +47,86 @@ final class AppSettings: ObservableObject {
     init(client: ChatClient = ChatClient(), defaults: UserDefaults = .standard) {
         self.client = client
         self.defaults = defaults
-        activeProvider = defaults.string(forKey: DefaultsKey.provider).flatMap(Provider.init(rawValue:))
+        store = ServiceStore(defaults: defaults)
         hotKey = defaults.data(forKey: DefaultsKey.hotKey)
             .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
             .flatMap { $0.isValid ? $0 : nil } ?? .optionSpace
-        refreshKeyPresence()
+        store.migrateLegacySetup()
+        reload()
         refreshLaunchAtLogin()
+        observer = DistributedNotificationCenter.default().addObserver(
+            forName: ServiceStore.changed, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.keyCache = nil
+                self?.reload()
+            }
+        }
     }
 
-    /// Re-reads which providers have a stored key. Called whenever the panel or Settings
-    /// opens, so a keychain lookup that failed once (e.g. while locked) is not final.
-    func refreshKeyPresence() {
-        var presence: [Provider: Bool] = [:]
-        for provider in Provider.allCases {
-            let present = Keychain.exists(account: provider.rawValue)
-            presence[provider] = present
-            if !present { keyCache[provider] = nil }
+    /// Re-reads the setup. Called when the panel or Settings opens and whenever the command
+    /// line changes it, so a keychain lookup that failed once (e.g. while locked) is not final.
+    func reload() {
+        #if DEBUG
+        if demoMode { return }
+        #endif
+        let stored = store.service
+        if stored != service { service = stored }
+        let present = store.hasKey
+        if !present { keyCache = nil }
+        if present != hasKey { hasKey = present }
+        guard checkState != .checking else { return }
+        let state: CheckState = switch store.lastCheck {
+        case .some(let record) where record.passed: .passed(record.date)
+        case .some(let record): .failed(record.message ?? "The last check failed.")
+        case nil: .unchecked
         }
-        if presence != keyPresence { keyPresence = presence }
+        if state != checkState { checkState = state }
     }
 
     var isConfigured: Bool {
         #if DEBUG
         if demoMode { return true }
         #endif
-        guard let activeProvider else { return false }
-        return hasKey(for: activeProvider)
+        return service != nil && hasKey
     }
 
     #if DEBUG
-    /// Demo mode (HOWLER_DEMO=1) pretends a provider is configured; nothing is sent or saved.
+    /// Demo mode (HOWLER_DEMO=1) pretends a service is configured; nothing is sent or saved.
     var demoMode = false
 
-    func useDemoProvider(_ provider: Provider) {
+    func useDemoService(_ provider: Provider) {
         demoMode = true
-        if activeProvider == nil { activeProvider = provider }
+        service = provider.service()
+        hasKey = true
+        checkState = .passed(Date())
     }
     #endif
 
-    /// Providers ready to use right now, for switching from the panel.
-    var configuredProviders: [Provider] {
-        Provider.allCases.filter(hasKey(for:))
+    func apiKey() -> String? {
+        if let keyCache { return keyCache }
+        keyCache = store.apiKey()
+        return keyCache
     }
 
-    /// Switches the active provider without re-testing (its key was tested when saved).
-    func setActiveProvider(_ provider: Provider) {
-        guard provider != activeProvider else { return }
-        activeProvider = provider
-        defaults.set(provider.rawValue, forKey: DefaultsKey.provider)
+    /// Sends a tiny real request with the current setup and records the outcome, which the
+    /// command line's `config show` reports too.
+    func check() async {
+        guard checkState != .checking else { return }
+        guard let service else { return }
+        guard let key = apiKey(), !key.isEmpty else {
+            checkState = .failed("No API key saved.")
+            return
+        }
+        checkState = .checking
+        do {
+            try await ConnectionTester.test(client: client, service: service, apiKey: key, appName: AppInfo.name)
+            checkState = .passed(Date())
+            store.recordCheck(passed: true, message: nil)
+        } catch {
+            checkState = .failed(error.localizedDescription)
+            store.recordCheck(passed: false, message: error.localizedDescription)
+        }
     }
 
     // MARK: Hotkey
@@ -128,77 +161,5 @@ final class AppSettings: ObservableObject {
         } catch {
             launchAtLogin = .failed(error.localizedDescription)
         }
-    }
-
-    func hasKey(for provider: Provider) -> Bool {
-        keyPresence[provider] ?? false
-    }
-
-    func connectionStatus(for provider: Provider) -> ConnectionStatus {
-        status[provider] ?? .untested
-    }
-
-    /// The model the user typed, or "" for the provider default.
-    func storedModel(for provider: Provider) -> String {
-        let models = defaults.dictionary(forKey: DefaultsKey.models) as? [String: String] ?? [:]
-        return models[provider.rawValue] ?? ""
-    }
-
-    func model(for provider: Provider) -> String {
-        provider.resolvedModel(storedModel(for: provider))
-    }
-
-    func apiKey(for provider: Provider) -> String? {
-        if let cached = keyCache[provider] { return cached }
-        let key = Keychain.get(account: provider.rawValue)
-        keyCache[provider] = key
-        return key
-    }
-
-    /// Makes `provider` active, stores the key (if a new one was entered) and model,
-    /// then runs a tiny real request to verify the configuration.
-    func save(provider: Provider, newKey: String, model: String) async {
-        let key = newKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !key.isEmpty {
-            do {
-                try Keychain.set(key, account: provider.rawValue)
-                keyCache[provider] = key
-                keyPresence[provider] = true
-            } catch {
-                status[provider] = .failed(error.localizedDescription)
-                return
-            }
-        }
-
-        var models = defaults.dictionary(forKey: DefaultsKey.models) as? [String: String] ?? [:]
-        models[provider.rawValue] = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        defaults.set(models, forKey: DefaultsKey.models)
-        activeProvider = provider
-        defaults.set(provider.rawValue, forKey: DefaultsKey.provider)
-
-        guard let storedKey = apiKey(for: provider), !storedKey.isEmpty else {
-            status[provider] = .failed("No API key saved.")
-            return
-        }
-        status[provider] = .testing
-        do {
-            try await ConnectionTester.test(
-                client: client,
-                provider: provider,
-                apiKey: storedKey,
-                model: self.model(for: provider),
-                appName: AppInfo.name
-            )
-            status[provider] = .connected
-        } catch {
-            status[provider] = .failed(error.localizedDescription)
-        }
-    }
-
-    func removeKey(for provider: Provider) {
-        Keychain.delete(account: provider.rawValue)
-        keyCache[provider] = nil
-        keyPresence[provider] = false
-        status[provider] = .untested
     }
 }

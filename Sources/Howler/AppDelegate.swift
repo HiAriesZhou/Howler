@@ -32,7 +32,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         #if DEBUG
         if let demo = ProcessInfo.processInfo.environment["HOWLER_DEMO"] {
-            if demo == "settings" { openSettings() } else { panelController?.runDemo() }
+            if demo == "settings" {
+                if let raw = ProcessInfo.processInfo.environment["HOWLER_DEMO_PROVIDER"], let provider = Provider(rawValue: raw) {
+                    settings.useDemoService(provider)
+                }
+                openSettings()
+            } else {
+                panelController?.runDemo()
+            }
             return
         }
         #endif

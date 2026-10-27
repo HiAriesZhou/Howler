@@ -33,12 +33,12 @@ public enum RequestBuilderError: Error, Equatable, LocalizedError {
         case .noMessages: return "Nothing to send."
         case .invalidModel(let model): return "Invalid model name: \(model)"
         case .imagesUnsupported(let provider):
-            return "\(provider) can't read images. Switch provider from the wax seal, or start a new letter without the picture."
+            return "\(provider) can't read images. Set up a model that can in Settings, or start a new letter without the picture."
         }
     }
 }
 
-/// Builds streaming HTTP requests for each provider. Pure: no I/O.
+/// Builds streaming HTTP requests for a model service. Pure: no I/O.
 public enum RequestBuilder {
     public static let anthropicVersion = "2026-10-21"
     public static let anthropicDefaultMaxTokens = 64_000
@@ -50,9 +50,8 @@ public enum RequestBuilder {
     public static let projectURL = "https://github.com/HiAriesZhou/Howler"
 
     public static func streamingRequest(
-        provider: Provider,
+        service: ModelService,
         apiKey: String,
-        model: String,
         messages: [ChatMessage],
         options: RequestOptions = RequestOptions()
     ) throws -> URLRequest {
@@ -60,18 +59,19 @@ public enum RequestBuilder {
         guard !key.isEmpty else { throw RequestBuilderError.missingAPIKey }
         let turns = normalize(messages)
         guard !turns.isEmpty else { throw RequestBuilderError.noMessages }
-        if !provider.acceptsImages, turns.contains(where: { $0.image != nil }) {
-            throw RequestBuilderError.imagesUnsupported(provider.displayName)
+        let known = service.knownProvider
+        if let known, !known.acceptsImages, turns.contains(where: { $0.image != nil }) {
+            throw RequestBuilderError.imagesUnsupported(known.displayName)
         }
-        let model = provider.resolvedModel(model)
+        let model = service.model
 
         var request: URLRequest
-        let body: [String: Any]
-        switch provider.wireFormat {
+        var body: [String: Any]
+        switch service.format {
         case .openAICompatible:
-            request = URLRequest(url: provider.baseURL.appendingPathComponent("chat/completions"))
+            request = URLRequest(url: service.baseURL.appendingPathComponent("chat/completions"))
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-            if provider == .openRouter {
+            if known == .openRouter {
                 request.setValue(projectURL, forHTTPHeaderField: "HTTP-Referer")
                 request.setValue(options.appName, forHTTPHeaderField: "X-Title")
             }
@@ -82,7 +82,7 @@ public enum RequestBuilder {
             ]
 
         case .anthropic:
-            request = URLRequest(url: provider.baseURL.appendingPathComponent("messages"))
+            request = URLRequest(url: service.baseURL.appendingPathComponent("messages"))
             request.setValue(key, forHTTPHeaderField: "x-api-key")
             request.setValue(anthropicVersion, forHTTPHeaderField: "anthropic-version")
             var anthropicBody: [String: Any] = [
@@ -91,7 +91,7 @@ public enum RequestBuilder {
                 "max_tokens": options.maxTokens ?? anthropicDefaultMaxTokens,
                 "messages": turns.map { ["role": $0.role.rawValue, "content": anthropicContent($0)] },
             ]
-            if anthropicFallbackModels.contains(model) {
+            if known == .anthropic, anthropicFallbackModels.contains(model) {
                 request.setValue(anthropicFallbackBeta, forHTTPHeaderField: "anthropic-beta")
                 anthropicBody["fallbacks"] = "default"
             }
@@ -103,7 +103,7 @@ public enum RequestBuilder {
                   let modelPath = geminiModel.addingPercentEncoding(withAllowedCharacters: geminiModelAllowed)
             else { throw RequestBuilderError.invalidModel(model) }
             var components = URLComponents(
-                url: provider.baseURL, resolvingAgainstBaseURL: false
+                url: service.baseURL, resolvingAgainstBaseURL: false
             )!
             components.percentEncodedPath += "/models/\(modelPath):streamGenerateContent"
             components.queryItems = [URLQueryItem(name: "alt", value: "sse")]
@@ -119,6 +119,14 @@ public enum RequestBuilder {
                 geminiBody["generationConfig"] = ["maxOutputTokens": maxTokens]
             }
             body = geminiBody
+        }
+
+        // The service's own fields (e.g. turning thinking off) override Howler's defaults.
+        for (name, value) in service.body where !ModelService.reservedBodyKeys(for: service.format).contains(name) {
+            body[name] = value.foundationValue
+        }
+        for (name, value) in service.headers where !ModelService.reservedHeaders.contains(name.lowercased()) {
+            request.setValue(value, forHTTPHeaderField: name)
         }
 
         request.httpMethod = "POST"

@@ -2,14 +2,14 @@ import AppKit
 import HowlerCore
 import SwiftUI
 
-/// Everything on one page: which AI answers, then the two general preferences.
+/// Everything on one page: the model that answers, then the two general preferences.
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            SettingsSection("AI Provider") {
-                ProviderSettings(settings: settings)
+            SettingsSection("Model") {
+                ModelSettings(settings: settings)
             }
 
             SettingsSection("General") {
@@ -36,7 +36,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the provider above, with your next question — leave out passwords and other secrets.")
+            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, with your next question — leave out passwords and other secrets.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

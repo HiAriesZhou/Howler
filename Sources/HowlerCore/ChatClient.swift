@@ -20,7 +20,7 @@ public enum ChatClientError: Error, Equatable, LocalizedError {
     }
 }
 
-/// Streams a chat completion from any supported provider.
+/// Streams a chat completion from the configured model service.
 ///
 /// Uses an ephemeral `URLSession` so nothing (requests, responses, cookies) is
 /// cached to disk, and never logs request or response content.
@@ -41,9 +41,8 @@ public final class ChatClient: @unchecked Sendable {
 
     /// Yields text deltas as they arrive. Cancelling the consuming task cancels the request.
     public func stream(
-        provider: Provider,
+        service: ModelService,
         apiKey: String,
-        model: String,
         messages: [ChatMessage],
         options: RequestOptions = RequestOptions()
     ) -> AsyncThrowingStream<String, Error> {
@@ -51,10 +50,9 @@ public final class ChatClient: @unchecked Sendable {
             let task = Task {
                 do {
                     let request = try RequestBuilder.streamingRequest(
-                        provider: provider, apiKey: apiKey, model: model,
-                        messages: messages, options: options
+                        service: service, apiKey: apiKey, messages: messages, options: options
                     )
-                    try await self.run(request, format: provider.wireFormat) { text in
+                    try await self.run(request, format: service.format) { text in
                         continuation.yield(text)
                     }
                     continuation.finish()

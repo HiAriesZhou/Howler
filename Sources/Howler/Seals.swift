@@ -101,11 +101,11 @@ private struct WaxPuddle: Shape {
     }
 }
 
-/// The provider's mark as a crimson wax seal (a monochrome letter or symbol — never a
-/// trademarked logo). It is pressed again each time the letter opens or the provider
+/// The model service's mark as a crimson wax seal (a monochrome letter or symbol — never a
+/// trademarked logo). It is pressed again each time the letter opens or the service
 /// changes.
 struct ProviderStamp: View {
-    let provider: Provider?
+    let glyph: ProviderGlyph?
     /// Changes whenever the seal should be pressed again.
     let pressKey: Int
     var size: CGFloat = 48
@@ -114,20 +114,27 @@ struct ProviderStamp: View {
     @State private var pressed = true
 
     var body: some View {
-        WaxSeal(wax: .crimson, size: size, seed: UInt64(provider?.rawValue.utf8.reduce(0) { $0 + Int($1) } ?? 7)) {
-            glyph
+        WaxSeal(wax: .crimson, size: size, seed: seed) {
+            mark
         }
         .rotationEffect(.degrees(-8))
         .scaleEffect(pressed ? 1 : 1.6)
         .opacity(pressed ? 1 : 0)
         .onAppear(perform: press)
         .onChange(of: pressKey) { _, _ in press() }
-        .onChange(of: provider) { _, _ in press() }
+        .onChange(of: glyph) { _, _ in press() }
+    }
+
+    private var seed: UInt64 {
+        switch glyph {
+        case .letters(let text), .symbol(let text): return UInt64(text.utf8.reduce(0) { $0 + Int($1) })
+        case nil: return 7
+        }
     }
 
     @ViewBuilder
-    private var glyph: some View {
-        switch provider?.glyph {
+    private var mark: some View {
+        switch glyph {
         case .letters(let letters):
             Text(letters).font(Lettering.proseBold(size * 0.38))
         case .symbol(let name):

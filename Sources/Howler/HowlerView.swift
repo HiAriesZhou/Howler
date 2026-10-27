@@ -132,7 +132,7 @@ struct HowlerView: View {
     private func header(_ parchment: Parchment) -> some View {
         HStack(alignment: .top, spacing: 16) {
             Button(action: showProviderMenu) {
-                ProviderStamp(provider: settings.activeProvider, pressKey: viewModel.openCount)
+                ProviderStamp(glyph: settings.service?.glyph, pressKey: viewModel.openCount)
             }
             .buttonStyle(.plain)
             .help(stampHelp)
@@ -202,8 +202,8 @@ struct HowlerView: View {
     }
 
     private var stampHelp: String {
-        guard let provider = settings.activeProvider else { return "Choose a provider" }
-        return "\(provider.displayName) · \(settings.model(for: provider)) — click to switch"
+        guard let service = settings.service else { return "No model set up" }
+        return "\(service.model) · \(service.host)"
     }
 
     // MARK: Footer
@@ -214,8 +214,8 @@ struct HowlerView: View {
                 .stroke(parchment.rule.opacity(0.7), lineWidth: 0.7)
                 .frame(height: 4)
             HStack {
-                if let provider = settings.activeProvider {
-                    Text("\(provider.displayName) · \(settings.model(for: provider))")
+                if let service = settings.service {
+                    Text("\(service.model) · \(service.host)")
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -320,7 +320,7 @@ private struct EmptyPage: View {
     }
 }
 
-/// Shown until a provider and key are configured.
+/// Shown until a model service and its key are set up.
 private struct SetupPage: View {
     let pressKey: Int
     let openSettings: () -> Void
@@ -329,12 +329,12 @@ private struct SetupPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 16) {
-                ProviderStamp(provider: nil, pressKey: pressKey)
+                ProviderStamp(glyph: nil, pressKey: pressKey)
                 VStack(alignment: .leading, spacing: 6) {
                     Text("This parchment has no ink yet.")
                         .font(Lettering.script(27))
                         .foregroundStyle(parchment.ink)
-                    Text("Choose a provider and paste an API key, and it will start answering.")
+                    Text("Set up a model in Settings — an AI assistant can do it for you — and it will start answering.")
                         .font(Lettering.prose(14))
                         .foregroundStyle(parchment.fadedInk)
                 }

@@ -5,9 +5,9 @@ import HowlerCore
 /// `HOWLER_DEMO=1 swift run Howler` opens the letter with an attachment and writes a
 /// scripted answer, without any network or API key. Used to check the look and motion.
 ///
-/// Variants: `HOWLER_DEMO=setup` (no provider yet), `long` (overflows an A4 page),
-/// `multi` (a follow-up question), `burn` (dismissed once written), `image` (a captured screen region), `settings` (the Settings window,
-/// `HOWLER_DEMO_PROVIDER=anthropic` opens a provider's form);
+/// Variants: `HOWLER_DEMO=setup` (no model yet), `long` (overflows an A4 page),
+/// `multi` (a follow-up question), `burn` (dismissed once written), `image` (a captured screen region),
+/// `settings` (the Settings window with the real setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one);
 /// `HOWLER_DEMO_DARK=1` forces Dark Mode.
 extension PanelController {
     func runDemo() {
@@ -20,7 +20,7 @@ extension PanelController {
             show()
             return
         }
-        settings.useDemoProvider(.anthropic)
+        settings.useDemoService(.anthropic)
         let repeats = variant == "long" ? 4 : 1
         viewModel.demoStream = { Self.demoStream(repeats: repeats) }
         show()

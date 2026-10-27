@@ -19,7 +19,7 @@ final class RequestBuilderTests: XCTestCase {
 
     private func build(_ provider: Provider, model: String = "", options: RequestOptions = RequestOptions()) throws -> URLRequest {
         try RequestBuilder.streamingRequest(
-            provider: provider, apiKey: " sk-test ", model: model,
+            service: provider.service(model: model), apiKey: " sk-test ",
             messages: conversation, options: options
         )
     }
@@ -141,13 +141,13 @@ final class RequestBuilderTests: XCTestCase {
 
     func testMissingKeyThrows() {
         XCTAssertThrowsError(
-            try RequestBuilder.streamingRequest(provider: .openAI, apiKey: "  ", model: "", messages: conversation)
+            try RequestBuilder.streamingRequest(service: Provider.openAI.service(), apiKey: "  ", messages: conversation)
         ) { XCTAssertEqual($0 as? RequestBuilderError, .missingAPIKey) }
     }
 
     func testEmptyConversationThrows() {
         XCTAssertThrowsError(
-            try RequestBuilder.streamingRequest(provider: .openAI, apiKey: "k", model: "", messages: [])
+            try RequestBuilder.streamingRequest(service: Provider.openAI.service(), apiKey: "k", messages: [])
         ) { XCTAssertEqual($0 as? RequestBuilderError, .noMessages) }
     }
 
@@ -160,7 +160,7 @@ final class RequestBuilderTests: XCTestCase {
 
     private func buildWithImage(_ provider: Provider) throws -> [String: Any] {
         try json(RequestBuilder.streamingRequest(
-            provider: provider, apiKey: "k", model: "",
+            service: provider.service(), apiKey: "k",
             messages: [ChatMessage(role: .user, content: "Read this", attachment: screenshot)]
         ))
     }

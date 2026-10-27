@@ -1,13 +1,22 @@
 import Foundation
 
-/// How a provider's streaming endpoint is shaped on the wire.
-public enum WireFormat: String, Sendable {
+/// How a model service's streaming endpoint is shaped on the wire. The raw values are the
+/// names used by `Howler config set format=…`.
+public enum WireFormat: String, CaseIterable, Codable, Sendable {
     /// `POST {base}/chat/completions` with `stream: true` (OpenAI and compatible APIs).
-    case openAICompatible
-    /// `POST /v1/messages` with `stream: true`.
-    case anthropic
-    /// `POST /v1beta/models/{model}:streamGenerateContent?alt=sse`.
-    case gemini
+    case openAICompatible = "chat-completions"
+    /// `POST {base}/messages` with `stream: true`.
+    case anthropic = "anthropic-messages"
+    /// `POST {base}/models/{model}:streamGenerateContent?alt=sse`.
+    case gemini = "gemini-generate-content"
+
+    public var displayName: String {
+        switch self {
+        case .openAICompatible: return "Chat Completions"
+        case .anthropic: return "Anthropic Messages"
+        case .gemini: return "Gemini generateContent"
+        }
+    }
 }
 
 /// A provider's icon. We never bundle trademarked logos: either an SF Symbol or a
@@ -17,6 +26,8 @@ public enum ProviderGlyph: Equatable, Sendable {
     case letters(String)
 }
 
+/// Well-known model services. They are presets (`Howler config set preset=deepseek`) and
+/// give a configured service its seal mark; the service itself is any `ModelService`.
 public enum Provider: String, CaseIterable, Identifiable, Codable, Sendable {
     case openAI = "openai"
     case anthropic = "anthropic"
@@ -86,21 +97,20 @@ public enum Provider: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    /// Where users create API keys; shown as a hint in Settings.
-    public var keyURL: URL {
-        switch self {
-        case .openAI: return URL(string: "https://platform.openai.com/api-keys")!
-        case .anthropic: return URL(string: "https://console.anthropic.com/settings/keys")!
-        case .gemini: return URL(string: "https://aistudio.google.com/apikey")!
-        case .xAI: return URL(string: "https://console.x.ai")!
-        case .deepSeek: return URL(string: "https://platform.deepseek.com/api_keys")!
-        case .openRouter: return URL(string: "https://openrouter.ai/keys")!
-        }
-    }
-
     /// Model to use for a user-entered value; blank falls back to the default.
     public func resolvedModel(_ userValue: String?) -> String {
         let trimmed = userValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? defaultModel : trimmed
+    }
+
+    /// This provider as a model service; a blank model means the default one.
+    public func service(model: String? = nil) -> ModelService {
+        ModelService(format: wireFormat, baseURL: baseURL, model: resolvedModel(model))
+    }
+
+    /// The well-known provider behind `host`, if any.
+    public init?(host: String) {
+        guard let match = Provider.allCases.first(where: { $0.baseURL.host == host.lowercased() }) else { return nil }
+        self = match
     }
 }

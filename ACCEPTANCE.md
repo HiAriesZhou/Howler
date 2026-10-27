@@ -27,7 +27,7 @@ Run on macOS 14+ with the released `Howler.zip`. Mark each item ✅ / ❌.
 
 ## 2a. 信纸交互 / Letter interactions
 
-- [ ] 空白信纸：毛边、纤维纹理、中间折痕；左上角为当前服务商的深红火漆印（蜡滴、下陷压印、浮雕字母、高光）；中间有花体提示
+- [ ] 空白信纸：毛边、纤维纹理、中间折痕；左上角为当前模型服务的深红火漆印（蜡滴、下陷压印、浮雕字母、高光）；中间有花体提示
 - [ ] 系统为深色模式时纸张变暗为“烛光”色，文字与占位符仍为深色墨水
 - [ ] 右上角为淡色虚线圆圈 “+ Attach”；点击弹出菜单：Paste from Clipboard、Capture Screen Region…
 - [ ] 复制一段文字后选择 Paste from Clipboard：右上角压上琥珀色火漆印（刻符文、文档图标），下方写 “Pasted text / N chars”；输入框**不**包含这段文字
@@ -38,9 +38,9 @@ Run on macOS 14+ with the released `Howler.zip`. Mark each item ✅ / ❌.
 - [ ] 点火漆印：展开预览卡片（文字显示前几行，图片显示缩略图），可 Remove
 - [ ] 有火漆印、输入框为空时按 ↩：以 “Explain this.” 发送
 - [ ] 带火漆印发送：问题前出现 ✦，回答针对附件内容（截图问 “图里写了什么”）；之后的问题不再附带
-- [ ] DeepSeek 下带图片发送：显示 “DeepSeek can't read images…”
+- [ ] DeepSeek 下带图片发送：显示 “DeepSeek can't read images…”，提示到 Settings 换能读图的模型
 - [ ] 不主动粘贴或截屏时，Howler 从不读取剪贴板（macOS 15.4+ 不会弹出“允许粘贴”提示）
-- [ ] 点左上角火漆印：弹出已保存 Key 的服务商列表，切换后火漆印重新盖章，页脚模型名随之变化
+- [ ] 点左上角火漆印：菜单显示 “Written by <模型>”（悬停显示完整配置）与 Settings…；页脚显示 “模型 · 主机”
 - [ ] 发送后先出现悬停的羽毛笔与 “The quill is thinking…”，2 秒后显示秒数
 - [ ] 回答逐字显现、新字带金色微光；macOS 15+ 羽毛笔停在最后一个字之后；macOS 14 停在段落末尾
 - [ ] 纸张随回答向下变长；超过 A4 比例或屏幕可用高度后改为滚动，顶部文字在书写线下渐隐
@@ -51,32 +51,50 @@ Run on macOS 14+ with the released `Howler.zip`. Mark each item ✅ / ❌.
 
 ## 3. 设置 / Settings
 
-- [ ] 设置只有一页：AI Provider、General 两组，底部有隐私说明（提醒不要粘贴或截取敏感信息）
-- [ ] AI Provider：6 个服务商以胶囊排列，每个带单色标志（SF Symbol 或字母，无商标 Logo）与名称；已保存 Key 的带灰点，正在使用的带绿点并高亮
-- [ ] 点一个胶囊：其余胶囊淡出，该胶囊的标志与名称平滑移动到标题位置，下方展开 API key（不明文）与 Model（占位符为默认模型）；点 ‹ 或按 Esc 回到胶囊列表
-- [ ] 输入错误 Key → Save & Test（或 ↩）：名称旁显示 Testing，随后变为红色 Failed，下方显示服务商返回的错误（如 HTTP 401）
-- [ ] 输入正确 Key → Save & Test：显示绿色 Connected；返回列表后该服务商带绿点，提示 “In use: …”
-- [ ] 留空 Key 再次 Save & Test 会保留原 Key 并重新测试
-- [ ] 填写不存在的模型名 → Save & Test：Failed 及服务商的错误信息
-- [ ] Remove Key 后状态标记消失；若为当前服务商，信纸回到 “Open Settings”
-- [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.howler` 可看到条目（账户名为服务商 id）
-- [ ] 退出并重启应用：服务商、模型、Key、快捷键仍然有效
+- [ ] 设置只有一页：Model、General 两组，底部有隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
+- [ ] 未配置：Model 显示问号火漆印、“No model yet”，下方 “Set up a model” 与 Copy Setup Prompt；没有 Check 按钮
+- [ ] 已配置：深红火漆印（DeepSeek 为 “D”、Gemini 为 ✦，其他服务为域名首字母）、模型名、“主机 · 格式”，状态为 Ready / Not checked yet / Failed / No API key
+- [ ] Copy Setup Prompt：按钮短暂显示 ✓ Copied；粘贴出的提示词包含本机可执行文件路径与当前配置（未配置时为 “not set up yet”），要求助手用 `pbpaste | Howler config set api-key --stdin` 写入 Key
+- [ ] 把提示词交给 Claude Code（或 Codex）：助手询问服务与模型，运行 `config schema` → `config set` → 请你复制 Key 后运行 `pbpaste | … --stdin` → `check` → `config show`；全程 Key 不出现在聊天与输出中
+- [ ] 应用运行时在终端执行 `config set model=…`：设置页与信纸页脚立即显示新模型，状态变为 Not checked yet
+- [ ] 点 Check：显示 Checking…，正确配置变为绿色 Ready；在终端执行 `config show` 的 check 一行为 passed
+- [ ] 错误 Key 或不存在的模型 → Check：红色 Failed，下方显示服务返回的错误（如 HTTP 401）
+- [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.howler` 可看到账户名为 `api-key` 的条目
+- [ ] 从配置了服务商的旧版本升级：首次启动后原服务商、模型与 Key 自动迁移，设置页直接显示该模型（状态 Not checked yet），发送可用
+- [ ] 退出并重启应用：模型服务、Key、快捷键仍然有效
+
+### 3a. 命令行 / Command line
+
+`H=/Applications/Howler.app/Contents/MacOS/Howler`
+
+- [ ] `$H help`、`$H config schema` 输出用法与全部字段、预设、格式；不启动菜单栏图标
+- [ ] `$H config set model=x`（未配置时）：报缺少 format、base-url，退出码 1
+- [ ] `$H config set api-key=sk-…`：拒绝，提示用 `--stdin` / `--env` / `--file`
+- [ ] `$H config set api-key --stdin` 直接在终端运行（无管道）：拒绝并给出 `pbpaste | …` 用法
+- [ ] `$H config set 'body={"messages":[]}'`、`'headers={"Authorization":"x"}'`、`base-url=http://example.com`：均被拒绝并说明原因
+- [ ] `$H config set preset=deepseek 'body={"thinking":{"type":"disabled"}}'` 后 `$H config show`：显示 endpoint、body；api-key 只显示 saved in Keychain / not set
+- [ ] `$H check --verbose`：打印请求 URL、请求头（认证头为 `••••`）与请求体，失败时显示 HTTP 状态与错误
+- [ ] 本机 Ollama 等：`$H config set format=chat-completions base-url=http://localhost:11434/v1 model=<本地模型>` 后 `check` 通过，信纸可正常流式回答
+- [ ] `$H config reset`：配置与 Key 被删除，设置页回到 “No model yet”
+
+### 3b. 通用 / General
+
 - [ ] General → Keyboard shortcut：点按钮后按 ⌃⌥K，菜单栏 “Open Howler” 显示新快捷键，⌃⌥K 可呼出、⌥Space 不再响应；录制中按 Esc 取消
 - [ ] Keyboard shortcut：只含 ⇧ 的组合提示需加 ⌘/⌥/⌃；⌘V、⌘C、⌘Space 等系统快捷键被拒绝；被其他应用占用时显示红色提示；点 ↺ 恢复 ⌥Space
 - [ ] Keyboard shortcut：开始录制后切到其他窗口或关闭设置窗口，录制自动结束，原快捷键恢复可用
 - [ ] General → Launch at login：打开后注销重新登录，Howler 自动启动（若提示需批准，按提示到“登录项”中允许）
 
-## 4. 各服务商真实流式 / Per-provider real streaming
+## 4. 各服务真实流式 / Per-service real streaming
 
-对每个服务商：保存 Key（模型留空用默认值），呼出面板，发送下列提示词。
-For each provider: save a key (default model), open the panel, send the prompts below.
+对每个预设：用 `config set preset=…` 写入并保存 Key、`check` 通过后，呼出面板，发送下列提示词。
+For each preset: `config set preset=…`, save a key, pass `check`, open the panel, send the prompts below.
 
 提示词 / Prompts：
 1. `用三段话介绍一下 SSE（Server-Sent Events）`（长回答，观察**逐字流式**而不是一次性出现）
 2. `再用一句话总结`（验证**多轮上下文**：回答应基于上一条）
 3. `写一个 Swift 函数计算斐波那契数，并用列表说明复杂度`（验证 Markdown：代码块、复制按钮、列表、加粗）
 
-| 服务商 | ✓ Connected | 1. 流式 | 2. 多轮 | 3. Markdown | 停止按钮 | 备注（模型） |
+| 预设 | ✓ check | 1. 流式 | 2. 多轮 | 3. Markdown | 停止按钮 | 备注（模型） |
 | --- | --- | --- | --- | --- | --- | --- |
 | OpenAI | | | | | | |
 | Anthropic | | | | | | |
@@ -97,7 +115,7 @@ For each provider: save a key (default model), open the panel, send the prompts 
 - [ ] 关闭面板后再打开：对话已清空
 - [ ] 生成过程中关闭面板：请求被取消，再打开为空白，不会出现旧回答
 - [ ] `~/Library/Containers`、`~/Library/Application Support`、`~/Library/Caches` 中没有 Howler 的对话文件
-- [ ] `defaults read com.hiarieszhou.howler` 只包含 `provider`、`models`，以及改过时的 `hotKey`
+- [ ] `defaults read com.hiarieszhou.howler` 只包含 `service`、检查过时的 `serviceCheck`，以及改过时的 `hotKey`；其中没有 API Key
 - [ ] Console.app 中按进程 Howler 过滤，发送消息时没有对话内容日志
 
 ## 6. 错误处理 / Errors

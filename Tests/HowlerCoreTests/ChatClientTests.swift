@@ -54,7 +54,7 @@ final class ChatClientTests: XCTestCase {
     private func collect(_ provider: Provider) async throws -> String {
         var text = ""
         for try await delta in makeClient().stream(
-            provider: provider, apiKey: "k", model: "",
+            service: provider.service(), apiKey: "k",
             messages: [ChatMessage(role: .user, content: "hi")]
         ) {
             text += delta
@@ -132,7 +132,7 @@ final class ChatClientTests: XCTestCase {
         var received = ""
         do {
             for try await delta in makeClient().stream(
-                provider: .openAI, apiKey: "k", model: "",
+                service: Provider.openAI.service(), apiKey: "k",
                 messages: [ChatMessage(role: .user, content: "hi")]
             ) {
                 received += delta
@@ -178,7 +178,7 @@ final class ChatClientTests: XCTestCase {
         StubURLProtocol.stub = .init(status: 200, body: Data("data: [DONE]\n\n".utf8))
         let attachment = try XCTUnwrap(ContextAttachment(source: .pasted, text: "let x = 1"))
         for try await _ in makeClient().stream(
-            provider: .openAI, apiKey: "k", model: "",
+            service: Provider.openAI.service(), apiKey: "k",
             messages: [ChatMessage(role: .user, content: "Explain", attachment: attachment)]
         ) {}
         let body = try XCTUnwrap(StubURLProtocol.lastRequest.flatMap(Self.body))
@@ -204,7 +204,7 @@ final class ChatClientTests: XCTestCase {
 
     func testConnectionTesterSucceedsOnFirstDelta() async throws {
         StubURLProtocol.stub = .init(status: 200, body: Data("data: {\"choices\":[{\"delta\":{\"content\":\"OK\"}}]}\n\n".utf8))
-        try await ConnectionTester.test(client: makeClient(), provider: .xAI, apiKey: "k", model: "")
+        try await ConnectionTester.test(client: makeClient(), service: Provider.xAI.service(), apiKey: "k")
         XCTAssertEqual(StubURLProtocol.lastRequest?.url?.host, "api.x.ai")
         XCTAssertEqual(StubURLProtocol.lastRequest?.timeoutInterval, ConnectionTester.timeout)
     }
@@ -221,7 +221,7 @@ final class ChatClientTests: XCTestCase {
 
         """.utf8))
         do {
-            try await ConnectionTester.test(client: makeClient(), provider: .deepSeek, apiKey: "k", model: "")
+            try await ConnectionTester.test(client: makeClient(), service: Provider.deepSeek.service(), apiKey: "k")
             XCTFail("expected an error")
         } catch {
             XCTAssertEqual(error as? ConnectionTesterError, .noText)
@@ -239,7 +239,7 @@ final class ChatClientTests: XCTestCase {
 
         """.utf8))
         do {
-            try await ConnectionTester.test(client: makeClient(), provider: .anthropic, apiKey: "k", model: "")
+            try await ConnectionTester.test(client: makeClient(), service: Provider.anthropic.service(), apiKey: "k")
             XCTFail("expected an error")
         } catch {
             XCTAssertEqual(error as? ConnectionTesterError, .noText)
@@ -248,7 +248,7 @@ final class ChatClientTests: XCTestCase {
 
     func testChatRequestsAllowLongIdleGaps() throws {
         let request = try RequestBuilder.streamingRequest(
-            provider: .xAI, apiKey: "k", model: "",
+            service: Provider.xAI.service(), apiKey: "k",
             messages: [ChatMessage(role: .user, content: "hi")]
         )
         XCTAssertEqual(request.timeoutInterval, 600)
