@@ -8,7 +8,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 ## 1. 安装与启动 / Install & launch
 
 - [ ] 打开 `Howler.dmg`：窗口中有 Howler 与 Applications 快捷方式，拖入后可推出磁盘映像
-- [ ] 安装后 `Howler.app` 可通过右键 → 打开（或 `xattr -dr com.apple.quarantine`）启动
+- [ ] 安装后直接双击即可打开，没有 Gatekeeper 警告；`spctl --assess --type execute -vv /Applications/Howler.app` 显示 `source=Notarized Developer ID`
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
 - [ ] 首次启动（未配置）自动弹出 Settings 窗口
 - [ ] Finder、DMG 中的 Howler.app 显示羽毛笔火漆图标（不是空白应用图标）

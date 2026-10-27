@@ -57,11 +57,10 @@ Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the
 ## Install
 
 1. Download `Howler.dmg` from [Releases](https://github.com/HiAriesZhou/Howler/releases), open it, and drag Howler onto Applications. `Howler.zip` holds the same app.
-2. The app is ad-hoc signed and not notarized, so Gatekeeper stops it the first time. Right-click it and choose **Open** (on macOS 15+, use **System Settings › Privacy & Security › Open Anyway**), or run:
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/Howler.app
-   ```
+2. Open Howler. It is signed with a Developer ID and notarized by Apple, so it opens like any other app. Updates keep your Keychain and screen-recording permissions.
 3. A small wax seal marked H appears in the menu bar. Howler has no Dock icon.
+
+Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, right-click it and choose **Open**.
 
 ## Set up a model
 
@@ -122,7 +121,7 @@ Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. No third-party dependencies.
 
 ```bash
 make test   # unit tests: config, requests, streaming, attachments, hotkeys, quill pacing
-make app    # universal build → build/Howler.zip, app staged in build/stage.noindex (ad-hoc signed)
+make app    # universal build → build/Howler.zip, app staged in build/stage.noindex (ad-hoc, or SIGN_IDENTITY)
 make dmg    # the same app in build/Howler.dmg, beside an Applications link
 make run    # build and open
 make icon   # re-render Resources/AppIcon.icns from Sources/Howler/AppIconArt.swift

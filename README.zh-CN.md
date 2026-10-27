@@ -57,11 +57,10 @@
 ## 安装
 
 1. 从 [Releases](https://github.com/HiAriesZhou/Howler/releases) 下载 `Howler.dmg`，打开后把 Howler 拖到 Applications。`Howler.zip` 里是同一个应用。
-2. 应用是 ad-hoc 签名，未经公证，首次打开会被 Gatekeeper 拦截。可以在 Finder 中右键点 Howler，选**打开**（macOS 15 起需要到“系统设置 › 隐私与安全性”中点“仍要打开”），或者执行：
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/Howler.app
-   ```
+2. 打开 Howler。应用使用 Developer ID 签名并经过 Apple 公证，可以像其他应用一样直接打开。更新后，钥匙串和录屏权限都会保留。
 3. 菜单栏会出现一枚刻着 H 的小火漆印。Howler 没有 Dock 图标。
+
+v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以在 Finder 中右键点 Howler，选**打开**。
 
 ## 配置模型
 
@@ -122,7 +121,7 @@ $H config show
 
 ```bash
 make test   # 单元测试：配置、请求、流式解析、附件、快捷键、书写节奏
-make app    # universal 构建，生成 build/Howler.zip，应用放在 build/stage.noindex（ad-hoc 签名）
+make app    # universal 构建，生成 build/Howler.zip，应用放在 build/stage.noindex（ad-hoc，或用 SIGN_IDENTITY 签名）
 make dmg    # 同一个应用打成 build/Howler.dmg，附 Applications 快捷方式
 make run    # 构建并打开
 make icon   # 由 Sources/Howler/AppIconArt.swift 重新渲染 Resources/AppIcon.icns
