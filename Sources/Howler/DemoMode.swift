@@ -1,13 +1,15 @@
 #if DEBUG
 import AppKit
 import HowlerCore
+import SwiftUI
 
 /// `HOWLER_DEMO=1 swift run Howler` opens the letter with an attachment and writes a
 /// scripted answer, without any network or API key. Used to check the look and motion.
 ///
 /// Variants: `HOWLER_DEMO=setup` (no model yet), `long` (overflows an A4 page),
 /// `multi` (a follow-up question), `burn` (dismissed once written), `image` (a captured screen region),
-/// `settings` (the Settings window with the real setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one);
+/// `settings` (the Settings window with the real setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one),
+/// `brand` (writes the "H" wax seal to `HOWLER_DEMO_OUT` as a PNG and quits);
 /// `HOWLER_DEMO_DARK=1` forces Dark Mode.
 extension PanelController {
     func runDemo() {
@@ -18,6 +20,11 @@ extension PanelController {
         panel.dismissesOnResignKey = false
         if variant == "setup" {
             show()
+            return
+        }
+        if variant == "brand" {
+            Self.renderBrandSeal(to: ProcessInfo.processInfo.environment["HOWLER_DEMO_OUT"] ?? "howler-seal.png")
+            NSApp.terminate(nil)
             return
         }
         settings.useDemoService(.anthropic)
@@ -84,6 +91,22 @@ extension PanelController {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    /// The brand mark: Howler's initial pressed into crimson wax, on a transparent ground.
+    private static func renderBrandSeal(to path: String) {
+        let size: CGFloat = 240
+        let seal = WaxSeal(wax: .crimson, size: size, seed: 11) {
+            Text("H").font(Lettering.proseBold(size * 0.4))
+        }
+        .rotationEffect(.degrees(-8))
+        .padding(size * 0.1)
+        let renderer = ImageRenderer(content: seal)
+        renderer.scale = 2
+        guard let image = renderer.cgImage,
+              let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
+        else { return }
+        try? png.write(to: URL(fileURLWithPath: path))
     }
 
     /// A small stand-in for a screen capture.
