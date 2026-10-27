@@ -7,12 +7,15 @@ public enum ChatClientError: Error, Equatable, LocalizedError {
     case http(status: Int, message: String)
     case stream(String)
     case invalidResponse
+    /// The connection closed before the provider signalled the end of the reply.
+    case incomplete
 
     public var errorDescription: String? {
         switch self {
         case .http(_, let message): return message
         case .stream(let message): return message
         case .invalidResponse: return "Unexpected response from server."
+        case .incomplete: return "The connection closed before the reply finished; the answer may be incomplete."
         }
     }
 }
@@ -86,11 +89,12 @@ public final class ChatClient: @unchecked Sendable {
         var parser = SSEParser()
         // Returns true when the provider signalled the end of the reply.
         func handle(_ event: SSEEvent) throws -> Bool {
-            switch StreamDecoder.decode(event, format: format) {
-            case .text(let text): onText(text)
-            case .done: return true
-            case .error(let message): throw ChatClientError.stream(message)
-            case .ignore: break
+            for delta in StreamDecoder.decode(event, format: format) {
+                switch delta {
+                case .text(let text): onText(text)
+                case .done: return true
+                case .error(let message): throw ChatClientError.stream(message)
+                }
             }
             return false
         }
@@ -99,7 +103,10 @@ public final class ChatClient: @unchecked Sendable {
             if let event = parser.feed(byte), try handle(event) { return }
         }
         try Task.checkCancellation()
-        if let event = parser.finish() { _ = try handle(event) }
+        if let event = parser.finish(), try handle(event) { return }
+        // Every supported provider ends a finished reply explicitly; a bare EOF means the
+        // connection dropped and what arrived is only part of the answer.
+        throw ChatClientError.incomplete
     }
 
     #if canImport(Darwin)

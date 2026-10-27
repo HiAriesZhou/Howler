@@ -13,7 +13,10 @@ final class SettingsWindowController {
     func show() {
         settings.refreshKeyPresence()
         if window == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(settings: settings)))
+            let controller = NSHostingController(rootView: SettingsView(settings: settings))
+            // The page changes height as a provider is chosen; let the window follow it.
+            controller.sizingOptions = [.preferredContentSize]
+            let window = NSWindow(contentViewController: controller)
             window.title = "\(AppInfo.name) Settings"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false

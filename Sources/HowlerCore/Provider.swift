@@ -57,6 +57,12 @@ public enum Provider: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
+    /// Whether the API accepts images in a user turn. DeepSeek's chat API is text-only;
+    /// for the rest it depends on the model, and the provider's error says so.
+    public var acceptsImages: Bool {
+        self != .deepSeek
+    }
+
     /// Model used when the user leaves the model field empty.
     public var defaultModel: String {
         switch self {

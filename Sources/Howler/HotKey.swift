@@ -7,11 +7,6 @@ final class HotKey {
     private var handlerRef: EventHandlerRef?
     private let action: () -> Void
 
-    /// Option+Space.
-    static let defaultKeyCode = UInt32(kVK_Space)
-    static let defaultModifiers = UInt32(optionKey)
-    static let defaultDisplay = "⌥Space"
-
     /// Returns nil if the shortcut is already taken by another app.
     init?(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
         self.action = action
@@ -32,7 +27,7 @@ final class HotKey {
         )
         guard installStatus == noErr else { return nil }
 
-        let hotKeyID = EventHotKeyID(signature: OSType(0x5141_534B), id: 1) // 'QASK'
+        let hotKeyID = EventHotKeyID(signature: OSType(0x484F_574C), id: 1) // 'HOWL'
         let registerStatus = RegisterEventHotKey(
             keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef
         )

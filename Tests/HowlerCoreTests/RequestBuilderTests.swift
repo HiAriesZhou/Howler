@@ -151,6 +151,62 @@ final class RequestBuilderTests: XCTestCase {
         ) { XCTAssertEqual($0 as? RequestBuilderError, .noMessages) }
     }
 
+    // MARK: Images
+
+    private let screenshot = ContextAttachment(
+        source: .screenshot,
+        image: ImageData(data: Data("PNG".utf8), mediaType: "image/png", width: 2, height: 1)
+    )
+
+    private func buildWithImage(_ provider: Provider) throws -> [String: Any] {
+        try json(RequestBuilder.streamingRequest(
+            provider: provider, apiKey: "k", model: "",
+            messages: [ChatMessage(role: .user, content: "Read this", attachment: screenshot)]
+        ))
+    }
+
+    func testOpenAICompatibleImagePart() throws {
+        let messages = try XCTUnwrap(buildWithImage(.openAI)["messages"] as? [[String: Any]])
+        let parts = try XCTUnwrap(messages.first?["content"] as? [[String: Any]])
+        XCTAssertEqual(parts.first?["type"] as? String, "text")
+        XCTAssertEqual(parts.first?["text"] as? String, "Read this")
+        let imageURL = try XCTUnwrap((parts.last?["image_url"] as? [String: Any])?["url"] as? String)
+        XCTAssertEqual(imageURL, "data:image/png;base64,UE5H")
+    }
+
+    func testAnthropicImageBlock() throws {
+        let messages = try XCTUnwrap(buildWithImage(.anthropic)["messages"] as? [[String: Any]])
+        let blocks = try XCTUnwrap(messages.first?["content"] as? [[String: Any]])
+        XCTAssertEqual(blocks.first?["type"] as? String, "image")
+        let source = try XCTUnwrap(blocks.first?["source"] as? [String: String])
+        XCTAssertEqual(source, ["type": "base64", "media_type": "image/png", "data": "UE5H"])
+        XCTAssertEqual(blocks.last?["text"] as? String, "Read this")
+    }
+
+    func testGeminiInlineImage() throws {
+        let contents = try XCTUnwrap(buildWithImage(.gemini)["contents"] as? [[String: Any]])
+        let parts = try XCTUnwrap(contents.first?["parts"] as? [[String: Any]])
+        let inline = try XCTUnwrap(parts.first?["inline_data"] as? [String: String])
+        XCTAssertEqual(inline, ["mime_type": "image/png", "data": "UE5H"])
+        XCTAssertEqual(parts.last?["text"] as? String, "Read this")
+    }
+
+    func testTextOnlyProvidersRejectImages() {
+        XCTAssertThrowsError(try buildWithImage(.deepSeek)) { error in
+            XCTAssertEqual(error as? RequestBuilderError, .imagesUnsupported("DeepSeek"))
+        }
+    }
+
+    func testNormalizeKeepsImagesWhenMerging() {
+        let normalized = RequestBuilder.normalize([
+            ChatMessage(role: .user, content: "first", attachment: screenshot),
+            ChatMessage(role: .user, content: "second"),
+        ])
+        XCTAssertEqual(normalized.count, 1)
+        XCTAssertEqual(normalized.first?.content, "first\n\nsecond")
+        XCTAssertEqual(normalized.first?.image, screenshot.image)
+    }
+
     func testNormalizeDropsEmptyAndMergesSameRole() {
         let messages = [
             ChatMessage(role: .assistant, content: "stray"),

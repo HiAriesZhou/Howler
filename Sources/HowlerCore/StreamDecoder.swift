@@ -3,26 +3,37 @@ import Foundation
 import FoundationNetworking
 #endif
 
-/// What one SSE event means for the chat transcript.
+/// One thing an SSE event means for the chat transcript. A single event can carry
+/// several (e.g. the last text chunk together with the stop reason).
 public enum StreamDelta: Equatable, Sendable {
     /// Text to append to the assistant reply.
     case text(String)
-    /// The provider signalled the end of the reply.
+    /// The provider signalled that the reply finished normally.
     case done
-    /// The provider reported an error inside the stream.
+    /// The provider reported an error, or the reply stopped early (truncation, safety filter).
     case error(String)
-    /// Bookkeeping event with nothing to show (role headers, pings, usage, thinking).
-    case ignore
 }
 
-/// Turns provider-specific SSE events into `StreamDelta`s.
+/// Turns provider-specific SSE events into `StreamDelta`s. Bookkeeping events (role headers,
+/// pings, usage, thinking) decode to an empty list.
 public enum StreamDecoder {
-    public static func decode(_ event: SSEEvent, format: WireFormat) -> StreamDelta {
+    public static let truncatedMessage = "The reply was cut off: it reached the output token limit."
+    public static let contextExceededMessage = "The reply was cut off: the conversation reached the model's context limit."
+
+    public static func decode(_ event: SSEEvent, format: WireFormat) -> [StreamDelta] {
         switch format {
         case .openAICompatible: return decodeOpenAI(event)
         case .anthropic: return decodeAnthropic(event)
         case .gemini: return decodeGemini(event)
         }
+    }
+
+    /// Text first, so nothing already generated is lost when the same chunk ends the reply.
+    private static func deltas(text: String, ending: StreamDelta?) -> [StreamDelta] {
+        var result: [StreamDelta] = []
+        if !text.isEmpty { result.append(.text(text)) }
+        if let ending { result.append(ending) }
+        return result
     }
 
     // MARK: OpenAI-compatible (OpenAI, xAI, DeepSeek, OpenRouter)
@@ -37,19 +48,27 @@ public enum StreamDecoder {
         let error: APIErrorBody?
     }
 
-    static func decodeOpenAI(_ event: SSEEvent) -> StreamDelta {
+    static func decodeOpenAI(_ event: SSEEvent) -> [StreamDelta] {
         let data = event.data.trimmingCharacters(in: .whitespacesAndNewlines)
-        if data == "[DONE]" { return .done }
+        if data == "[DONE]" { return [.done] }
         guard let chunk = try? JSONDecoder().decode(OpenAIChunk.self, from: Data(data.utf8)) else {
-            return .ignore
+            return []
         }
-        if let error = chunk.error { return .error(error.text) }
+        if let error = chunk.error { return [.error(error.text)] }
         let text = (chunk.choices ?? []).compactMap { $0.delta?.content }.joined()
-        if !text.isEmpty { return .text(text) }
-        if chunk.choices?.first?.finish_reason == "content_filter" {
-            return .error("Response blocked by the provider's content filter.")
+        return deltas(text: text, ending: openAIEnding(chunk.choices?.first?.finish_reason))
+    }
+
+    private static func openAIEnding(_ reason: String?) -> StreamDelta? {
+        switch reason {
+        case nil, "": return nil // some gateways send "" on intermediate chunks
+        case "length": return .error(truncatedMessage)
+        case "insufficient_system_resource": // DeepSeek: interrupted by server load
+            return .error("The provider ran out of capacity and stopped the reply early.")
+        case "content_filter": return .error("Response blocked by the provider's content filter.")
+        case "error": return .error("The provider reported an error while answering.")
+        default: return .done // "stop", "tool_calls", …
         }
-        return .ignore
     }
 
     // MARK: Anthropic Messages
@@ -65,35 +84,36 @@ public enum StreamDecoder {
         let error: APIErrorBody?
     }
 
-    static func decodeAnthropic(_ event: SSEEvent) -> StreamDelta {
+    static func decodeAnthropic(_ event: SSEEvent) -> [StreamDelta] {
         guard let payload = try? JSONDecoder().decode(AnthropicEvent.self, from: Data(event.data.utf8)) else {
-            return .ignore
+            return []
         }
         switch payload.type {
         case "content_block_delta":
             // Only visible text; thinking/signature/tool-input deltas are not shown.
-            if payload.delta?.type == "text_delta", let text = payload.delta?.text, !text.isEmpty {
-                return .text(text)
-            }
-            return .ignore
+            guard payload.delta?.type == "text_delta" else { return [] }
+            return deltas(text: payload.delta?.text ?? "", ending: nil)
         case "message_delta":
             switch payload.delta?.stop_reason {
             case "refusal":
-                return .error("The model declined to answer this request.")
+                return [.error("The model declined to answer this request.")]
             case "max_tokens":
                 // Thinking shares the budget, so this can happen on long answers.
-                return .error("The reply was cut off: it reached the output token limit.")
+                return [.error(truncatedMessage)]
             case "model_context_window_exceeded":
-                return .error("The reply was cut off: the conversation reached the model's context limit.")
+                return [.error(contextExceededMessage)]
+            case "end_turn", "stop_sequence":
+                // Finished; don't depend on the trailing message_stop arriving.
+                return [.done]
             default:
-                return .ignore
+                return [] // message_stop follows
             }
         case "message_stop":
-            return .done
+            return [.done]
         case "error":
-            return .error(payload.error?.text ?? "Unknown streaming error.")
+            return [.error(payload.error?.text ?? "Unknown streaming error.")]
         default:
-            return .ignore
+            return []
         }
     }
 
@@ -117,23 +137,29 @@ public enum StreamDecoder {
         let error: APIErrorBody?
     }
 
-    static func decodeGemini(_ event: SSEEvent) -> StreamDelta {
+    static func decodeGemini(_ event: SSEEvent) -> [StreamDelta] {
         guard let chunk = try? JSONDecoder().decode(GeminiChunk.self, from: Data(event.data.utf8)) else {
-            return .ignore
+            return []
         }
-        if let error = chunk.error { return .error(error.text) }
+        if let error = chunk.error { return [.error(error.text)] }
         if let reason = chunk.promptFeedback?.blockReason {
-            return .error("Prompt blocked by Gemini (\(reason)).")
+            return [.error("Prompt blocked by Gemini (\(reason)).")]
         }
-        let parts = chunk.candidates?.first?.content?.parts ?? []
+        let candidate = chunk.candidates?.first
+        let parts = candidate?.content?.parts ?? []
         let text = parts.filter { $0.thought != true }.compactMap(\.text).joined()
-        if !text.isEmpty { return .text(text) }
-        switch chunk.candidates?.first?.finishReason {
-        case "SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION":
-            return .error("Response blocked by Gemini (\(chunk.candidates!.first!.finishReason!)).")
-        default:
-            // Gemini has no terminal event; the stream simply ends.
-            return .ignore
+        return deltas(text: text, ending: geminiEnding(candidate?.finishReason))
+    }
+
+    /// Gemini has no terminal event: the chunk carrying `finishReason` is the last one.
+    private static func geminiEnding(_ reason: String?) -> StreamDelta? {
+        switch reason {
+        case nil, "FINISH_REASON_UNSPECIFIED": return nil
+        case "STOP": return .done
+        case "MAX_TOKENS": return .error(truncatedMessage)
+        case "SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION", "IMAGE_SAFETY":
+            return .error("Response blocked by Gemini (\(reason!)).")
+        case let other?: return .error("Gemini stopped the reply early (\(other)).")
         }
     }
 }

@@ -1,159 +1,127 @@
+import AppKit
 import HowlerCore
 import SwiftUI
 
+/// Everything on one page: which AI answers, then the two general preferences.
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
 
-    @State private var selection: Provider?
-    @State private var keyInput = ""
-    @State private var modelInput = ""
-    @State private var isSaving = false
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Provider").font(.headline)
-
-            List(Provider.allCases, selection: $selection) { provider in
-                ProviderRow(
-                    provider: provider,
-                    isActive: settings.activeProvider == provider,
-                    hasKey: settings.hasKey(for: provider)
-                )
-                .tag(provider)
-            }
-            .listStyle(.bordered(alternatesRowBackgrounds: false))
-            .frame(height: 6 * 34 + 8)
-
-            if let provider = selection {
-                details(for: provider)
-            } else {
-                Text("Select a provider to configure it.")
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsSection("AI Provider") {
+                ProviderSettings(settings: settings)
             }
 
-            Spacer(minLength: 0)
-            Divider()
-            Text("Hotkey \(HotKey.defaultDisplay) toggles the chat panel. Conversations are never saved; only the provider, model and API key (in Keychain) are stored.")
+            SettingsSection("General") {
+                VStack(alignment: .leading, spacing: 12) {
+                    SettingsRow("Keyboard shortcut", detail: "Opens \(AppInfo.name) from any app.") {
+                        HotKeyRecorder(settings: settings)
+                    }
+                    if !settings.hotKeyRegistered && !settings.isRecordingHotKey {
+                        Text("\(settings.hotKey.display) is already used by another app. Choose a different shortcut, or open \(AppInfo.name) from the menu bar.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Divider()
+                    SettingsRow("Launch at login", detail: nil) {
+                        Toggle("Launch at login", isOn: Binding(
+                            get: { settings.launchAtLogin == .on || settings.launchAtLogin == .needsApproval },
+                            set: { settings.setLaunchAtLogin($0) }
+                        ))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                    }
+                    loginItemNote
+                }
+            }
+
+            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the provider above, with your next question — leave out passwords and other secrets.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
-        .frame(width: 480, height: 560)
-        .onAppear {
-            selection = settings.activeProvider
-            loadFields()
-        }
-        .onChange(of: selection) { _, _ in loadFields() }
+        .frame(width: 460)
+        .fixedSize(horizontal: false, vertical: true)
+        .onAppear { settings.refreshLaunchAtLogin() }
     }
 
     @ViewBuilder
-    private func details(for provider: Provider) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private var loginItemNote: some View {
+        switch settings.launchAtLogin {
+        case .needsApproval:
             HStack {
-                Text("API key").frame(width: 60, alignment: .leading)
-                SecureField(
-                    "API key",
-                    text: $keyInput,
-                    prompt: Text(settings.hasKey(for: provider)
-                        ? "Saved in Keychain — leave blank to keep"
-                        : "Paste your \(provider.displayName) API key")
-                )
-                .labelsHidden()
-                .textFieldStyle(.roundedBorder)
-            }
-            HStack {
-                Text("Model").frame(width: 60, alignment: .leading)
-                TextField("Model", text: $modelInput, prompt: Text(provider.defaultModel))
-                    .labelsHidden()
-                    .textFieldStyle(.roundedBorder)
-            }
-            HStack(spacing: 12) {
-                Button(isSaving ? "Testing…" : "Save") {
-                    save(provider)
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(isSaving || (keyInput.isEmpty && !settings.hasKey(for: provider)))
-
-                if settings.hasKey(for: provider) {
-                    Button("Remove Key", role: .destructive) {
-                        settings.removeKey(for: provider)
-                        keyInput = ""
-                    }
-                    .disabled(isSaving)
-                }
-                Spacer()
-                Link("Get a key ↗", destination: provider.keyURL)
-                    .font(.callout)
-            }
-            StatusLine(provider: provider, status: settings.connectionStatus(for: provider))
-        }
-    }
-
-    private func loadFields() {
-        keyInput = ""
-        modelInput = selection.map { settings.storedModel(for: $0) } ?? ""
-    }
-
-    private func save(_ provider: Provider) {
-        isSaving = true
-        let key = keyInput
-        let model = modelInput
-        Task {
-            await settings.save(provider: provider, newKey: key, model: model)
-            keyInput = ""
-            isSaving = false
-        }
-    }
-}
-
-private struct ProviderRow: View {
-    let provider: Provider
-    let isActive: Bool
-    let hasKey: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ProviderGlyphView(provider: provider)
-            Text(provider.displayName)
-            Spacer()
-            if hasKey {
-                Image(systemName: "key.fill")
+                Text("Allow \(AppInfo.name) in System Settings › General › Login Items.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .help("API key saved in Keychain")
+                Spacer()
+                Button("Open Login Items") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .controlSize(.small)
             }
-            if isActive {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(Color.accentColor)
-                    .help("Active provider")
-            }
+        case .failed(let message):
+            Text("Couldn't change the login item: \(message)")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
+        case .on, .off:
+            EmptyView()
         }
-        .padding(.vertical, 3)
     }
 }
 
-private struct StatusLine: View {
-    let provider: Provider
-    let status: AppSettings.ConnectionStatus
+/// A titled group on a quiet card, like System Settings.
+private struct SettingsSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.content = content
+    }
 
     var body: some View {
-        switch status {
-        case .untested:
-            EmptyView()
-        case .testing:
-            HStack(spacing: 6) {
-                ProgressView().controlSize(.small)
-                Text("\(provider.displayName) · Testing…")
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            content()
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 0.5)
+                )
+        }
+    }
+}
+
+private struct SettingsRow<Control: View>: View {
+    let title: String
+    let detail: String?
+    @ViewBuilder let control: () -> Control
+
+    init(_ title: String, detail: String?, @ViewBuilder control: @escaping () -> Control) {
+        self.title = title
+        self.detail = detail
+        self.control = control
+    }
+
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                if let detail {
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                }
             }
-        case .connected:
-            Text("\(provider.displayName) · ✓ Connected")
-                .foregroundStyle(.green)
-        case .failed(let message):
-            Text("\(provider.displayName) · ✗ \(message)")
-                .foregroundStyle(.red)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-                .lineLimit(4)
+            Spacer(minLength: 12)
+            control()
         }
     }
 }

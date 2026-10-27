@@ -25,12 +25,15 @@ public enum RequestBuilderError: Error, Equatable, LocalizedError {
     case missingAPIKey
     case noMessages
     case invalidModel(String)
+    case imagesUnsupported(String)
 
     public var errorDescription: String? {
         switch self {
         case .missingAPIKey: return "API key is missing."
         case .noMessages: return "Nothing to send."
         case .invalidModel(let model): return "Invalid model name: \(model)"
+        case .imagesUnsupported(let provider):
+            return "\(provider) can't read images. Switch provider from the wax seal, or start a new letter without the picture."
         }
     }
 }
@@ -57,6 +60,9 @@ public enum RequestBuilder {
         guard !key.isEmpty else { throw RequestBuilderError.missingAPIKey }
         let turns = normalize(messages)
         guard !turns.isEmpty else { throw RequestBuilderError.noMessages }
+        if !provider.acceptsImages, turns.contains(where: { $0.image != nil }) {
+            throw RequestBuilderError.imagesUnsupported(provider.displayName)
+        }
         let model = provider.resolvedModel(model)
 
         var request: URLRequest
@@ -72,7 +78,7 @@ public enum RequestBuilder {
             body = [
                 "model": model,
                 "stream": true,
-                "messages": turns.map { ["role": $0.role.rawValue, "content": $0.content] },
+                "messages": turns.map { ["role": $0.role.rawValue, "content": openAIContent($0)] },
             ]
 
         case .anthropic:
@@ -83,7 +89,7 @@ public enum RequestBuilder {
                 "model": model,
                 "stream": true,
                 "max_tokens": options.maxTokens ?? anthropicDefaultMaxTokens,
-                "messages": turns.map { ["role": $0.role.rawValue, "content": $0.content] },
+                "messages": turns.map { ["role": $0.role.rawValue, "content": anthropicContent($0)] },
             ]
             if anthropicFallbackModels.contains(model) {
                 request.setValue(anthropicFallbackBeta, forHTTPHeaderField: "anthropic-beta")
@@ -106,7 +112,7 @@ public enum RequestBuilder {
             request.setValue(key, forHTTPHeaderField: "x-goog-api-key")
             var geminiBody: [String: Any] = [
                 "contents": turns.map {
-                    ["role": $0.role == .user ? "user" : "model", "parts": [["text": $0.content]]]
+                    ["role": $0.role == .user ? "user" : "model", "parts": geminiParts($0)]
                 },
             ]
             if let maxTokens = options.maxTokens {
@@ -125,20 +131,52 @@ public enum RequestBuilder {
 
     /// Drops empty turns (e.g. a reply that failed before any text arrived) and merges
     /// consecutive turns of the same role so every provider sees strictly alternating roles.
+    /// Attached text is folded into `content`, so the result holds exactly what is sent;
+    /// an attached image stays as the turn's attachment.
     public static func normalize(_ messages: [ChatMessage]) -> [ChatMessage] {
         var result: [ChatMessage] = []
         for message in messages {
-            let text = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { continue }
+            let wire = message.wireContent
+            guard !wire.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+            let picture = message.attachment.flatMap { $0.image == nil ? nil : $0 }
             if let last = result.last, last.role == message.role {
-                result[result.count - 1].content = last.content + "\n\n" + message.content
+                result[result.count - 1].content = last.content + "\n\n" + wire
+                if last.attachment == nil { result[result.count - 1].attachment = picture }
             } else {
-                result.append(message)
+                result.append(ChatMessage(id: message.id, role: message.role, content: wire, attachment: picture))
             }
         }
         // A conversation must start with the user.
         while let first = result.first, first.role != .user { result.removeFirst() }
         return result
+    }
+
+    // MARK: Multimodal content
+
+    /// A plain string, or text + image parts when the turn carries a picture.
+    private static func openAIContent(_ turn: ChatMessage) -> Any {
+        guard let image = turn.image else { return turn.content }
+        return [
+            ["type": "text", "text": turn.content],
+            ["type": "image_url", "image_url": ["url": "data:\(image.mediaType);base64,\(image.data.base64EncodedString())"]],
+        ]
+    }
+
+    /// Anthropic recommends the image before the text that refers to it.
+    private static func anthropicContent(_ turn: ChatMessage) -> Any {
+        guard let image = turn.image else { return turn.content }
+        return [
+            ["type": "image", "source": ["type": "base64", "media_type": image.mediaType, "data": image.data.base64EncodedString()]],
+            ["type": "text", "text": turn.content],
+        ]
+    }
+
+    private static func geminiParts(_ turn: ChatMessage) -> [[String: Any]] {
+        guard let image = turn.image else { return [["text": turn.content]] }
+        return [
+            ["inline_data": ["mime_type": image.mediaType, "data": image.data.base64EncodedString()]],
+            ["text": turn.content],
+        ]
     }
 
     private static let geminiModelAllowed = CharacterSet(

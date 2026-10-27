@@ -122,6 +122,86 @@ final class ChatClientTests: XCTestCase {
         }
     }
 
+    func testStreamThatEndsWithoutAStopSignalIsIncomplete() async {
+        // The connection closes cleanly mid-reply: no finish_reason, no [DONE].
+        StubURLProtocol.stub = .init(status: 200, body: Data("""
+        data: {"choices":[{"delta":{"content":"The first half"}}]}
+
+
+        """.utf8))
+        var received = ""
+        do {
+            for try await delta in makeClient().stream(
+                provider: .openAI, apiKey: "k", model: "",
+                messages: [ChatMessage(role: .user, content: "hi")]
+            ) {
+                received += delta
+            }
+            XCTFail("expected an error")
+        } catch {
+            XCTAssertEqual(error as? ChatClientError, .incomplete)
+        }
+        XCTAssertEqual(received, "The first half")
+    }
+
+    func testGeminiStopReasonCompletesTheStream() async throws {
+        StubURLProtocol.stub = .init(status: 200, body: Data("""
+        data: {"candidates":[{"content":{"parts":[{"text":"Hi"}]},"finishReason":"STOP"}]}
+
+
+        """.utf8))
+        let text = try await collect(.gemini)
+        XCTAssertEqual(text, "Hi")
+    }
+
+    func testOpenAITruncationThrowsAfterText() async {
+        StubURLProtocol.stub = .init(status: 200, body: Data("""
+        data: {"choices":[{"delta":{"content":"Long answ"}}]}
+
+        data: {"choices":[{"delta":{},"finish_reason":"length"}]}
+
+        data: [DONE]
+
+
+        """.utf8))
+        do {
+            _ = try await collect(.openRouter)
+            XCTFail("expected an error")
+        } catch let ChatClientError.stream(message) {
+            XCTAssertTrue(message.contains("cut off"), message)
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
+    }
+
+    func testSendsAttachmentAsContext() async throws {
+        StubURLProtocol.stub = .init(status: 200, body: Data("data: [DONE]\n\n".utf8))
+        let attachment = try XCTUnwrap(ContextAttachment(source: .pasted, text: "let x = 1"))
+        for try await _ in makeClient().stream(
+            provider: .openAI, apiKey: "k", model: "",
+            messages: [ChatMessage(role: .user, content: "Explain", attachment: attachment)]
+        ) {}
+        let body = try XCTUnwrap(StubURLProtocol.lastRequest.flatMap(Self.body))
+        XCTAssertTrue(body.contains("let x = 1"), body)
+        XCTAssertTrue(body.contains("Explain"), body)
+    }
+
+    /// URLProtocol sees the body as a stream, not `httpBody`.
+    private static func body(of request: URLRequest) -> String? {
+        if let data = request.httpBody { return String(decoding: data, as: UTF8.self) }
+        guard let stream = request.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let read = stream.read(&buffer, maxLength: buffer.count)
+            guard read > 0 else { break }
+            data.append(buffer, count: read)
+        }
+        return String(decoding: data, as: UTF8.self)
+    }
+
     func testConnectionTesterSucceedsOnFirstDelta() async throws {
         StubURLProtocol.stub = .init(status: 200, body: Data("data: {\"choices\":[{\"delta\":{\"content\":\"OK\"}}]}\n\n".utf8))
         try await ConnectionTester.test(client: makeClient(), provider: .xAI, apiKey: "k", model: "")
