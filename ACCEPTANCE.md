@@ -11,7 +11,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 安装后 `Howler.app` 可通过右键 → 打开（或 `xattr -dr com.apple.quarantine`）启动
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
 - [ ] 首次启动（未配置）自动弹出 Settings 窗口
-- [ ] 菜单栏图标为信封（envelope）；菜单包含：Open Howler（⌥Space）、Settings…、Quit Howler；Quit 可正常退出
+- [ ] Finder、DMG 中的 Howler.app 显示羽毛笔火漆图标（不是空白应用图标）
+- [ ] 菜单栏图标为刻着 H 的火漆剪影，随浅色 / 深色菜单栏变色；菜单包含：Open Howler（⌥Space）、Settings…、Quit Howler；Quit 可正常退出
 
 ## 2. 全局快捷键与面板 / Hotkey & panel
 
