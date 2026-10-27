@@ -29,17 +29,72 @@ jobs:
       - name: Test
         run: swift test
 
+      # With the Developer ID secrets set, builds are signed (and tagged releases notarized);
+      # without them, as on forks, everything below falls back to an ad-hoc signature.
+      - name: Import signing certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          if [[ -z "$CERT_P12_BASE64" ]]; then
+            echo "No signing certificate configured; building ad-hoc."
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" | awk '/Developer ID Application/ { print $2; exit }')"
+          if [[ -z "$IDENTITY" ]]; then
+            echo "error: the certificate holds no Developer ID Application identity" >&2
+            exit 1
+          fi
+          echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
       - name: Build app bundle
         run: ./scripts/bundle.sh
 
+      - name: Notarization credentials
+        if: startsWith(github.ref, 'refs/tags/v') && env.SIGN_IDENTITY != ''
+        env:
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          if [[ -z "$NOTARY_KEY_P8_BASE64" || -z "$NOTARY_KEY_ID" || -z "$NOTARY_ISSUER_ID" ]]; then
+            echo "error: signed release without notarization credentials; Gatekeeper would still block it" >&2
+            exit 1
+          fi
+          echo "$NOTARY_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          {
+            echo "NOTARY_KEY_PATH=$RUNNER_TEMP/notary.p8"
+            echo "NOTARY_KEY_ID=$NOTARY_KEY_ID"
+            echo "NOTARY_ISSUER_ID=$NOTARY_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Notarize app
+        if: env.NOTARY_KEY_PATH != ''
+        run: ./scripts/notarize.sh app
+
       - name: Build disk image
         run: ./scripts/dmg.sh
+
+      - name: Notarize disk image
+        if: env.NOTARY_KEY_PATH != ''
+        run: ./scripts/notarize.sh dmg
 
       - name: Inspect bundle
         run: |
           source app.config
           plutil -p "build/stage.noindex/$APP_NAME.app/Contents/Info.plist"
           codesign -dv "build/stage.noindex/$APP_NAME.app" 2>&1
+          spctl --assess --type execute --verbose=2 "build/stage.noindex/$APP_NAME.app" 2>&1 || true
           ls -la build
 
       - uses: actions/upload-artifact@v4

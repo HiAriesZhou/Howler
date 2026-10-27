@@ -136,7 +136,7 @@ HOWLER_DEMO=1 .build/debug/Howler          # 其他变体：long、multi、burn�
 HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
 ```
 
-改应用名或 Bundle ID：修改 [`app.config`](app.config) 后重新构建。发布：在同一文件里改好 `VERSION`，推送同名的 `v` tag，CI 会自动测试、构建并发布 Release。手动验收清单见 [ACCEPTANCE.md](ACCEPTANCE.md)。
+改应用名或 Bundle ID：修改 [`app.config`](app.config) 后重新构建。发布：在同一文件里改好 `VERSION`，推送同名的 `v` tag，CI 会自动测试、构建、签名、公证并发布 Release（见 [release signing](docs/release-signing.md)）。手动验收清单见 [ACCEPTANCE.md](ACCEPTANCE.md)。
 
 <details>
 <summary>从 Napkin 或 QuickAsk 升级</summary>

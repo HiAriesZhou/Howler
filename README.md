@@ -136,7 +136,7 @@ HOWLER_DEMO=1 .build/debug/Howler          # also: long, multi, burn, image, set
 HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
 ```
 
-To rename the app or change its bundle ID, edit [`app.config`](app.config) and rebuild. To release, bump `VERSION` there and push a matching `v` tag. CI tests, builds and publishes the release. Manual checks are listed in [ACCEPTANCE.md](ACCEPTANCE.md).
+To rename the app or change its bundle ID, edit [`app.config`](app.config) and rebuild. To release, bump `VERSION` there and push a matching `v` tag. CI tests, builds, signs, notarizes and publishes the release (see [release signing](docs/release-signing.md)). Manual checks are listed in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 <details>
 <summary>Upgrading from Napkin or QuickAsk</summary>

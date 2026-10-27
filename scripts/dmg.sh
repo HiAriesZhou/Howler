@@ -29,4 +29,9 @@ rm -f "$DMG"
 hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE" -fs HFS+ \
     -format UDZO -imagekey zlib-level=9 -ov "$DMG"
 hdiutil verify "$DMG"
+if [[ -n "${SIGN_IDENTITY:-}" ]]; then
+    echo "==> codesign disk image (${SIGN_IDENTITY})"
+    codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
+    codesign --verify --strict "$DMG"
+fi
 echo "Built $DMG"
