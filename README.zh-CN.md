@@ -56,7 +56,7 @@
 
 ## 安装
 
-1. 从 [Releases](https://github.com/HiAriesZhou/Howler/releases) 下载 `Howler.zip`，解压后把 `Howler.app` 拖进“应用程序”。
+1. 从 [Releases](https://github.com/HiAriesZhou/Howler/releases) 下载 `Howler.dmg`，打开后把 Howler 拖到 Applications。`Howler.zip` 里是同一个应用。
 2. 应用是 ad-hoc 签名，未经公证，首次打开会被 Gatekeeper 拦截。可以在 Finder 中右键点 Howler，选**打开**（macOS 15 起需要到“系统设置 › 隐私与安全性”中点“仍要打开”），或者执行：
    ```bash
    xattr -dr com.apple.quarantine /Applications/Howler.app
@@ -123,6 +123,7 @@ $H config show
 ```bash
 make test   # 单元测试：配置、请求、流式解析、附件、快捷键、书写节奏
 make app    # universal 构建，生成 build/Howler.app 与 build/Howler.zip（ad-hoc 签名）
+make dmg    # 同一个应用打成 build/Howler.dmg，附 Applications 快捷方式
 make run    # 构建并打开
 ```
 

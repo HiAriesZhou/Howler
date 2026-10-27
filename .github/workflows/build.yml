@@ -32,6 +32,9 @@ jobs:
       - name: Build app bundle
         run: ./scripts/bundle.sh
 
+      - name: Build disk image
+        run: ./scripts/dmg.sh
+
       - name: Inspect bundle
         run: |
           source app.config
@@ -42,7 +45,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Howler
-          path: build/*.zip
+          path: |
+            build/*.zip
+            build/*.dmg
           if-no-files-found: error
 
       - name: Publish release
@@ -56,8 +61,8 @@ jobs:
             exit 1
           fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" build/*.zip --clobber
+            gh release upload "$GITHUB_REF_NAME" build/*.zip build/*.dmg --clobber
           else
-            gh release create "$GITHUB_REF_NAME" build/*.zip \
+            gh release create "$GITHUB_REF_NAME" build/*.zip build/*.dmg \
               --title "$APP_NAME $GITHUB_REF_NAME" --generate-notes --prerelease
           fi

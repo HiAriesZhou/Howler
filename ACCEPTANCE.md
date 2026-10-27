@@ -1,13 +1,14 @@
 # Howler 手动验收清单 / Manual Acceptance Checklist
 
-在一台 macOS 14+ 的 Mac 上，用 Release 中的 `Howler.zip` 逐项验证。每项打 ✅ / ❌ 并备注。
-Run on macOS 14+ with the released `Howler.zip`. Mark each item ✅ / ❌.
+在一台 macOS 14+ 的 Mac 上，用 Release 中的 `Howler.dmg`（或 `Howler.zip`）逐项验证。每项打 ✅ / ❌ 并备注。
+Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each item ✅ / ❌.
 
 环境 / Environment：macOS 版本 ______ · 芯片 Apple Silicon / Intel · 版本 v______
 
 ## 1. 安装与启动 / Install & launch
 
-- [ ] 解压后 `Howler.app` 可通过右键 → 打开（或 `xattr -dr com.apple.quarantine`）启动
+- [ ] 打开 `Howler.dmg`：窗口中有 Howler 与 Applications 快捷方式，拖入后可推出磁盘映像
+- [ ] 安装后 `Howler.app` 可通过右键 → 打开（或 `xattr -dr com.apple.quarantine`）启动
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
 - [ ] 首次启动（未配置）自动弹出 Settings 窗口
 - [ ] 菜单栏图标为信封（envelope）；菜单包含：Open Howler（⌥Space）、Settings…、Quit Howler；Quit 可正常退出
@@ -130,5 +131,5 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 
 ## 8. 发布 / Release
 
-- [ ] 推送与 `app.config` 中 `VERSION` 一致的 tag（如 `v0.1.2`）：CI 创建 pre-release 并附上 `Howler.zip`
+- [ ] 推送与 `app.config` 中 `VERSION` 一致的 tag（如 `v0.1.2`）：CI 创建 pre-release 并附上 `Howler.zip` 与 `Howler.dmg`
 - [ ] 推送不一致的 tag：CI 的 “Publish release” 步骤失败并说明原因

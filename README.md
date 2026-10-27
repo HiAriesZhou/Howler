@@ -56,7 +56,7 @@ Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the
 
 ## Install
 
-1. Download `Howler.zip` from [Releases](https://github.com/HiAriesZhou/Howler/releases), unzip it, and move `Howler.app` to Applications.
+1. Download `Howler.dmg` from [Releases](https://github.com/HiAriesZhou/Howler/releases), open it, and drag Howler onto Applications. `Howler.zip` holds the same app.
 2. The app is ad-hoc signed and not notarized, so Gatekeeper stops it the first time. Right-click it and choose **Open** (on macOS 15+, use **System Settings › Privacy & Security › Open Anyway**), or run:
    ```bash
    xattr -dr com.apple.quarantine /Applications/Howler.app
@@ -123,6 +123,7 @@ Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. No third-party dependencies.
 ```bash
 make test   # unit tests: config, requests, streaming, attachments, hotkeys, quill pacing
 make app    # universal build → build/Howler.app and build/Howler.zip (ad-hoc signed)
+make dmg    # the same app in build/Howler.dmg, beside an Applications link
 make run    # build and open
 ```
 
