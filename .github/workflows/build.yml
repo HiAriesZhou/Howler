@@ -38,8 +38,8 @@ jobs:
       - name: Inspect bundle
         run: |
           source app.config
-          plutil -p "build/$APP_NAME.app/Contents/Info.plist"
-          codesign -dv "build/$APP_NAME.app" 2>&1
+          plutil -p "build/stage.noindex/$APP_NAME.app/Contents/Info.plist"
+          codesign -dv "build/stage.noindex/$APP_NAME.app" 2>&1
           ls -la build
 
       - uses: actions/upload-artifact@v4

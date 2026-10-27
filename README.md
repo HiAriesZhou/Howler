@@ -122,7 +122,7 @@ Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. No third-party dependencies.
 
 ```bash
 make test   # unit tests: config, requests, streaming, attachments, hotkeys, quill pacing
-make app    # universal build → build/Howler.app and build/Howler.zip (ad-hoc signed)
+make app    # universal build → build/Howler.zip, app staged in build/stage.noindex (ad-hoc signed)
 make dmg    # the same app in build/Howler.dmg, beside an Applications link
 make run    # build and open
 make icon   # re-render Resources/AppIcon.icns from Sources/Howler/AppIconArt.swift

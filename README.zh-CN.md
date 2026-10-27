@@ -122,7 +122,7 @@ $H config show
 
 ```bash
 make test   # 单元测试：配置、请求、流式解析、附件、快捷键、书写节奏
-make app    # universal 构建，生成 build/Howler.app 与 build/Howler.zip（ad-hoc 签名）
+make app    # universal 构建，生成 build/Howler.zip，应用放在 build/stage.noindex（ad-hoc 签名）
 make dmg    # 同一个应用打成 build/Howler.dmg，附 Applications 快捷方式
 make run    # 构建并打开
 make icon   # 由 Sources/Howler/AppIconArt.swift 重新渲染 Resources/AppIcon.icns
