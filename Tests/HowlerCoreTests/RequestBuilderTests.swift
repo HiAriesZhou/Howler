@@ -191,10 +191,11 @@ final class RequestBuilderTests: XCTestCase {
         XCTAssertEqual(parts.last?["text"] as? String, "Read this")
     }
 
-    func testTextOnlyProvidersRejectImages() {
-        XCTAssertThrowsError(try buildWithImage(.deepSeek)) { error in
-            XCTAssertEqual(error as? RequestBuilderError, .imagesUnsupported("DeepSeek"))
-        }
+    func testImagesAreLeftToTheService() throws {
+        // DeepSeek's chat API takes image_url parts; whether a model reads them is its call.
+        let messages = try XCTUnwrap(buildWithImage(.deepSeek)["messages"] as? [[String: Any]])
+        let parts = try XCTUnwrap(messages.first?["content"] as? [[String: Any]])
+        XCTAssertEqual(parts.last?["type"] as? String, "image_url")
     }
 
     func testNormalizeKeepsImagesWhenMerging() {

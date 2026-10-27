@@ -25,15 +25,12 @@ public enum RequestBuilderError: Error, Equatable, LocalizedError {
     case missingAPIKey
     case noMessages
     case invalidModel(String)
-    case imagesUnsupported(String)
 
     public var errorDescription: String? {
         switch self {
         case .missingAPIKey: return "API key is missing."
         case .noMessages: return "Nothing to send."
         case .invalidModel(let model): return "Invalid model name: \(model)"
-        case .imagesUnsupported(let provider):
-            return "\(provider) can't read images. Set up a model that can in Settings, or start a new letter without the picture."
         }
     }
 }
@@ -59,10 +56,8 @@ public enum RequestBuilder {
         guard !key.isEmpty else { throw RequestBuilderError.missingAPIKey }
         let turns = normalize(messages)
         guard !turns.isEmpty else { throw RequestBuilderError.noMessages }
+        // Whether a model reads images is up to the service; its own error says when it can't.
         let known = service.knownProvider
-        if let known, !known.acceptsImages, turns.contains(where: { $0.image != nil }) {
-            throw RequestBuilderError.imagesUnsupported(known.displayName)
-        }
         let model = service.model
 
         var request: URLRequest

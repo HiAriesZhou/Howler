@@ -48,7 +48,7 @@
 附件说明：附上内容后不写问题直接按 ↩，会以 “Explain this.” 发送。附件只随下一个问题发给当前模型服务，请不要粘贴或截取密码、密钥等敏感信息。
 
 - **截屏**：首次使用需要在“系统设置 → 隐私与安全性 → 录屏与系统录音”中允许 Howler，然后再试一次。截屏时信纸会暂时让开，截完带着原来的对话回来。由于应用是 ad-hoc 签名，重新构建安装后可能需要重新授权。
-- **图片**：缩放到长边不超过 1568 像素后发送（OpenAI 兼容格式用 `image_url`，Anthropic 用 `image` 块，Gemini 用 `inline_data`）。DeepSeek 的接口只支持文字，带图片发送会直接提示；其他服务能否读图取决于所选模型，不支持时显示服务返回的错误。
+- **图片**：缩放到长边不超过 1568 像素后发送（OpenAI 兼容格式用 `image_url`，Anthropic 用 `image` 块，Gemini 用 `inline_data`）。能否读图取决于所选模型，Howler 不预先拦截；模型不支持时显示服务返回的错误。
 - **从剪贴板粘贴**：macOS 15.4 起读取剪贴板可能弹出系统询问，选“允许”即可，信纸会保持打开。
 
 若快捷键已被其他应用占用，菜单和设置中都会提示，此时可换一个快捷键，或通过菜单 “Open Howler” 打开。
@@ -174,7 +174,7 @@ scripts/bundle.sh          组装 .app、Info.plist（LSUIElement）、codesign�
 **Howler** is a minimal macOS (14+) menu-bar AI chat shell. Press **Option+Space** (configurable) and an enchanted letter settles on screen: write your question on its line, and a quill writes the answer beneath it, ink blooming from gold into sepia as it streams. Press **Esc** and the letter catches fire at its bottom edge and burns away, taking the conversation with it — nothing is kept.
 
 - **Paper, not a text box:** deckled parchment, fibers, a fold crease; the model service's mark is a crimson wax seal top-left (click it to see the model or open Settings). The sheet grows with the answer up to an A4 page (or the screen), then follows the quill.
-- **Wax-sealed context:** "+ Attach" in the corner pastes from the clipboard or captures a screen region (⌘V of a long text or a picture works too). It rides along as a rune-cut amber wax seal instead of filling the question; click it to read or remove it, or just press ↩ to send it with "Explain this." The clipboard is read only when you paste; images go as each API's image part (DeepSeek is text-only). Screen capture needs Screen & System Audio Recording permission. Don't paste or capture secrets — attachments go to your model service with the next question.
+- **Wax-sealed context:** "+ Attach" in the corner pastes from the clipboard or captures a screen region (⌘V of a long text or a picture works too). It rides along as a rune-cut amber wax seal instead of filling the question; click it to read or remove it, or just press ↩ to send it with "Explain this." The clipboard is read only when you paste; images go as each API's image part; whether the model can read them is up to the service, whose error is shown if not. Screen capture needs Screen & System Audio Recording permission. Don't paste or capture secrets — attachments go to your model service with the next question.
 - **Burn after reading:** dismissing the letter (Esc, a click outside, the hotkey) sets it alight — scorch, glowing edge and sparks, about a second. Opening Settings and Reduce Motion skip the fire.
 - **Honest endings:** truncation, safety blocks and dropped connections are reported instead of looking like a finished answer.
 - **Settings (one page):** the model in use, its host and format, a status (Ready / Not checked yet / Failed / No API key) with **Check**, and **Copy Setup Prompt**. Below: keyboard shortcut and launch at login. ⇧⌘C copies the latest answer.

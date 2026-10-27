@@ -38,7 +38,7 @@ Run on macOS 14+ with the released `Howler.zip`. Mark each item ✅ / ❌.
 - [ ] 点火漆印：展开预览卡片（文字显示前几行，图片显示缩略图），可 Remove
 - [ ] 有火漆印、输入框为空时按 ↩：以 “Explain this.” 发送
 - [ ] 带火漆印发送：问题前出现 ✦，回答针对附件内容（截图问 “图里写了什么”）；之后的问题不再附带
-- [ ] DeepSeek 下带图片发送：显示 “DeepSeek can't read images…”，提示到 Settings 换能读图的模型
+- [ ] DeepSeek 下带图片发送：请求照常发出；模型能读图则回答图片内容，不能则显示 DeepSeek 返回的错误（Howler 不预先拦截）
 - [ ] 不主动粘贴或截屏时，Howler 从不读取剪贴板（macOS 15.4+ 不会弹出“允许粘贴”提示）
 - [ ] 点左上角火漆印：菜单显示 “Written by <模型>”（悬停显示完整配置）与 Settings…；页脚显示 “模型 · 主机”
 - [ ] 发送后先出现悬停的羽毛笔与 “The quill is thinking…”，2 秒后显示秒数
