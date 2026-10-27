@@ -30,6 +30,7 @@ struct SettingsView: View {
                             set: { settings.setLaunchAtLogin($0) }
                         ))
                         .toggleStyle(.switch)
+                        .controlSize(.mini)
                         .labelsHidden()
                     }
                     loginItemNote

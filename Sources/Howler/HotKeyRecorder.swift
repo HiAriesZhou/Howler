@@ -20,10 +20,7 @@ struct HotKeyRecorder: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Button(settings.isRecordingHotKey ? "Type a shortcut…" : settings.hotKey.display) {
-                settings.isRecordingHotKey ? stopRecording() : startRecording()
-            }
-            .frame(minWidth: 120)
+            // Reset sits to the left so the shortcut button keeps to the row's trailing edge.
             if settings.hotKey != .optionSpace && !settings.isRecordingHotKey {
                 Button {
                     settings.setHotKey(.optionSpace)
@@ -32,6 +29,12 @@ struct HotKeyRecorder: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Reset to \(HotKeyCombo.optionSpace.display)")
+            }
+            Button {
+                settings.isRecordingHotKey ? stopRecording() : startRecording()
+            } label: {
+                Text(settings.isRecordingHotKey ? "Type a shortcut…" : settings.hotKey.display)
+                    .frame(minWidth: 64)
             }
         }
         .onDisappear(perform: stopRecording)

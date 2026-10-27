@@ -11,19 +11,92 @@ struct ModelSettings: View {
     @State private var copied = false
 
     var body: some View {
+        Group {
+            if let service = settings.service {
+                configured(service)
+            } else {
+                setupGuide
+            }
+        }
+        .onAppear { settings.reload() }
+    }
+
+    // MARK: Set up
+
+    /// No model yet: how to get one, step by step, ending in the button that starts it.
+    private var setupGuide: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ProviderStamp(glyph: nil, pressKey: 0, size: 40)
+                .frame(width: 44, height: 44)
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Set up a model")
+                        .font(.title3.weight(.semibold))
+                    Text("An AI assistant does it for you in a minute.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 7) {
+                    step(1, "Copy the setup prompt.")
+                    step(2, "Paste it into Claude Code, Codex or another AI assistant that can run commands.")
+                    step(3, "Pick a model, and copy your API key when it asks. It never needs the key in the chat.")
+                }
+                HStack(spacing: 10) {
+                    copyButton
+                        .buttonStyle(.borderedProminent)
+                        .tint(Wax.crimson.base)
+                    if copied {
+                        Text("Now paste it into your assistant.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .transition(.opacity)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func step(_ number: Int, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("\(number)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Wax.crimson.base)
+                .frame(width: 17, height: 17)
+                .background(Circle().fill(Wax.crimson.base.opacity(0.12)))
+                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+            Text(text)
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: Configured
+
+    private func configured(_ service: ModelService) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 14) {
-                ProviderStamp(glyph: settings.service?.glyph, pressKey: stampKey, size: 40)
+                ProviderStamp(glyph: service.glyph, pressKey: stampKey, size: 40)
                     .frame(width: 44, height: 44)
-                serviceDescription
-                Spacer(minLength: 12)
-                if settings.service != nil {
-                    Button(settings.checkState == .checking ? "Checking…" : "Check") {
-                        Task { await settings.check() }
-                    }
-                    .disabled(settings.checkState == .checking || !settings.hasKey)
-                    .help("Send a tiny real request to make sure it answers")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(service.model)
+                        .font(.title3.weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                    Text("\(service.host) · \(service.format.displayName)")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    status
                 }
+                Spacer(minLength: 12)
+                Button(settings.checkState == .checking ? "Checking…" : "Check") {
+                    Task { await settings.check() }
+                }
+                .disabled(settings.checkState == .checking || !settings.hasKey)
+                .help("Send a tiny real request to make sure it answers")
             }
 
             if case .failed(let message) = settings.checkState {
@@ -40,47 +113,22 @@ struct ModelSettings: View {
 
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(settings.service == nil ? "Set up a model" : "Change the setup")
-                    Text("Hand it to your AI assistant.")
+                    Text("Change the setup")
+                    Text("Hand the prompt to your AI assistant.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 12)
-                Button(action: copyPrompt) {
-                    Label(copied ? "Copied" : "Copy Setup Prompt", systemImage: copied ? "checkmark" : "doc.on.doc")
-                }
-                .help("Copies instructions for Claude Code, Codex or another assistant. It never asks you to paste the key into the chat.")
+                copyButton
             }
         }
-        .onAppear { settings.reload() }
     }
 
-    @ViewBuilder
-    private var serviceDescription: some View {
-        if let service = settings.service {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(service.model)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-                Text("\(service.host) · \(service.format.displayName)")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                status
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("No model yet")
-                    .font(.title3.weight(.semibold))
-                Text("Nothing will answer your letters until one is set up.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+    private var copyButton: some View {
+        Button(action: copyPrompt) {
+            Label(copied ? "Copied" : "Copy Setup Prompt", systemImage: copied ? "checkmark" : "doc.on.doc")
         }
+        .help("Copies instructions for Claude Code, Codex or another assistant. It never asks you to paste the key into the chat.")
     }
 
     private var status: some View {

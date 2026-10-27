@@ -67,6 +67,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")
         open.target = self
+        if #available(macOS 26, *) {
+            // macOS 26 gives Settings… and Quit icons; without one this row's title sits apart.
+            open.image = NSImage(systemSymbolName: "envelope.open", accessibilityDescription: nil)
+        }
         menu.addItem(open)
         let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         warning.isEnabled = false
