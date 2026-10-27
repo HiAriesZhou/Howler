@@ -60,9 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "envelope", accessibilityDescription: AppInfo.name)
-            ?? NSImage(systemSymbolName: "text.bubble", accessibilityDescription: AppInfo.name)
-        item.button?.image?.isTemplate = true
+        item.button?.image = MenuBarMark.image()
 
         let menu = NSMenu()
         let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/seal.png" width="112" alt="Howler 的深红火漆印">
+  <img src="docs/images/icon.png" width="128" alt="Howler 图标：刻着 H 的深红火漆、一支渡鸦羽毛笔，羊皮纸从下方燃起">
 </p>
 
 <h1 align="center">Howler</h1>
@@ -61,7 +61,7 @@
    ```bash
    xattr -dr com.apple.quarantine /Applications/Howler.app
    ```
-3. 菜单栏会出现一个信封图标。Howler 没有 Dock 图标。
+3. 菜单栏会出现一枚刻着 H 的小火漆印。Howler 没有 Dock 图标。
 
 ## 配置模型
 
@@ -125,13 +125,14 @@ make test   # 单元测试：配置、请求、流式解析、附件、快捷键
 make app    # universal 构建，生成 build/Howler.app 与 build/Howler.zip（ad-hoc 签名）
 make dmg    # 同一个应用打成 build/Howler.dmg，附 Applications 快捷方式
 make run    # 构建并打开
+make icon   # 由 Sources/Howler/AppIconArt.swift 重新渲染 Resources/AppIcon.icns
 ```
 
 调试构建自带演示模式，不需要 Key，也不联网：
 
 ```bash
 swift build
-HOWLER_DEMO=1 .build/debug/Howler          # 其他变体：long、multi、burn、image、setup、settings、brand
+HOWLER_DEMO=1 .build/debug/Howler          # 其他变体：long、multi、burn、image、setup、settings
 HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
 ```
 
@@ -146,6 +147,6 @@ HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
 ---
 
 <p align="center">
-  <sub>服务商标记使用压进火漆的单色字母与 SF Symbols，没有打包任何商标 Logo。<br>
+  <sub>图标和火漆都用代码绘制，材质与信纸里的纸、蜡、火一致；服务商标记使用单色字母与 SF Symbols，没有打包任何商标 Logo。<br>
   MIT 许可证 · © 2026 AriesZhou</sub>
 </p>

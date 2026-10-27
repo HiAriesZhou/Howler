@@ -77,7 +77,7 @@ struct WaxSeal<Mark: View>: View {
 }
 
 /// The outline of a puddle of wax: round-ish, with soft lumps where it spread.
-private struct WaxPuddle: Shape {
+struct WaxPuddle: Shape {
     let seed: UInt64
 
     func path(in rect: CGRect) -> Path {

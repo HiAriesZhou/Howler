@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/seal.png" width="112" alt="Howler's crimson wax seal">
+  <img src="docs/images/icon.png" width="128" alt="Howler's icon: a crimson wax seal cut with an H, a raven quill, and parchment burning from below">
 </p>
 
 <h1 align="center">Howler</h1>
@@ -61,7 +61,7 @@ Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the
    ```bash
    xattr -dr com.apple.quarantine /Applications/Howler.app
    ```
-3. An envelope appears in the menu bar. Howler has no Dock icon.
+3. A small wax seal marked H appears in the menu bar. Howler has no Dock icon.
 
 ## Set up a model
 
@@ -125,13 +125,14 @@ make test   # unit tests: config, requests, streaming, attachments, hotkeys, qui
 make app    # universal build → build/Howler.app and build/Howler.zip (ad-hoc signed)
 make dmg    # the same app in build/Howler.dmg, beside an Applications link
 make run    # build and open
+make icon   # re-render Resources/AppIcon.icns from Sources/Howler/AppIconArt.swift
 ```
 
 Debug builds include a demo mode that needs no key and no network:
 
 ```bash
 swift build
-HOWLER_DEMO=1 .build/debug/Howler          # also: long, multi, burn, image, setup, settings, brand
+HOWLER_DEMO=1 .build/debug/Howler          # also: long, multi, burn, image, setup, settings
 HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
 ```
 
@@ -146,6 +147,6 @@ The project was renamed QuickAsk → Napkin → Howler, and so was the GitHub re
 ---
 
 <p align="center">
-  <sub>Provider marks are monochrome letters and SF Symbols pressed into wax. No trademarked logos are bundled.<br>
+  <sub>The icon and seals are drawn in code with the letter's own paper, wax and fire. Provider marks are monochrome letters and SF Symbols; no trademarked logos are bundled.<br>
   MIT License · © 2026 AriesZhou</sub>
 </p>

@@ -200,6 +200,8 @@ struct DeckledSheet: Shape {
 
 /// Paper body: warm center, aged edges, fibers, flecks and a faint fold crease.
 struct PaperTexture: View {
+    /// The fold down the middle; the app icon leaves it out.
+    var showsCrease = true
     @Environment(\.parchment) private var parchment
 
     var body: some View {
@@ -261,6 +263,7 @@ struct PaperTexture: View {
             }
 
             // The letter's fold: a faint crease down the middle.
+            guard showsCrease else { return }
             let crease = size.width * 0.5
             context.fill(
                 Path(CGRect(x: crease - 0.5, y: 0, width: 0.6, height: size.height)),

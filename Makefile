@@ -1,4 +1,4 @@
-.PHONY: build test app zip dmg run clean
+.PHONY: build test app zip dmg icon run clean
 
 build:
 	swift build
@@ -13,6 +13,10 @@ app zip:
 # Wraps build/<APP_NAME>.app into build/<APP_NAME>.dmg (with an Applications link).
 dmg: app
 	./scripts/dmg.sh
+
+# Re-renders Resources/AppIcon.icns and docs/images/icon.png from Sources/Howler/AppIconArt.swift.
+icon:
+	./scripts/icon.sh
 
 run: app
 	. ./app.config && open "build/$$APP_NAME.app"
