@@ -1,5 +1,5 @@
 import XCTest
-@testable import NapkinCore
+@testable import HowlerCore
 
 final class StreamDecoderTests: XCTestCase {
     private func decode(_ data: String, event: String? = nil, _ format: WireFormat) -> StreamDelta {

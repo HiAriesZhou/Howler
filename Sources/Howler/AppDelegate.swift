@@ -1,5 +1,5 @@
 import AppKit
-import NapkinCore
+import HowlerCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {

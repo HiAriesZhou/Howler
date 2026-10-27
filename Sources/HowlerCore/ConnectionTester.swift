@@ -22,7 +22,7 @@ public enum ConnectionTester {
         provider: Provider,
         apiKey: String,
         model: String,
-        appName: String = "Napkin"
+        appName: String = "Howler"
     ) async throws {
         let stream = client.stream(
             provider: provider,

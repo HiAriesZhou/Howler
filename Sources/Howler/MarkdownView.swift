@@ -1,5 +1,5 @@
 import AppKit
-import NapkinCore
+import HowlerCore
 import SwiftUI
 
 /// Renders a reply: prose via `AttributedString(markdown:)` (inline syntax, whitespace kept),

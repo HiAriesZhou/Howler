@@ -1,7 +1,7 @@
 import AppKit
 
 @main
-enum NapkinApp {
+enum HowlerApp {
     @MainActor
     static func main() {
         let app = NSApplication.shared

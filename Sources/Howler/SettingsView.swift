@@ -1,4 +1,4 @@
-import NapkinCore
+import HowlerCore
 import SwiftUI
 
 struct SettingsView: View {

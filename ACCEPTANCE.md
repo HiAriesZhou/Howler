@@ -1,16 +1,16 @@
-# Napkin 手动验收清单 / Manual Acceptance Checklist
+# Howler 手动验收清单 / Manual Acceptance Checklist
 
-在一台 macOS 14+ 的 Mac 上，用 Release 中的 `Napkin.zip` 逐项验证。每项打 ✅ / ❌ 并备注。
-Run on macOS 14+ with the released `Napkin.zip`. Mark each item ✅ / ❌.
+在一台 macOS 14+ 的 Mac 上，用 Release 中的 `Howler.zip` 逐项验证。每项打 ✅ / ❌ 并备注。
+Run on macOS 14+ with the released `Howler.zip`. Mark each item ✅ / ❌.
 
 环境 / Environment：macOS 版本 ______ · 芯片 Apple Silicon / Intel · 版本 v______
 
 ## 1. 安装与启动 / Install & launch
 
-- [ ] 解压后 `Napkin.app` 可通过右键 → 打开（或 `xattr -dr com.apple.quarantine`）启动
+- [ ] 解压后 `Howler.app` 可通过右键 → 打开（或 `xattr -dr com.apple.quarantine`）启动
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
 - [ ] 首次启动（未配置）自动弹出 Settings 窗口
-- [ ] 菜单包含：Open Napkin（⌥Space）、Settings…、Quit Napkin；Quit 可正常退出
+- [ ] 菜单包含：Open Howler（⌥Space）、Settings…、Quit Howler；Quit 可正常退出
 
 ## 2. 全局快捷键与面板 / Hotkey & panel
 
@@ -32,7 +32,7 @@ Run on macOS 14+ with the released `Napkin.zip`. Mark each item ✅ / ❌.
 - [ ] 留空 Key 再次 Save 会保留原 Key 并重新测试
 - [ ] 填写不存在的模型名 → Save → 显示 ✗ 及服务商的错误信息
 - [ ] Remove Key 后该服务商 🔑 消失；若为当前服务商，面板回到 “Configure in Settings”
-- [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.napkin` 可看到条目（账户名为服务商 id）
+- [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.howler` 可看到条目（账户名为服务商 id）
 - [ ] 退出并重启应用：服务商、模型、Key 仍然有效
 
 ## 4. 各服务商真实流式 / Per-provider real streaming
@@ -63,9 +63,9 @@ For each provider: save a key (default model), open the panel, send the prompts 
 
 - [ ] 关闭面板后再打开：对话已清空
 - [ ] 生成过程中关闭面板：请求被取消，再打开为空白，不会出现旧回答
-- [ ] `~/Library/Containers`、`~/Library/Application Support`、`~/Library/Caches` 中没有 Napkin 的对话文件
-- [ ] `defaults read com.hiarieszhou.napkin` 只包含 `provider` 与 `models`
-- [ ] Console.app 中按进程 Napkin 过滤，发送消息时没有对话内容日志
+- [ ] `~/Library/Containers`、`~/Library/Application Support`、`~/Library/Caches` 中没有 Howler 的对话文件
+- [ ] `defaults read com.hiarieszhou.howler` 只包含 `provider` 与 `models`
+- [ ] Console.app 中按进程 Howler 过滤，发送消息时没有对话内容日志
 
 ## 6. 错误处理 / Errors
 

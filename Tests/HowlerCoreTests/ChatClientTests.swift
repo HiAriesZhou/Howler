@@ -3,7 +3,7 @@ import Foundation
 import FoundationNetworking
 #endif
 import XCTest
-@testable import NapkinCore
+@testable import HowlerCore
 
 /// Serves canned responses so `ChatClient` can be exercised end to end without network.
 final class StubURLProtocol: URLProtocol {

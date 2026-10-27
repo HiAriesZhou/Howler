@@ -1,5 +1,5 @@
 import Foundation
-import NapkinCore
+import HowlerCore
 
 /// The only persisted state: the active provider and per-provider model (UserDefaults)
 /// plus API keys (Keychain). Conversations are never stored.

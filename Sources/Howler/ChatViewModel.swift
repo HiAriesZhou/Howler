@@ -1,5 +1,5 @@
 import Foundation
-import NapkinCore
+import HowlerCore
 
 /// One in-memory conversation. Cleared whenever the panel closes; never written anywhere.
 @MainActor

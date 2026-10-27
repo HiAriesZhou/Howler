@@ -1,5 +1,5 @@
 import XCTest
-@testable import NapkinCore
+@testable import HowlerCore
 
 final class SSEParserTests: XCTestCase {
     func testParsesEventsSeparatedByBlankLines() {

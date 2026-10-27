@@ -39,6 +39,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Napkin
+          name: Howler
           path: build/*.zip
           if-no-files-found: error

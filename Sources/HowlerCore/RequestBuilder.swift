@@ -14,7 +14,7 @@ public struct RequestOptions: Equatable, Sendable {
     /// caps the whole request.
     public var timeout: TimeInterval
 
-    public init(maxTokens: Int? = nil, appName: String = "Napkin", timeout: TimeInterval = 600) {
+    public init(maxTokens: Int? = nil, appName: String = "Howler", timeout: TimeInterval = 600) {
         self.maxTokens = maxTokens
         self.appName = appName
         self.timeout = timeout
@@ -44,7 +44,7 @@ public enum RequestBuilder {
         "claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5",
     ]
     public static let anthropicFallbackBeta = "server-side-fallback-2026-07-01"
-    public static let projectURL = "https://github.com/HiAriesZhou/Napkin"
+    public static let projectURL = "https://github.com/HiAriesZhou/Howler"
 
     public static func streamingRequest(
         provider: Provider,

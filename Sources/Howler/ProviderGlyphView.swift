@@ -1,4 +1,4 @@
-import NapkinCore
+import HowlerCore
 import SwiftUI
 
 /// Monochrome provider mark: an SF Symbol or a letter in a rounded square.
