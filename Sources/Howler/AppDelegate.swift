@@ -58,6 +58,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateMenu(for: combo)
     }
 
+    /// The size macOS 26 draws menu item symbols at.
+    private static let menuIconSide: CGFloat = 16
+
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = MenuBarMark.image()
@@ -67,7 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         open.target = self
         if #available(macOS 26, *) {
             // macOS 26 gives Settings… and Quit icons; without one this row's title sits apart.
-            open.image = NSImage(systemSymbolName: "envelope.open", accessibilityDescription: nil)
+            // Howler's own seal, at the size of the symbols beside it.
+            open.image = MenuBarMark.image(side: Self.menuIconSide)
         }
         menu.addItem(open)
         let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
