@@ -2,8 +2,10 @@
 # Builds a release binary with SwiftPM and assembles build/stage.noindex/<APP_NAME>.app + build/<APP_NAME>.zip.
 # The app is staged in a .noindex folder so Spotlight doesn't list a second copy beside /Applications.
 # App identity comes from app.config (the one place to rename the app).
-# Usage: scripts/bundle.sh            # universal (arm64 + x86_64)
+# Usage: scripts/bundle.sh            # universal (arm64 + x86_64), ad-hoc signed
 #        ARCHS=arm64 scripts/bundle.sh
+#        SIGN_IDENTITY="Developer ID Application: …" scripts/bundle.sh   # signed with hardened runtime,
+#                                     # ready for scripts/notarize.sh (any identity name or SHA-1 works)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -72,8 +74,15 @@ PLIST
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 plutil -lint "$APP/Contents/Info.plist"
 
-echo "==> ad-hoc codesign"
-codesign --force --sign - --timestamp=none "$APP"
+if [[ -n "${SIGN_IDENTITY:-}" ]]; then
+    # A stable identity keeps Keychain and privacy grants across updates; notarization
+    # requires the hardened runtime and a secure timestamp.
+    echo "==> codesign (${SIGN_IDENTITY}, hardened runtime)"
+    codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+else
+    echo "==> ad-hoc codesign"
+    codesign --force --sign - --timestamp=none "$APP"
+fi
 codesign --verify --strict --verbose=2 "$APP"
 lipo -info "$APP/Contents/MacOS/$APP_NAME"
 # shellcheck disable=SC2086 # ARCHS is a space-separated list
