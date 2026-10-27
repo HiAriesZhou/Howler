@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Wraps the app into build/<APP_NAME>.dmg: the app beside a link to /Applications, so
 # installing is a single drag. Run scripts/bundle.sh first (`make dmg` does both).
-# Usage: scripts/dmg.sh                    # packs build/<APP_NAME>.app
+# Usage: scripts/dmg.sh                    # packs build/stage.noindex/<APP_NAME>.app
 #        scripts/dmg.sh path/to/App.app    # packs a given bundle, e.g. one CI built
 set -euo pipefail
 
@@ -10,7 +10,7 @@ cd "$ROOT"
 # shellcheck source=../app.config
 source ./app.config
 
-APP="${1:-$ROOT/build/$APP_NAME.app}"
+APP="${1:-$ROOT/build/stage.noindex/$APP_NAME.app}"
 [[ -d "$APP" ]] || { echo "error: no app bundle at $APP (run scripts/bundle.sh first)" >&2; exit 1; }
 
 OUT="$ROOT/build"

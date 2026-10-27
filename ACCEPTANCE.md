@@ -128,7 +128,7 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 
 ## 7. 改名 / Rename
 
-- [ ] 修改 `app.config` 中 `APP_NAME="AskBox"` 后 `make app`：得到 `build/AskBox.app` 与 `build/AskBox.zip`，菜单项、设置窗口标题均显示 AskBox
+- [ ] 修改 `app.config` 中 `APP_NAME="AskBox"` 后 `make app`：得到 `build/stage.noindex/AskBox.app` 与 `build/AskBox.zip`，菜单项、设置窗口标题均显示 AskBox
 
 ## 8. 发布 / Release
 

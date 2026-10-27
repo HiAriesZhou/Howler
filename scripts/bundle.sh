@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Builds a release binary with SwiftPM and assembles build/<APP_NAME>.app + build/<APP_NAME>.zip.
+# Builds a release binary with SwiftPM and assembles build/stage.noindex/<APP_NAME>.app + build/<APP_NAME>.zip.
+# The app is staged in a .noindex folder so Spotlight doesn't list a second copy beside /Applications.
 # App identity comes from app.config (the one place to rename the app).
 # Usage: scripts/bundle.sh            # universal (arm64 + x86_64)
 #        ARCHS=arm64 scripts/bundle.sh
@@ -21,9 +22,9 @@ BINARY="$BIN_DIR/$EXECUTABLE_PRODUCT"
 [[ -x "$BINARY" ]] || { echo "error: binary not found at $BINARY" >&2; exit 1; }
 
 OUT="$ROOT/build"
-APP="$OUT/$APP_NAME.app"
+APP="$OUT/stage.noindex/$APP_NAME.app"
 ZIP="$OUT/$APP_NAME.zip"
-rm -rf "$APP" "$ZIP"
+rm -rf "$APP" "$ZIP" "$OUT/$APP_NAME.app" # the last: where earlier versions put the app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp "$BINARY" "$APP/Contents/MacOS/$APP_NAME"
