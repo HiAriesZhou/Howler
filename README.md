@@ -1,131 +1,150 @@
-# Napkin
+<p align="center">
+  <img src="docs/images/seal.png" width="112" alt="Howler's crimson wax seal">
+</p>
 
-一个极简的 macOS 菜单栏 AI 对话小工具：按 **⌥Space（Option+空格）** 呼出类似 Spotlight 的浮动输入框，提问、流式看到回答，按 **Esc** 关闭，对话随即清空。
+<h1 align="center">Howler</h1>
 
-- 支持 6 家服务商，均为官方 API 的真实流式（SSE）输出：OpenAI、Anthropic、Google Gemini、xAI、DeepSeek、OpenRouter
-- 只在菜单栏显示图标，没有 Dock 图标（`LSUIElement`）
-- 回答支持 Markdown（行内格式、标题、列表、代码块 + 一键复制）
-- 不保存任何对话；API Key 存在系统钥匙串（Keychain）
-- 纯 Swift + SwiftUI/AppKit，无第三方依赖，要求 macOS 14+
+<p align="center">
+  <strong><em>Burn after reading.</em></strong>
+</p>
 
-> **从 QuickAsk 升级？** 项目已从 QuickAsk 更名为 Napkin，GitHub 仓库也随之改名：本地克隆请执行 `git remote set-url origin https://github.com/HiAriesZhou/Napkin.git`。
-> 新的 Bundle ID `com.hiarieszhou.napkin` 与旧的 `io.github.hiarieszhou.quickask` 互不相通：钥匙串中的 API Key、`UserDefaults` 设置以及系统授予的隐私权限（TCC）都**不会**沿用，升级后需在 Settings 中重新填入 API Key。请删除旧的 `QuickAsk.app`（否则两者会争抢 ⌥Space）；旧的钥匙串条目可在“钥匙串访问”中搜索 `io.github.hiarieszhou.quickask` 手动删除。
+<p align="center">
+  A sealed letter for your quick questions on macOS.<br>
+  Write on the parchment, a quill writes the answer back, and the letter burns when you're done.
+</p>
 
-## 安装
+<p align="center">
+  <a href="https://github.com/HiAriesZhou/Howler/releases"><img src="https://img.shields.io/github/v/release/HiAriesZhou/Howler?include_prereleases&style=flat-square&color=a0211b&label=release" alt="Latest release"></a>
+  <a href="https://github.com/HiAriesZhou/Howler/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/HiAriesZhou/Howler/build.yml?branch=main&style=flat-square&label=build" alt="Build status"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-3b2f25?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Swift-5.10-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift 5.10">
+  <img src="https://img.shields.io/badge/dependencies-none-b5801f?style=flat-square" alt="No dependencies">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/HiAriesZhou/Howler?style=flat-square&color=5e3b08" alt="MIT license"></a>
+</p>
 
-1. 从 [Releases](https://github.com/HiAriesZhou/Napkin/releases) 下载 `Napkin.zip` 并解压，把 `Napkin.app` 拖进“应用程序”。
-2. 应用只做了 ad-hoc 签名，未经过 Apple 公证，首次打开会被 Gatekeeper 拦截。任选一种方式放行：
-   - 在 Finder 中**右键点击 `Napkin.app` → 打开**，在弹窗中再点“打开”（macOS 15 起可能需要到“系统设置 → 隐私与安全性”中点“仍要打开”）；
-   - 或在终端执行：
-     ```bash
-     xattr -dr com.apple.quarantine /Applications/Napkin.app
-     ```
-3. 启动后菜单栏会出现 💬 图标。首次启动若未配置，会自动打开设置窗口。
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-## 使用
-
-| 操作 | 说明 |
-| --- | --- |
-| ⌥Space | 呼出 / 隐藏对话面板（全局快捷键，任何应用中都可用） |
-| ↩ | 发送 |
-| ⌥↩ | 换行 |
-| Esc / 点击面板外 | 关闭面板，**同时清空本次对话** |
-| 菜单栏图标 → Settings… | 打开设置 |
-| 菜单栏图标 → Quit | 退出 |
-
-面板内同一次会话支持多轮上下文；关闭面板即丢弃。生成过程中可点输入框右侧的 ⏹ 停止。
-
-若 ⌥Space 已被其他应用占用，菜单中会提示，此时可通过菜单 “Open Napkin” 打开面板。
-
-## 配置
-
-1. 菜单栏图标 → **Settings…**
-2. 在列表中选择一个服务商（单选）。
-3. 填入 API Key（`SecureField`，不明文显示）；可选填写模型名，留空则使用默认模型：
-
-   | 服务商 | 接口 | 默认模型 |
-   | --- | --- | --- |
-   | OpenAI | `api.openai.com/v1/chat/completions` | `gpt-5.4-mini` |
-   | Anthropic | `api.anthropic.com/v1/messages` | `claude-opus-5-5` |
-   | Google Gemini | `generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse` | `gemini-3.6-flash` |
-   | xAI | `api.x.ai/v1/chat/completions` | `grok-4.6` |
-   | DeepSeek | `api.deepseek.com/chat/completions` | `deepseek-flash` |
-   | OpenRouter | `openrouter.ai/api/v1/chat/completions` | `openrouter/auto` |
-
-4. 点击 **Save**：Key 写入钥匙串，然后发送一次极小的真实请求进行测试，结果显示为 `OpenAI · ✓ Connected` 或 `OpenAI · ✗ 错误信息`。
-5. 保存的服务商即为当前使用的服务商。未配置时，面板只显示 “Configure in Settings” 按钮。
-
-说明：
-
-- 模型名会过时，可随时在设置里改成服务商当前提供的任意模型。
-- Anthropic 使用 `anthropic-version: 2026-10-21`；对支持的模型（`claude-opus-5-5` 等）会附带 `fallbacks: "default"`，在安全分类器拒答时由服务端自动改用推荐的回退模型。
-- 由于是 ad-hoc 签名，**更新应用后**首次读取 Key 时 macOS 可能弹出钥匙串授权提示，点“始终允许”即可。
-
-## 隐私
-
-- **不保存任何对话历史**：消息只在内存中，关闭面板即清空，退出应用即消失。
-- 持久化的只有：当前服务商与每个服务商的模型名（`UserDefaults`）、API Key（钥匙串，service 为应用的 Bundle ID）。
-- 不记录任何日志，不含统计/遥测；网络请求使用 ephemeral `URLSession`，不写磁盘缓存。
-- 请求直接发往你选择的服务商，不经过任何中转服务器（OpenRouter 本身即为聚合服务）。
-
-## 图标说明
-
-服务商列表使用 SF Symbols 或单色字母标记（如 “O”、“A”、✦），**没有打包任何服务商的商标 Logo**。各名称与商标归其各自所有者所有，本项目与它们无关联。
-
-## 改名
-
-应用身份集中在仓库根目录的 [`app.config`](app.config)：
-
-```bash
-APP_NAME="Napkin"                    # 应用名 / .app 名 / zip 名 / 菜单与窗口标题
-BUNDLE_ID="com.hiarieszhou.napkin"   # Bundle ID（也是钥匙串 service）
-VERSION="0.1.1"
-```
-
-修改后重新执行 `make app`。`scripts/bundle.sh` 会据此生成 `Info.plist`，应用运行时从 `Info.plist` 读取名称，界面文字会自动跟随。注意：
-
-- 修改 `BUNDLE_ID` 后，钥匙串中旧 Key 与旧的 `UserDefaults` 不会被新 ID 读取，需要重新配置。
-- SwiftPM 的 target/product 名（`Napkin` / `NapkinCore`）是内部名称，不随 `APP_NAME` 变化，也不影响用户看到的名字；如也想改，同时修改 `Package.swift`、`Sources/`、`Tests/` 下的目录名、`import` 语句和 `app.config` 中的 `EXECUTABLE_PRODUCT`。
-- 若 CI 产物名需要变化，同步修改 `.github/workflows/build.yml` 中的 artifact `name`。
-
-## 从源码构建
-
-需要 Xcode 15.3+（或对应的 Swift 5.10+ 工具链）和 macOS 14+：
-
-```bash
-make test   # swift test：请求构建、SSE 解析、各服务商增量解析的单元测试
-make app    # 构建 universal release，组装并 ad-hoc 签名 build/Napkin.app，打包 build/Napkin.zip
-make run    # 构建并打开
-```
-
-代码结构：
-
-```
-app.config                 应用名 / Bundle ID / 版本（唯一需要改的地方）
-Package.swift
-Sources/NapkinCore/        纯逻辑库：Provider、RequestBuilder、SSEParser、StreamDecoder、ChatClient、MarkdownBlocks
-Sources/Napkin/            App：菜单栏、Carbon 全局快捷键、浮动面板、设置、Keychain
-Tests/NapkinCoreTests/     XCTest
-scripts/bundle.sh          组装 .app、Info.plist（LSUIElement）、codesign、zip
-.github/workflows/build.yml  macos-latest 上测试 + 打包 + 上传 artifact
-```
-
-手动验收清单见 [ACCEPTANCE.md](ACCEPTANCE.md)。
+<p align="center">
+  <img src="docs/images/letter.png" width="720" alt="A Howler letter: a question beside a crimson wax seal, the answer written beneath it in ink">
+</p>
 
 ---
 
-## English
+## The letter
 
-**Napkin** is a minimal macOS (14+) menu-bar AI chat shell. Press **Option+Space** for a Spotlight-like floating panel, ask, watch the answer stream in, press **Esc** to close — the conversation is discarded.
+Press **⌥Space** anywhere. A letter settles at the top of the screen, already sealed in wax.
 
-> **Upgrading from QuickAsk?** The project and its GitHub repo were renamed from QuickAsk to Napkin; update old clones with `git remote set-url origin https://github.com/HiAriesZhou/Napkin.git`. The new bundle ID `com.hiarieszhou.napkin` does not share state with the old `io.github.hiarieszhou.quickask`: Keychain entries, UserDefaults and any TCC (privacy) grants are reset, so re-enter your API key in Settings after upgrading. Delete the old `QuickAsk.app` (both would compete for ⌥Space); its Keychain items can be removed in Keychain Access by searching `io.github.hiarieszhou.quickask`.
+- **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. Your question sits on a ruled line, and the answer is set in a book face below it. The sheet grows with the answer up to an A4 page, then follows the quill.
+- **A quill that writes.** Answers stream in at a hand's pace. Fresh ink glows gold before it settles to sepia, and the quill rests after the last word. While the model thinks, the quill hovers and counts the seconds.
+- **Wax seals.** The crimson seal names the model writing to you. Paste a long text or a picture, or capture a region of the screen, and it is sealed into an amber seal cut with runes instead of filling your question.
+- **Burn after reading.** Press Esc or click outside, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is saved.
 
-- **Providers:** OpenAI, Anthropic, Google Gemini, xAI, DeepSeek, OpenRouter — real SSE streaming against each official API (OpenAI-compatible `chat/completions`, Anthropic `/v1/messages`, Gemini `streamGenerateContent?alt=sse`).
-- **Install:** download `Napkin.zip` from Releases, unzip, move `Napkin.app` to Applications. It is ad-hoc signed (not notarized), so right-click → **Open** the first time, or run `xattr -dr com.apple.quarantine /Applications/Napkin.app`.
-- **Configure:** menu-bar icon → Settings… → pick a provider → paste the API key (optionally a model) → **Save**. The key goes to the Keychain and a tiny live request verifies it: `Provider · ✓ Connected` / `✗ error`.
-- **Privacy:** no chat history is ever written to disk; only the provider/model (UserDefaults) and the API key (Keychain) are stored. No logging, no telemetry.
-- **Glyphs:** SF Symbols / monochrome letter marks only — no trademarked provider logos are bundled.
-- **Rename:** edit `app.config` (`APP_NAME`, `BUNDLE_ID`) and run `make app`; the app reads its display name from the generated Info.plist.
-- **Build:** `make test`, `make app` (Xcode 15.3+ / Swift 5.10+).
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/burning.png" alt="The letter burning from its bottom edge"></td>
+    <td width="50%"><img src="docs/images/letter-dark.png" alt="The letter on candlelit paper in Dark Mode"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Esc, and it burns</em></td>
+    <td align="center"><em>Candlelit paper in Dark Mode</em></td>
+  </tr>
+</table>
 
-License: MIT.
+Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the fire. The text simply appears.
+
+## Install
+
+1. Download `Howler.zip` from [Releases](https://github.com/HiAriesZhou/Howler/releases), unzip it, and move `Howler.app` to Applications.
+2. The app is ad-hoc signed and not notarized, so Gatekeeper stops it the first time. Right-click it and choose **Open** (on macOS 15+, use **System Settings › Privacy & Security › Open Anyway**), or run:
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Howler.app
+   ```
+3. An envelope appears in the menu bar. Howler has no Dock icon.
+
+## Set up a model
+
+Howler writes with one model service. The setup is short enough to hand to an AI assistant.
+
+<p align="center">
+  <img src="docs/images/settings.png" width="460" alt="Howler Settings: the model, its host and status, Check and Copy Setup Prompt">
+</p>
+
+Open **Settings › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It asks which service and model you want, checks the official docs, writes the setup and runs a check until it passes. It never asks for your API key in the chat. When it needs the key, it asks you to copy it, then runs `pbpaste | Howler config set api-key --stdin`, which sends the key straight into the Keychain.
+
+You can run the same commands yourself. They live in the app binary:
+
+```bash
+H=/Applications/Howler.app/Contents/MacOS/Howler
+$H config schema                                    # every field, with examples
+$H config set preset=deepseek 'body={"thinking":{"type":"disabled"}}'
+pbpaste | $H config set api-key --stdin             # or --env NAME, --file PATH
+$H check                                            # --verbose shows the request, key masked
+$H config show
+```
+
+| Field | Meaning |
+| --- | --- |
+| `format` | `chat-completions` (OpenAI and compatible, including local Ollama / LM Studio), `anthropic-messages`, `gemini-generate-content` |
+| `base-url` | API base without the endpoint path; `https://` only, except `http://localhost` |
+| `model` | Model name as the service spells it |
+| `body` | JSON merged into every request, e.g. to turn thinking off or cap the output |
+| `headers` | Extra HTTP headers. Never the key. |
+| `preset` | `openai`, `anthropic`, `gemini`, `xai`, `deepseek` or `openrouter`. Fills the three fields above. |
+
+Changes take effect in the running app at once. Every request goes straight to the service you configured, never through a relay.
+
+## Use
+
+| | |
+| --- | --- |
+| **⌥Space** | Open the letter. Press again to burn it. The shortcut can be changed in Settings. |
+| **↩** / **⌥↩** | Send / new line |
+| **⇧⌘C** | Copy the latest answer (or click ❧ Copy) |
+| **+ Attach** | Paste from the clipboard, or capture a screen region |
+| **⌘V** | Short text goes into the question. Long text or a picture is sealed as an attachment. |
+| **Esc** / click outside | Burn the letter, and the conversation with it |
+
+Follow-up questions stay on the same sheet, separated by a fleuron. ⏹ stops a reply and keeps what is already written. Attachments travel only with your next question, so leave out passwords and other secrets. Screen capture asks for Screen & System Audio Recording permission the first time.
+
+## Privacy
+
+- No chat history, ever. Messages live in memory and burn with the letter.
+- Stored: the model setup, its last check and your shortcut (UserDefaults), plus the API key (Keychain).
+- The clipboard and the screen are read only when you paste or capture.
+- No logs, no telemetry. Network requests use an ephemeral `URLSession`.
+- The command line never prints the key.
+
+## Build from source
+
+Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. No third-party dependencies.
+
+```bash
+make test   # unit tests: config, requests, streaming, attachments, hotkeys, quill pacing
+make app    # universal build → build/Howler.app and build/Howler.zip (ad-hoc signed)
+make run    # build and open
+```
+
+Debug builds include a demo mode that needs no key and no network:
+
+```bash
+swift build
+HOWLER_DEMO=1 .build/debug/Howler          # also: long, multi, burn, image, setup, settings, brand
+HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
+```
+
+To rename the app or change its bundle ID, edit [`app.config`](app.config) and rebuild. To release, bump `VERSION` there and push a matching `v` tag. CI tests, builds and publishes the release. Manual checks are listed in [ACCEPTANCE.md](ACCEPTANCE.md).
+
+<details>
+<summary>Upgrading from Napkin or QuickAsk</summary>
+
+The project was renamed QuickAsk → Napkin → Howler, and so was the GitHub repo. Update old clones with `git remote set-url origin git@github.com:HiAriesZhou/Howler.git`. The bundle ID `com.hiarieszhou.howler` shares nothing with `com.hiarieszhou.napkin` or `io.github.hiarieszhou.quickask`, so set up the model again. Delete the old app, because both would compete for ⌥Space. You can remove the old Keychain items in Keychain Access by searching for the old bundle IDs.
+</details>
+
+---
+
+<p align="center">
+  <sub>Provider marks are monochrome letters and SF Symbols pressed into wax. No trademarked logos are bundled.<br>
+  MIT License · © 2026 AriesZhou</sub>
+</p>

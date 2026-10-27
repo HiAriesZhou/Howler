@@ -15,6 +15,8 @@ jobs:
   build:
     runs-on: macos-latest
     timeout-minutes: 30
+    permissions:
+      contents: write # create the GitHub Release on version tags
     steps:
       - uses: actions/checkout@v4
 
@@ -39,6 +41,23 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Napkin
+          name: Howler
           path: build/*.zip
           if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source app.config
+          if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "error: tag $GITHUB_REF_NAME does not match VERSION=$VERSION in app.config" >&2
+            exit 1
+          fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" build/*.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" build/*.zip \
+              --title "$APP_NAME $GITHUB_REF_NAME" --generate-notes --prerelease
+          fi
