@@ -119,5 +119,5 @@ jobs:
             gh release upload "$GITHUB_REF_NAME" build/*.zip build/*.dmg --clobber
           else
             gh release create "$GITHUB_REF_NAME" build/*.zip build/*.dmg \
-              --title "$APP_NAME $GITHUB_REF_NAME" --generate-notes --prerelease
+              --title "$APP_NAME $GITHUB_REF_NAME" --generate-notes --latest
           fi
