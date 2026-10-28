@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Howler — Burn after reading</title>
+  <meta name="description" content="A sealed letter for quick AI questions on macOS. Write on parchment, a quill writes the answer, and the letter burns when you're done. Menu bar, any model, nothing saved.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f3ead6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#140f0b" media="(prefers-color-scheme: dark)">
+  <link rel="canonical" href="https://howler.arieszhou.com/">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://howler.arieszhou.com/">
+  <meta property="og:title" content="Howler — Burn after reading">
+  <meta property="og:description" content="A sealed letter for quick AI questions on macOS. A quill writes the answer; the letter burns when you're done.">
+  <meta property="og:image" content="https://howler.arieszhou.com/assets/letter.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Pick the language before first paint: a saved choice, else the browser's.
+    (function () {
+      var lang = null;
+      try { lang = localStorage.getItem("howler-lang"); } catch (e) {}
+      if (!lang) lang = /^zh/i.test(navigator.language || "") ? "zh" : "en";
+      document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main"><span class="en">Skip to content</span><span class="zh">跳到正文</span></a>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Howler">
+      <img src="assets/icon.png" width="36" height="36" alt="">
+      <span>Howler</span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#letter"><span class="en">The letter</span><span class="zh">一封信</span></a>
+      <a href="#setup"><span class="en">Setup</span><span class="zh">配置</span></a>
+      <a href="#privacy"><span class="en">Privacy</span><span class="zh">隐私</span></a>
+      <a href="https://github.com/HiAriesZhou/Howler">GitHub</a>
+      <button class="lang" type="button" data-lang-toggle aria-label="Switch language / 切换语言">
+        <span class="en">中文</span><span class="zh">EN</span>
+      </button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- Hero: the product, then the letter itself writing and burning. -->
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <img class="hero-icon" src="assets/icon.png" width="128" height="128" alt="Howler icon: a crimson wax seal cut with an H, a raven quill, and parchment burning from below">
+        <h1>Howler</h1>
+        <p class="slogan">Burn after reading.</p>
+        <p class="lede">
+          <span class="en">A sealed letter for your quick questions on macOS. Write on the parchment, a quill writes the answer back, and the letter burns when you're done.</span>
+          <span class="zh">macOS 上一封用火漆封着的信，专门用来问小问题。在羊皮纸上写下问题，羽毛笔把回答写在下面；读完，信就烧掉。</span>
+        </p>
+        <div class="actions">
+          <a class="btn wax" href="https://github.com/HiAriesZhou/Howler/releases">
+            <span class="en">Download for macOS</span><span class="zh">下载 macOS 版</span>
+          </a>
+          <a class="btn quiet" href="https://github.com/HiAriesZhou/Howler">
+            <span class="en">View on GitHub</span><span class="zh">在 GitHub 查看</span>
+          </a>
+        </div>
+        <p class="meta">
+          <span class="en">macOS 14+ · Apple silicon &amp; Intel · Signed &amp; notarized · Free, MIT</span>
+          <span class="zh">macOS 14+ · Apple 芯片与 Intel · 已签名与公证 · 免费开源（MIT）</span>
+        </p>
+      </div>
+
+      <figure class="demo" aria-label="A letter writing its answer, then burning">
+        <div class="stage" data-stage>
+          <div class="paper">
+          <article class="sheet" data-sheet>
+            <div class="sheet-head">
+              <div class="seal" aria-hidden="true"><span>H</span></div>
+              <p class="ask" data-ask></p>
+            </div>
+            <p class="answer" data-answer></p>
+            <footer class="sheet-foot">
+              <span>deepseek-flash · api.deepseek.com</span>
+              <span>↩ write · ⇧⌘C copy · esc burn</span>
+            </footer>
+          </article>
+          </div>
+          <canvas class="fire" data-fire aria-hidden="true"></canvas>
+        </div>
+        <figcaption>
+          <button class="burn-now" type="button" data-burn>
+            <span class="en">Burn it</span><span class="zh">烧掉它</span>
+          </button>
+          <span class="hint"><span class="en">or press Esc</span><span class="zh">或按 Esc</span></span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- The letter -->
+    <section class="chapter" id="letter">
+      <h2><span class="en">A letter, not a chat box</span><span class="zh">一封信，不是聊天框</span></h2>
+      <p class="chapter-lede">
+        <span class="en">Press <kbd>⌥Space</kbd> anywhere. A letter settles at the top of the screen, already sealed in wax.</span>
+        <span class="zh">在任何应用里按 <kbd>⌥Space</kbd>，一封封好火漆的信就落在屏幕上方。</span>
+      </p>
+
+      <div class="feature">
+        <img src="assets/letter.png" width="1200" height="999" loading="lazy" alt="A Howler letter: a question beside a crimson wax seal, and the answer written beneath it with a code block and a list">
+        <div>
+          <h3><span class="en">Parchment and a quill</span><span class="zh">羊皮纸与羽毛笔</span></h3>
+          <p><span class="en">Deckled edges, fibers, a fold. Your question sits on a ruled line; the answer streams in at a hand's pace, fresh ink glowing gold before it settles to sepia. The sheet grows with the answer, up to an A4 page.</span>
+          <span class="zh">毛边、纤维纹理、一道折痕。问题写在横线上，回答按手写的节奏逐字出现，新墨先泛起金光，再沉为墨色。纸随回答向下展开，最长到 A4 比例。</span></p>
+          <p><span class="en">Markdown, code blocks with copy, and follow-up questions on the same sheet, separated by a fleuron.</span>
+          <span class="zh">支持 Markdown 和可复制的代码块；追问写在同一张纸上，每轮之间用花饰隔开。</span></p>
+        </div>
+      </div>
+
+      <div class="feature flip">
+        <img src="assets/burning.png" width="960" height="799" loading="lazy" alt="The letter catching fire at its bottom edge, scorch and sparks climbing toward the seal">
+        <div>
+          <h3><span class="en">Burn after reading</span><span class="zh">阅后即焚</span></h3>
+          <p><span class="en">Press Esc or click outside, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is kept.</span>
+          <span class="zh">按 Esc 或点击纸外，信纸从底边起火，焦痕、火光和火星一路烧到火漆印，这次对话也随之烧掉，什么都不留。</span></p>
+          <p class="aside"><span class="en">Reduce Motion skips the fire; the letter simply goes.</span><span class="zh">开启“减少动态效果”时不播放燃烧，信纸直接收起。</span></p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <img src="assets/letter-dark.png" width="960" height="799" loading="lazy" alt="The same letter on candlelit paper in Dark Mode">
+        <div>
+          <h3><span class="en">Wax-sealed context, candlelit at night</span><span class="zh">火漆附件，夜里是烛光</span></h3>
+          <p><span class="en">Paste a long text or a picture, or capture a region of the screen: it is sealed into an amber seal cut with runes instead of filling your question. The clipboard is read only when you paste.</span>
+          <span class="zh">粘贴长文本或图片，或截取屏幕区域，内容会封进一枚刻着符文的琥珀色火漆印，不会塞进问题里。剪贴板只在你粘贴时读取。</span></p>
+          <p><span class="en">In Dark Mode the paper dims to candlelight, so it never glares against a dark desktop.</span>
+          <span class="zh">深色模式下，纸张暗成烛光色，不会在深色桌面上刺眼。</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Setup -->
+    <section class="chapter" id="setup">
+      <h2><span class="en">Any model. Set up by your assistant.</span><span class="zh">任何模型，交给 AI 助手配置</span></h2>
+      <div class="feature flip">
+        <img class="settings-shot" src="assets/settings.png" width="1056" height="1002" loading="lazy" alt="Howler Settings: the model, its host and status, a Check button and Copy Setup Prompt">
+        <div>
+          <p><span class="en">Howler writes with one model service. Copy the setup prompt from Settings and paste it into Claude Code, Codex or any assistant that can run commands. It asks which model you want, reads the docs, configures Howler's built-in command line and checks it works.</span>
+          <span class="zh">Howler 只连接一个模型服务。在设置里复制配置提示词，粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪个模型、查官方文档、用 Howler 自带的命令行写好配置，并检查能否正常回答。</span></p>
+          <p><span class="en">Your API key never enters the chat: you copy it, and it goes straight into the Keychain.</span>
+          <span class="zh">API Key 不会出现在聊天里：你复制好，它直接存进钥匙串。</span></p>
+<pre><code>pbpaste | Howler config set api-key --stdin
+Howler check
+✓ Passed: deepseek-flash answered.</code></pre>
+        </div>
+      </div>
+
+      <ul class="models" aria-label="Supported services">
+        <li>OpenAI</li><li>Anthropic</li><li>Google Gemini</li><li>xAI</li><li>DeepSeek</li><li>OpenRouter</li>
+        <li><span class="en">Ollama &amp; LM Studio, locally</span><span class="zh">本机 Ollama 与 LM Studio</span></li>
+      </ul>
+      <p class="center small">
+        <span class="en">Chat Completions, Anthropic Messages and Gemini formats, with real streaming.</span>
+        <span class="zh">支持 Chat Completions、Anthropic Messages 与 Gemini 三种格式，真实流式输出。</span>
+      </p>
+    </section>
+
+    <!-- Privacy -->
+    <section class="chapter" id="privacy">
+      <h2><span class="en">Nothing is saved</span><span class="zh">什么都不保存</span></h2>
+      <ul class="vows">
+        <li><span class="en">No chat history, ever. Messages live in memory and burn with the letter.</span><span class="zh">从不保存对话：消息只在内存里，随信纸烧掉。</span></li>
+        <li><span class="en">The API key lives in the macOS Keychain and is never printed.</span><span class="zh">API Key 存在 macOS 钥匙串里，从不打印。</span></li>
+        <li><span class="en">Requests go straight to the service you chose, never through a relay.</span><span class="zh">请求直接发往你选择的服务，不经过任何中转。</span></li>
+        <li><span class="en">No logs, no telemetry, no account.</span><span class="zh">没有日志，没有统计，不需要注册账号。</span></li>
+      </ul>
+    </section>
+
+    <!-- Install -->
+    <section class="chapter install" id="install">
+      <h2><span class="en">Seal your first letter</span><span class="zh">封上你的第一封信</span></h2>
+      <ol>
+        <li><span class="en">Download <strong>Howler.dmg</strong> and drag Howler onto Applications.</span><span class="zh">下载 <strong>Howler.dmg</strong>，把 Howler 拖到 Applications。</span></li>
+        <li><span class="en">Open it. It is signed with a Developer ID and notarized by Apple, so it opens like any other app.</span><span class="zh">打开它。应用已用 Developer ID 签名并经 Apple 公证，像其他应用一样直接打开。</span></li>
+        <li><span class="en">Copy the setup prompt from Settings, hand it to your assistant, then press <kbd>⌥Space</kbd>.</span><span class="zh">在设置里复制配置提示词交给 AI 助手，然后按 <kbd>⌥Space</kbd>。</span></li>
+      </ol>
+      <div class="actions center">
+        <a class="btn wax" href="https://github.com/HiAriesZhou/Howler/releases">
+          <span class="en">Download for macOS</span><span class="zh">下载 macOS 版</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <img src="assets/icon.png" width="48" height="48" alt="">
+    <p class="slogan small-slogan">Burn after reading.</p>
+    <p>
+      <a href="https://github.com/HiAriesZhou/Howler">GitHub</a> ·
+      <a href="https://github.com/HiAriesZhou/Howler/releases"><span class="en">Releases</span><span class="zh">版本</span></a> ·
+      <a href="https://github.com/HiAriesZhou/Howler/blob/main/LICENSE">MIT</a>
+    </p>
+    <p class="maker">
+      <span class="en">Made with <span class="heart" role="img" aria-label="love">❤️</span> by</span>
+      <a class="author" href="https://arieszhou.com">
+        <img src="assets/avatar.jpg" width="28" height="28" alt="">
+        <span>AriesZhou</span>
+      </a>
+      <span class="zh">用 <span class="heart" role="img" aria-label="爱">❤️</span> 制作</span>
+    </p>
+    <p class="small">
+      <span class="en">The icon and seals are drawn in code with the letter's own paper, wax and fire. Provider names belong to their owners; Howler is not affiliated with them.</span>
+      <span class="zh">图标与火漆均以代码绘制，材质与信纸里的纸、蜡、火一致。各服务商名称归其所有者所有，Howler 与它们无关联。</span>
+    </p>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>
