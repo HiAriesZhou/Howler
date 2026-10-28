@@ -166,8 +166,16 @@
   var fire = (function () {
     var CELL = 4;
     var DURATION = 1150;
-    var MARGIN = 40; // the canvas reaches past the sheet, for sparks
-    var frame = null;
+    var MARGIN = 40;     // canvas room left, right and above the sheet, for sparks
+    var FLOOR = 46;      // canvas room below the sheet, where the ash settles
+    var paperEl = sheet.parentNode; // carries the sheet's shadow
+    var ashCanvas = document.querySelector("[data-ash]");
+    var frame = null, ashFrame = null, fadeTimer = null, ashTimer = null;
+    var tmp = document.createElement("canvas");
+    // Safari before 18 has no canvas filter; the glow then gets a soft halo drawn by hand.
+    var canFilter = typeof document.createElement("canvas").getContext("2d").filter === "string";
+
+    function clamp(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
     function field(width, height, seed) {
       var cols = Math.max(2, Math.ceil(width / CELL));
@@ -187,49 +195,67 @@
             var dx = ignitions[i][0] - c, dy = (ignitions[i][1] - r) * 1.15;
             distance = Math.min(distance, Math.sqrt(dx * dx + dy * dy));
           }
-          var n = 0.7 * coarse(c, r) + 0.3 * fine(c, r);
-          var t = distance / (rows + cols / 3) + 0.32 * n;
+          var t = distance / (rows + cols / 3) + 0.32 * (0.7 * coarse(c, r) + 0.3 * fine(c, r));
           times[r * cols + c] = t;
           if (t < lo) lo = t;
           if (t > hi) hi = t;
         }
       }
       for (var k = 0; k < times.length; k++) times[k] = (times[k] - lo) / (hi - lo || 1);
+
+      function cell() {
+        var c = Math.floor(random() * cols), r = Math.floor(random() * rows);
+        return { x: c * CELL, y: r * CELL, lit: times[r * cols + c] };
+      }
+      // Sparks rise from the burning edge; flakes of ash fall from it and settle below.
       var embers = [];
       for (var e = 0; e < 70; e++) {
-        var ec = Math.floor(random() * cols), er = Math.floor(random() * rows);
-        embers.push({ x: ec * CELL, y: er * CELL, lit: times[er * cols + ec], rise: 40 + random() * 80,
-                      drift: -14 + random() * 28, radius: 0.8 + random() * 1.4, phase: random() * 6 });
+        var ec = cell();
+        embers.push({ x: ec.x, y: ec.y, lit: ec.lit, rise: 40 + random() * 80, drift: -14 + random() * 28,
+                      radius: 0.8 + random() * 1.4, phase: random() * 6 });
       }
-      return { cols: cols, rows: rows, times: times, embers: embers };
+      var flakes = [];
+      for (var a = 0; a < 54; a++) {
+        var fc = cell();
+        var points = [], sides = 4 + Math.floor(random() * 3);
+        for (var v = 0; v < sides; v++) points.push(0.55 + random() * 0.45);
+        flakes.push({ x0: fc.x, y0: fc.y, lit: fc.lit, size: 1.4 + random() * 3.4, points: points,
+                      shade: random(), drift: -26 + random() * 52, speed: 170 + random() * 110,
+                      flutter: 3 + random() * 6, phase: random() * 6, spin: -5 + random() * 10,
+                      angle: random() * 6.28, rest: random(), ember: random() < 0.22,
+                      start: null, landedAt: null, x: 0, y: 0 });
+      }
+      return { cols: cols, rows: rows, times: times, embers: embers, flakes: flakes };
     }
 
-    var tmp = document.createElement("canvas");
-    var fadeTimer = null;
-    // Safari before 18 has no canvas filter; the glow then gets a soft halo drawn by hand.
-    var canFilter = typeof document.createElement("canvas").getContext("2d").filter === "string";
+    function pageColor() {
+      var m = getComputedStyle(document.body).backgroundColor.match(/\d+(\.\d+)?/g) || [233, 222, 198];
+      return [+m[0], +m[1], +m[2]];
+    }
 
-    // Paints one moment of the burn: the sheet is masked where the paper is gone, and the
-    // canvas carries the scorch, char and glowing edge on what is left, plus the sparks.
-    function draw(ctx, f, p, offX, offY, w, h) {
-      // One set of buffers per burn, cleared each frame.
-      var img = f.img || (f.img = ctx.createImageData(f.cols, f.rows));
-      var glow = f.glow || (f.glow = ctx.createImageData(f.cols, f.rows));
-      var mask = f.mask || (f.mask = ctx.createImageData(f.cols, f.rows));
-      var px = img.data, gl = glow.data, mk = mask.data;
-      px.fill(0); gl.fill(0); mk.fill(0);
-      for (var i = 0; i < f.times.length; i++) {
-        var d = f.times[i] - p; // > 0: not burned yet
+    // One moment of the burn: where the paper is gone the desk shows through (painted in
+    // the page's own color), with scorch, char and the glowing edge on what is left.
+    function draw(ctx, f, p, w, h, page) {
+      // One cell of padding all round, copying the edge, so the blurred cover reaches past
+      // the sheet's edge instead of leaving a thin rim of paper.
+      var pc = f.cols + 2, pr = f.rows + 2;
+      var img = f.img || (f.img = ctx.createImageData(pc, pr));
+      var glow = f.glow || (f.glow = ctx.createImageData(pc, pr));
+      var px = img.data, gl = glow.data;
+      gl.fill(0);
+      for (var i = 0; i < pc * pr; i++) {
+        var cc = Math.min(f.cols - 1, Math.max(0, (i % pc) - 1));
+        var cr = Math.min(f.rows - 1, Math.max(0, Math.floor(i / pc) - 1));
+        var d = f.times[cr * f.cols + cc] - p; // > 0: not burned yet
         var o = i * 4;
-        mk[o + 3] = 255 * clamp((d + 0.006) / 0.018);
-        var r = 0, g = 0, b = 0, a = 0, ca;
-        var remains = d >= -0.006; // browning and char only on paper that is still there
-        // Painted from the outside in: browning, char, then the burning edge on top.
-        ca = remains ? 0.28 * (1 - clamp((d - 0.07) / 0.12)) : 0;
-        if (ca > 0) { r = 115 * ca; g = 64 * ca; b = 20 * ca; a = ca; }
-        ca = remains ? 0.9 * (1 - clamp((d - 0.018) / 0.07)) : 0;
+        var gone = 1 - clamp((d + 0.006) / 0.018);
+        var r = page[0] * gone, g = page[1] * gone, b = page[2] * gone, a = gone, ca;
+        var remains = 1 - gone;
+        ca = remains * 0.28 * (1 - clamp((d - 0.07) / 0.12)); // browning
+        if (ca > 0) { r = 115 * ca + r * (1 - ca); g = 64 * ca + g * (1 - ca); b = 20 * ca + b * (1 - ca); a = ca + a * (1 - ca); }
+        ca = remains * 0.9 * (1 - clamp((d - 0.018) / 0.07)); // char
         if (ca > 0) { r = 33 * ca + r * (1 - ca); g = 18 * ca + g * (1 - ca); b = 8 * ca + b * (1 - ca); a = ca + a * (1 - ca); }
-        ca = d > -0.012 ? 1 - clamp(d / 0.028) : 0;
+        ca = d > -0.012 ? 1 - clamp(d / 0.028) : 0; // the burning edge
         if (ca > 0) {
           var heat = clamp(1 - d / 0.028);
           var fr = 255, fg = 255 * (0.35 + 0.55 * heat), fb = 255 * (0.08 + 0.4 * heat * heat);
@@ -238,42 +264,38 @@
         }
         // ImageData is not premultiplied.
         if (a > 0) { px[o] = r / a; px[o + 1] = g / a; px[o + 2] = b / a; px[o + 3] = a * 255; }
+        else { px[o + 3] = 0; }
       }
-      tmp.width = f.cols; tmp.height = f.rows;
+      tmp.width = pc; tmp.height = pr;
       var tctx = tmp.getContext("2d");
-      tctx.putImageData(mask, 0, 0);
-      var url = "url(" + tmp.toDataURL() + ")";
-      sheet.style.webkitMaskImage = url; sheet.style.maskImage = url;
+      var cw = w / f.cols, ch = h / f.rows; // one cell, in canvas points
+      var x0 = MARGIN - cw, y0 = MARGIN - ch, ww = w + 2 * cw, hh = h + 2 * ch;
       ctx.imageSmoothingEnabled = true;
       tctx.putImageData(img, 0, 0);
-      if (canFilter) ctx.filter = "blur(1.4px)";
-      ctx.drawImage(tmp, offX, offY, w, h);
+      if (canFilter) ctx.filter = "blur(1.2px)";
+      ctx.drawImage(tmp, x0, y0, ww, hh);
       tctx.putImageData(glow, 0, 0);
       ctx.globalCompositeOperation = "lighter";
       if (canFilter) {
         ctx.filter = "blur(7px)";
-        ctx.drawImage(tmp, offX, offY, w, h);
+        ctx.drawImage(tmp, x0, y0, ww, hh);
         ctx.filter = "none";
       } else {
-        // A halo from a few offset, faded copies.
         ctx.globalAlpha = 0.35;
-        for (var k = 0; k < 4; k++) {
-          var dx = (k % 2 ? 1 : -1) * 3, dy = (k < 2 ? 1 : -1) * 3;
-          ctx.drawImage(tmp, offX + dx, offY + dy, w, h);
-        }
+        for (var k = 0; k < 4; k++) ctx.drawImage(tmp, x0 + (k % 2 ? 3 : -3), y0 + (k < 2 ? 3 : -3), ww, hh);
         ctx.globalAlpha = 1;
       }
       ctx.globalCompositeOperation = "source-over";
 
-      // Sparks leave from wherever the front passes.
       var life = 0.22;
       for (var s = 0; s < f.embers.length; s++) {
         var em = f.embers[s];
         if (p <= em.lit || p >= em.lit + life) continue;
         var age = (p - em.lit) / life;
-        var x = offX + em.x * (w / (f.cols * CELL)) + em.drift * age + Math.sin(em.phase + age * 9) * 3;
-        var y = offY + em.y * (h / (f.rows * CELL)) - em.rise * age;
+        var x = MARGIN + em.x + em.drift * age + Math.sin(em.phase + age * 9) * 3;
+        var y = MARGIN + em.y - em.rise * age;
         var rad = em.radius * (1 - age * 0.5) * 2;
+        if (!isFinite(x) || !isFinite(y) || !(rad > 0)) continue;
         var grad = ctx.createRadialGradient(x, y, 0, x, y, rad * 2);
         grad.addColorStop(0, "rgba(255,216,128," + (1 - age) + ")");
         grad.addColorStop(0.5, "rgba(255,102,26," + (0.6 * (1 - age)) + ")");
@@ -283,20 +305,79 @@
       }
     }
 
-    function clamp(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+    // Ash: each flake drifts down from where the fire passed it and comes to rest on the
+    // floor below the sheet; a few keep a dying ember for a moment. Returns true while any fall.
+    function drawAsh(ctx, f, p, now, h) {
+      var floor = MARGIN + h + 12;
+      var falling = false;
+      for (var i = 0; i < f.flakes.length; i++) {
+        var fl = f.flakes[i];
+        if (fl.start === null) {
+          if (p < fl.lit) { falling = true; continue; }
+          fl.start = now;
+        }
+        if (fl.landedAt === null) {
+          var dt = (now - fl.start) / 1000;
+          fl.x = MARGIN + fl.x0 + fl.drift * dt + Math.sin(fl.phase + dt * 4) * fl.flutter;
+          fl.y = MARGIN + fl.y0 + fl.speed * dt + 260 * dt * dt;
+          fl.angle += fl.spin * 0.016;
+          var rest = floor + fl.rest * 10;
+          if (fl.y >= rest) { fl.y = rest; fl.landedAt = now; } else falling = true;
+        }
+        var shade = fl.shade < 0.45 ? 34 + fl.shade * 60 : 110 + fl.shade * 60;
+        ctx.save();
+        ctx.translate(fl.x, fl.y);
+        ctx.rotate(fl.angle);
+        ctx.beginPath();
+        for (var v = 0; v < fl.points.length; v++) {
+          var ang = (v / fl.points.length) * Math.PI * 2;
+          var rr = fl.size * fl.points[v];
+          if (v === 0) ctx.moveTo(Math.cos(ang) * rr, Math.sin(ang) * rr * 0.7);
+          else ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr * 0.7);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "rgba(" + shade + "," + (shade - 6) + "," + (shade - 12) + ",0.88)";
+        ctx.fill();
+        if (fl.ember) {
+          var glowLeft = fl.landedAt === null ? 1 : clamp(1 - (now - fl.landedAt) / 1600);
+          if (glowLeft > 0) {
+            ctx.fillStyle = "rgba(255," + Math.round(110 + 60 * glowLeft) + ",40," + (0.85 * glowLeft) + ")";
+            ctx.beginPath(); ctx.arc(0, 0, fl.size * 0.45, 0, Math.PI * 2); ctx.fill();
+            falling = true; // keep animating until the ember dies
+          }
+        }
+        ctx.restore();
+      }
+      return falling;
+    }
 
-    function unmask() { sheet.style.webkitMaskImage = sheet.style.maskImage = ""; }
+    function size(c, w, h, dpr) {
+      c.width = Math.round((w + MARGIN * 2) * dpr);
+      c.height = Math.round((h + MARGIN + FLOOR) * dpr);
+      var ctx = c.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return ctx;
+    }
+
+    function clearAsh() {
+      if (ashFrame) cancelAnimationFrame(ashFrame);
+      clearTimeout(ashTimer);
+      ashFrame = ashTimer = null;
+      if (!ashCanvas) return;
+      ashCanvas.classList.remove("fading");
+      ashCanvas.getContext("2d").clearRect(0, 0, ashCanvas.width, ashCanvas.height);
+    }
 
     function stop() {
       if (frame) cancelAnimationFrame(frame);
       frame = null;
       clearTimeout(fadeTimer);
       fadeTimer = null;
+      clearAsh();
+      paperEl.classList.remove("burning");
       sheet.style.transition = "";
       sheet.style.opacity = "1";
-      unmask();
-      var ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
     }
 
     function play(done) {
@@ -308,25 +389,43 @@
         return;
       }
       var rect = sheet.getBoundingClientRect();
+      var w = rect.width, h = rect.height;
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
-      var cw = rect.width + MARGIN * 2, ch = rect.height + MARGIN;
-      canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
-      var ctx = canvas.getContext("2d");
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      var f = field(rect.width, rect.height, (Math.random() * 1e9) | 0);
-      sheet.style.webkitMaskSize = sheet.style.maskSize = "100% 100%";
+      var ctx = size(canvas, w, h, dpr);
+      var ashCtx = ashCanvas ? size(ashCanvas, w, h, dpr) : null;
+      var f = field(w, h, (Math.random() * 1e9) | 0);
+      var page = pageColor();
+      paperEl.classList.add("burning"); // the shadow goes with the paper
       var start = performance.now();
+      var p = -0.04;
+
+      function ash(now) {
+        if (!ashCtx) return false;
+        ashCtx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
+        return drawAsh(ashCtx, f, p, now, h);
+      }
+
       (function tick(now) {
         var t = Math.min((now - start) / DURATION, 1);
-        var p = -0.04 + 1.12 * Math.pow(t, 1.35);
-        ctx.clearRect(0, 0, cw, ch);
-        draw(ctx, f, p, MARGIN, MARGIN, rect.width, rect.height);
+        p = -0.04 + 1.12 * Math.pow(t, 1.35);
+        ctx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
+        draw(ctx, f, p, w, h, page);
+        ash(now);
         if (t < 1) { frame = requestAnimationFrame(tick); return; }
-        sheet.style.opacity = "0";
-        unmask();
-        ctx.clearRect(0, 0, cw, ch);
         frame = null;
+        sheet.style.opacity = "0";
+        paperEl.classList.remove("burning");
+        ctx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
         done();
+        // The ash keeps falling, then lies on the floor a while before it fades.
+        (function settle(now2) {
+          if (ash(now2)) { ashFrame = requestAnimationFrame(settle); return; }
+          ashFrame = null;
+          ashTimer = setTimeout(function () {
+            ashCanvas.classList.add("fading");
+            ashTimer = setTimeout(clearAsh, 2600);
+          }, 4500);
+        })(performance.now());
       })(start);
     }
 
