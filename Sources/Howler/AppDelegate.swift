@@ -102,7 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private static func keyEquivalent(for combo: HotKeyCombo) -> String? {
-        if combo.keyCode == HotKeyCombo.optionSpace.keyCode { return " " }
+        if combo.keyCode == HotKeyCombo.spaceKeyCode { return " " }
         if let number = Int(combo.keyLabel.dropFirst()), combo.keyLabel.hasPrefix("F"), (1...20).contains(number),
            let scalar = UnicodeScalar(NSF1FunctionKey + number - 1) {
             return String(Character(scalar))

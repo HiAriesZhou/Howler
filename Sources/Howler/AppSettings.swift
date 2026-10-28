@@ -48,9 +48,8 @@ final class AppSettings: ObservableObject {
         self.client = client
         self.defaults = defaults
         store = ServiceStore(defaults: defaults)
-        hotKey = defaults.data(forKey: DefaultsKey.hotKey)
-            .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
-            .flatMap { $0.isValid ? $0 : nil } ?? .optionSpace
+        hotKey = HotKeyCombo.effective(stored: defaults.data(forKey: DefaultsKey.hotKey)
+            .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) })
         store.migrateLegacySetup()
         reload()
         refreshLaunchAtLogin()

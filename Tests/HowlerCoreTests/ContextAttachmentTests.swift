@@ -78,9 +78,21 @@ final class ContextAttachmentTests: XCTestCase {
 }
 
 final class HotKeyComboTests: XCTestCase {
-    func testDefaultIsOptionSpace() {
-        XCTAssertEqual(HotKeyCombo.optionSpace.display, "⌥Space")
-        XCTAssertTrue(HotKeyCombo.optionSpace.isValid)
+    func testDefaultIsOptionH() {
+        XCTAssertEqual(HotKeyCombo.standard.display, "⌥H")
+        XCTAssertEqual(HotKeyCombo.standard.keyCode, 4) // kVK_ANSI_H
+        XCTAssertTrue(HotKeyCombo.standard.isValid)
+        XCTAssertEqual(HotKeyCombo.previousStandard.display, "⌥Space")
+        XCTAssertNotEqual(HotKeyCombo.standard, HotKeyCombo.previousStandard)
+    }
+
+    func testStoredShortcutResolution() {
+        let custom = HotKeyCombo(keyCode: 40, modifiers: [.control, .option], keyLabel: "K")
+        XCTAssertEqual(HotKeyCombo.effective(stored: nil), .standard)
+        XCTAssertEqual(HotKeyCombo.effective(stored: custom), custom)
+        // "Reset" used to store ⌥Space; it meant the default and now follows it to ⌥H.
+        XCTAssertEqual(HotKeyCombo.effective(stored: .previousStandard), .standard)
+        XCTAssertEqual(HotKeyCombo.effective(stored: HotKeyCombo(keyCode: 40, modifiers: [], keyLabel: "K")), .standard)
     }
 
     func testDisplayUsesMacModifierOrder() {

@@ -25,7 +25,21 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
         self.keyLabel = keyLabel
     }
 
-    public static let optionSpace = HotKeyCombo(keyCode: 49, modifiers: .option, keyLabel: "Space")
+    /// The shortcut until the user records another: ⌥H, H for Howler. (⌥Space, the
+    /// default before v0.1.5, collides with other assistants' launchers.)
+    public static let standard = HotKeyCombo(keyCode: 4, modifiers: .option, keyLabel: "H")
+
+    /// ⌥Space, the default until v0.1.5; a stored copy of it means "the default", not a choice.
+    public static let previousStandard = HotKeyCombo(keyCode: spaceKeyCode, modifiers: .option, keyLabel: "Space")
+
+    public static let spaceKeyCode: UInt32 = 49
+
+    /// The shortcut to use for what settings hold: an invalid or missing combo, or a stored
+    /// copy of the previous default, means the current default.
+    public static func effective(stored: HotKeyCombo?) -> HotKeyCombo {
+        guard let stored, stored.isValid, stored != previousStandard else { return standard }
+        return stored
+    }
 
     /// "⌃⌥⇧⌘K" — Apple's canonical modifier order.
     public var display: String {
