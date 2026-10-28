@@ -78,10 +78,12 @@
       askEl.textContent = pair[0];
       sheet.style.opacity = "1";
       phase = "writing";
+      fire.prepare();
       if (reduceMotion) {
         // No motion, no cycling: the letter stays until the reader burns it.
         render(text, true);
         phase = "shown";
+        fire.prepare();
         return;
       }
       var shown = 0;
@@ -92,6 +94,7 @@
         if (shown >= text.length) {
           render(text, true);
           phase = "shown";
+          fire.prepare();
           timer = setTimeout(function () {
             if (visible) burn(myRun); else burnDue = true;
           }, 4200);
@@ -147,11 +150,11 @@
     };
   }
   function noise(seed, spacing) {
-    var cache = {};
+    // An integer hash per lattice point: no allocation, so lighting the fire doesn't stall.
     function lattice(x, y) {
-      var key = x + "," + y;
-      if (cache[key] === undefined) cache[key] = rng((x * 7919 + y * 104729 + seed) | 0)();
-      return cache[key];
+      var h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 2246822519)) | 0;
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
     }
     return function (x, y) {
       var gx = Math.floor(x / spacing), gy = Math.floor(y / spacing);
@@ -172,8 +175,20 @@
     var ashCanvas = document.querySelector("[data-ash]");
     var frame = null, ashFrame = null, fadeTimer = null, ashTimer = null;
     var tmp = document.createElement("canvas");
-    // Safari before 18 has no canvas filter; the glow then gets a soft halo drawn by hand.
-    var canFilter = typeof document.createElement("canvas").getContext("2d").filter === "string";
+    var small = document.createElement("canvas"); // the glow, at a third of the cell size
+    // One spark, drawn once: a hot core fading through orange to nothing.
+    var spark = (function () {
+      var c = document.createElement("canvas");
+      c.width = c.height = 32;
+      var g = c.getContext("2d");
+      var grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+      grad.addColorStop(0, "rgba(255,216,128,1)");
+      grad.addColorStop(0.5, "rgba(255,102,26,0.6)");
+      grad.addColorStop(1, "rgba(204,38,0,0)");
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 32, 32);
+      return c;
+    })();
 
     function clamp(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
@@ -276,19 +291,19 @@
       var x0 = MARGIN - cw, y0 = MARGIN - ch, ww = w + 2 * cw, hh = h + 2 * ch;
       ctx.imageSmoothingEnabled = true;
       tctx.putImageData(img, 0, 0);
-      if (canFilter) ctx.filter = "blur(1.2px)";
+      // Upscaling the cell image with smoothing softens its edges; no per-frame blur filter.
       ctx.drawImage(tmp, x0, y0, ww, hh);
+      // The glow: shrunk onto a small canvas and stretched back, which blurs it for free.
       tctx.putImageData(glow, 0, 0);
+      var gctx = small.getContext("2d");
+      gctx.clearRect(0, 0, small.width, small.height);
+      gctx.imageSmoothingEnabled = true;
+      gctx.drawImage(tmp, 0, 0, small.width, small.height);
       ctx.globalCompositeOperation = "lighter";
-      if (canFilter) {
-        ctx.filter = "blur(7px)";
-        ctx.drawImage(tmp, x0, y0, ww, hh);
-        ctx.filter = "none";
-      } else {
-        ctx.globalAlpha = 0.35;
-        for (var k = 0; k < 4; k++) ctx.drawImage(tmp, x0 + (k % 2 ? 3 : -3), y0 + (k < 2 ? 3 : -3), ww, hh);
-        ctx.globalAlpha = 1;
-      }
+      ctx.drawImage(small, x0 - 6, y0 - 6, ww + 12, hh + 12);
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(tmp, x0, y0, ww, hh);
+      ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
 
       var life = 0.22;
@@ -298,15 +313,12 @@
         var age = (p - em.lit) / life;
         var x = MARGIN + em.x + em.drift * age + Math.sin(em.phase + age * 9) * 3;
         var y = MARGIN + em.y - em.rise * age;
-        var rad = em.radius * (1 - age * 0.5) * 2;
+        var rad = em.radius * (1 - age * 0.5) * 4;
         if (!isFinite(x) || !isFinite(y) || !(rad > 0)) continue;
-        var grad = ctx.createRadialGradient(x, y, 0, x, y, rad * 2);
-        grad.addColorStop(0, "rgba(255,216,128," + (1 - age) + ")");
-        grad.addColorStop(0.5, "rgba(255,102,26," + (0.6 * (1 - age)) + ")");
-        grad.addColorStop(1, "rgba(204,38,0,0)");
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.arc(x, y, rad * 2, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1 - age;
+        ctx.drawImage(spark, x - rad, y - rad, rad * 2, rad * 2);
       }
+      ctx.globalAlpha = 1;
     }
 
     // Ash: each flake drifts down from where the fire passed it and comes to rest on the
@@ -356,10 +368,13 @@
       return falling;
     }
 
+    // Reassigning a canvas's size reallocates it even when unchanged, so only on a change.
     function size(c, w, h, dpr) {
-      c.width = Math.round((w + MARGIN * 2) * dpr);
-      c.height = Math.round((h + MARGIN + FLOOR) * dpr);
+      var cw = Math.round((w + MARGIN * 2) * dpr), chh = Math.round((h + MARGIN + FLOOR) * dpr);
+      if (c.width !== cw || c.height !== chh) { c.width = cw; c.height = chh; }
       var ctx = c.getContext("2d");
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, cw, chh);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       return ctx;
     }
@@ -389,6 +404,36 @@
       canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
     }
 
+    var ready = null;
+    function sizeKey(w, h) { return Math.round(w) + "x" + Math.round(h); }
+    function fitScratch(f) {
+      var pc = f.cols + 2, pr = f.rows + 2;
+      if (tmp.width !== pc || tmp.height !== pr) { tmp.width = pc; tmp.height = pr; }
+      var sw = Math.max(2, Math.round(pc / 3)), sh = Math.max(2, Math.round(pr / 3));
+      if (small.width !== sw || small.height !== sh) { small.width = sw; small.height = sh; }
+    }
+
+    // While a finished letter waits, do the slow parts of lighting it: build its burn field,
+    // size the fire canvas and paint one invisible frame, so the first click doesn't stutter.
+    function prepare() {
+      if (reduceMotion) return;
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 200); };
+      idle(function () {
+        if (frame) return;
+        var rect = sheet.getBoundingClientRect();
+        var w = rect.width, h = rect.height, k = sizeKey(w, h);
+        if (!w || !h || (ready && ready.key === k)) return;
+        var f = field(w, h, (Math.random() * 1e9) | 0);
+        fitScratch(f);
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var ctx = size(canvas, w, h, dpr);
+        if (ashCanvas && !ashFrame && !ashTimer) size(ashCanvas, w, h, dpr); // only while no ash lies there
+        draw(ctx, f, -1, w, h, pageColor());
+        ctx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
+        ready = { key: k, f: f };
+      });
+    }
+
     function play(done) {
       stop();
       if (reduceMotion) {
@@ -402,10 +447,12 @@
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
       var ctx = size(canvas, w, h, dpr);
       var ashCtx = ashCanvas ? size(ashCanvas, w, h, dpr) : null;
-      var f = field(w, h, (Math.random() * 1e9) | 0);
+      // A field prepared while the letter waited, if it still fits; flakes and sparks carry
+      // state, so each field burns once.
+      var f = ready && ready.key === sizeKey(w, h) ? ready.f : field(w, h, (Math.random() * 1e9) | 0);
+      ready = null;
       var page = pageColor();
-      var pc = f.cols + 2, pr = f.rows + 2;
-      if (tmp.width !== pc || tmp.height !== pr) { tmp.width = pc; tmp.height = pr; }
+      fitScratch(f);
       paperEl.classList.add("burning"); // the shadow goes with the paper
       var start = performance.now();
       var p = -0.04;
@@ -443,7 +490,7 @@
       })(start);
     }
 
-    return { play: play, stop: stop };
+    return { play: play, stop: stop, prepare: prepare };
   })();
 
   if (burnButton) burnButton.addEventListener("click", function () { letter.burnNow(); });
