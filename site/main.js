@@ -33,18 +33,20 @@
     function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
     function save(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
 
+    // Thanks for pressing the seal; it doesn't claim a star this page can't see.
     function showSealed() {
       link.classList.add("sealed");
-      label.innerHTML = '<span class="en">Sealed, with thanks</span><span class="zh">已封缄，谢谢你</span>';
+      label.innerHTML = '<span class="en">Thanks for stopping by</span><span class="zh">谢谢你来盖印</span>';
     }
     function showCount(n) {
       if (typeof n !== "number" || n < 0) return;
       meta.innerHTML = n === 0
         ? '<span class="en">be the first, on GitHub</span><span class="zh">来盖第一枚 · GitHub</span>'
-        : '<span class="en">✦ ' + n + (n === 1 ? " seal" : " seals") + ' on GitHub</span><span class="zh">GitHub 上已有 ' + n + ' 枚</span>';
+        : '<span class="en"><span aria-hidden="true">✦ </span>' + n + (n === 1 ? " seal" : " seals") + ' on GitHub</span><span class="zh">GitHub 上已有 ' + n + ' 枚</span>';
     }
 
-    if (load("howler-sealed")) showSealed();
+    // Remembered for this visit only.
+    try { if (sessionStorage.getItem("howler-sealed")) showSealed(); } catch (e) {}
 
     // The count is a nicety: cached for an hour, and simply left out if the public API
     // (60 requests an hour per address) says no.
@@ -63,12 +65,17 @@
         .catch(function () {});
     }
 
-    link.addEventListener("click", function () {
-      link.classList.remove("pressing");
-      void link.offsetWidth; // a second press plays again
+    var pressTimer = null;
+    link.addEventListener("click", function (event) {
+      // Mid-press, a second click neither restarts the seal nor opens a second tab.
+      if (pressTimer) { event.preventDefault(); return; }
       link.classList.add("pressing");
-      save("howler-sealed", "1");
-      setTimeout(function () { link.classList.remove("pressing"); showSealed(); }, reduceMotion ? 0 : 900);
+      try { sessionStorage.setItem("howler-sealed", "1"); } catch (e) {}
+      pressTimer = setTimeout(function () {
+        pressTimer = null;
+        link.classList.remove("pressing");
+        showSealed();
+      }, reduceMotion ? 0 : 900);
     });
   })();
 
@@ -227,7 +234,9 @@
     var ashCanvas = document.querySelector("[data-ash]");
     var frame = null, ashFrame = null, fadeTimer = null, ashTimer = null;
     var tmp = document.createElement("canvas");
-    var small = document.createElement("canvas"); // the glow, at a third of the cell size
+    var canFilter = typeof tmp.getContext("2d").filter === "string"; // Safari before 18: none
+    var small = document.createElement("canvas"); // the glow's bloom, at a third of the cell grid
+    var mid = document.createElement("canvas");   // its core, at two thirds
     // One spark, drawn once: a hot core fading through orange to nothing.
     var spark = (function () {
       var c = document.createElement("canvas");
@@ -320,7 +329,7 @@
         var cr = Math.min(f.rows - 1, Math.max(0, Math.floor(i / pc) - 1));
         var d = f.times[cr * f.cols + cc] - p; // > 0: not burned yet
         var o = i * 4;
-        var gone = 1 - clamp((d + 0.006) / 0.018);
+        var gone = 1 - clamp((d + 0.004) / 0.03); // a soft ramp, so the burned edge isn't stepped
         var r = page[0] * gone, g = page[1] * gone, b = page[2] * gone, a = gone, ca;
         var remains = 1 - gone;
         ca = remains * 0.28 * (1 - clamp((d - 0.07) / 0.12)); // browning
@@ -343,18 +352,30 @@
       var x0 = MARGIN - cw, y0 = MARGIN - ch, ww = w + 2 * cw, hh = h + 2 * ch;
       ctx.imageSmoothingEnabled = true;
       tctx.putImageData(img, 0, 0);
-      // Upscaling the cell image with smoothing softens its edges; no per-frame blur filter.
+      // Upscaled smoothly, plus a light blur where supported: the burned edge is about one cell
+      // wide, and upscaling alone leaves it stepped. (Cheap at this radius; the wide glow
+      // below never uses a filter.)
+      ctx.imageSmoothingQuality = "high";
+      if (canFilter) ctx.filter = "blur(1.2px)";
       ctx.drawImage(tmp, x0, y0, ww, hh);
+      if (canFilter) ctx.filter = "none";
       // The glow: shrunk onto a small canvas and stretched back, which blurs it for free.
       tctx.putImageData(glow, 0, 0);
       var gctx = small.getContext("2d");
       gctx.clearRect(0, 0, small.width, small.height);
       gctx.imageSmoothingEnabled = true;
+      gctx.imageSmoothingQuality = "high"; // average the whole edge when shrinking, so it doesn't shimmer
       gctx.drawImage(tmp, 0, 0, small.width, small.height);
+      var mctx = mid.getContext("2d");
+      mctx.clearRect(0, 0, mid.width, mid.height);
+      mctx.imageSmoothingEnabled = true;
+      mctx.imageSmoothingQuality = "high";
+      mctx.drawImage(tmp, 0, 0, mid.width, mid.height);
+      // Two soft layers, a wide bloom and a tighter core, read as a blurred glow.
       ctx.globalCompositeOperation = "lighter";
       ctx.drawImage(small, x0 - 6, y0 - 6, ww + 12, hh + 12);
-      ctx.globalAlpha = 0.6;
-      ctx.drawImage(tmp, x0, y0, ww, hh);
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(mid, x0 - 2, y0 - 2, ww + 4, hh + 4);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
 
@@ -463,6 +484,8 @@
       if (tmp.width !== pc || tmp.height !== pr) { tmp.width = pc; tmp.height = pr; }
       var sw = Math.max(2, Math.round(pc / 3)), sh = Math.max(2, Math.round(pr / 3));
       if (small.width !== sw || small.height !== sh) { small.width = sw; small.height = sh; }
+      var mw = Math.max(2, Math.round(pc / 1.5)), mh = Math.max(2, Math.round(pr / 1.5));
+      if (mid.width !== mw || mid.height !== mh) { mid.width = mw; mid.height = mh; }
     }
 
     // While a finished letter waits, do the slow parts of lighting it: build its burn field,
