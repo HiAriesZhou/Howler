@@ -75,6 +75,7 @@ kbd {
 }
 
 .skip { position: absolute; left: -9999px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .skip:focus { left: 16px; top: 12px; z-index: 10; background: var(--paper); color: var(--ink); padding: 6px 12px; border-radius: 6px; }
 
 /* Top bar */
