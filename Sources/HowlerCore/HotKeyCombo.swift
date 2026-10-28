@@ -29,16 +29,22 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
     /// default before v0.1.5, collides with other assistants' launchers.)
     public static let standard = HotKeyCombo(keyCode: 4, modifiers: .option, keyLabel: "H")
 
-    /// ⌥Space, the default until v0.1.5; a stored copy of it means "the default", not a choice.
+    /// ⌥Space, the default until v0.1.5. Only the old Reset button stored it, so a stored
+    /// copy found on upgrade means "the default", not a choice.
     public static let previousStandard = HotKeyCombo(keyCode: spaceKeyCode, modifiers: .option, keyLabel: "Space")
 
     public static let spaceKeyCode: UInt32 = 49
 
-    /// The shortcut to use for what settings hold: an invalid or missing combo, or a stored
-    /// copy of the previous default, means the current default.
+    /// The shortcut to use for what settings hold: a missing or invalid combo means the default.
     public static func effective(stored: HotKeyCombo?) -> HotKeyCombo {
-        guard let stored, stored.isValid, stored != previousStandard else { return standard }
+        guard let stored, stored.isValid else { return standard }
         return stored
+    }
+
+    /// Applied once, on the first launch after the default moved to ⌥H: a stored ⌥Space is
+    /// dropped so it follows the default. After that, ⌥Space recorded on purpose stays.
+    public static func storedAfterDefaultChange(_ stored: HotKeyCombo?) -> HotKeyCombo? {
+        stored == previousStandard ? nil : stored
     }
 
     /// "⌃⌥⇧⌘K" — Apple's canonical modifier order.

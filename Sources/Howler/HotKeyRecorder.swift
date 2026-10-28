@@ -23,7 +23,7 @@ struct HotKeyRecorder: View {
             // Reset sits to the left so the shortcut button keeps to the row's trailing edge.
             if settings.hotKey != .standard && !settings.isRecordingHotKey {
                 Button {
-                    settings.setHotKey(.standard)
+                    settings.resetHotKey()
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                 }

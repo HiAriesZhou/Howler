@@ -90,9 +90,17 @@ final class HotKeyComboTests: XCTestCase {
         let custom = HotKeyCombo(keyCode: 40, modifiers: [.control, .option], keyLabel: "K")
         XCTAssertEqual(HotKeyCombo.effective(stored: nil), .standard)
         XCTAssertEqual(HotKeyCombo.effective(stored: custom), custom)
-        // "Reset" used to store ⌥Space; it meant the default and now follows it to ⌥H.
-        XCTAssertEqual(HotKeyCombo.effective(stored: .previousStandard), .standard)
         XCTAssertEqual(HotKeyCombo.effective(stored: HotKeyCombo(keyCode: 40, modifiers: [], keyLabel: "K")), .standard)
+        // Recorded on purpose after the upgrade, ⌥Space is kept.
+        XCTAssertEqual(HotKeyCombo.effective(stored: .previousStandard), .previousStandard)
+    }
+
+    func testDefaultChangeDropsOnlyTheOldDefault() {
+        // The old Reset stored ⌥Space; on the one-time upgrade it follows the default to ⌥H.
+        XCTAssertNil(HotKeyCombo.storedAfterDefaultChange(.previousStandard))
+        let custom = HotKeyCombo(keyCode: 40, modifiers: [.control, .option], keyLabel: "K")
+        XCTAssertEqual(HotKeyCombo.storedAfterDefaultChange(custom), custom)
+        XCTAssertNil(HotKeyCombo.storedAfterDefaultChange(nil))
     }
 
     func testDisplayUsesMacModifierOrder() {

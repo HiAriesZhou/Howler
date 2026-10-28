@@ -34,6 +34,8 @@ final class AppSettings: ObservableObject {
 
     private enum DefaultsKey {
         static let hotKey = "hotKey"
+        /// Set once the ⌥Space → ⌥H default change has been applied to stored settings.
+        static let hotKeyDefaultChecked = "hotKeyDefaultChecked"
     }
 
     enum LoginItemState: Equatable {
@@ -48,8 +50,14 @@ final class AppSettings: ObservableObject {
         self.client = client
         self.defaults = defaults
         store = ServiceStore(defaults: defaults)
-        hotKey = HotKeyCombo.effective(stored: defaults.data(forKey: DefaultsKey.hotKey)
-            .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) })
+        var stored = defaults.data(forKey: DefaultsKey.hotKey)
+            .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
+        if !defaults.bool(forKey: DefaultsKey.hotKeyDefaultChecked) {
+            stored = HotKeyCombo.storedAfterDefaultChange(stored)
+            if stored == nil { defaults.removeObject(forKey: DefaultsKey.hotKey) }
+            defaults.set(true, forKey: DefaultsKey.hotKeyDefaultChecked)
+        }
+        hotKey = HotKeyCombo.effective(stored: stored)
         store.migrateLegacySetup()
         reload()
         refreshLaunchAtLogin()
@@ -136,6 +144,12 @@ final class AppSettings: ObservableObject {
         if let data = try? JSONEncoder().encode(combo) {
             defaults.set(data, forKey: DefaultsKey.hotKey)
         }
+    }
+
+    /// Back to the default by forgetting the recorded shortcut, so a future default applies too.
+    func resetHotKey() {
+        hotKey = .standard
+        defaults.removeObject(forKey: DefaultsKey.hotKey)
     }
 
     // MARK: Launch at login

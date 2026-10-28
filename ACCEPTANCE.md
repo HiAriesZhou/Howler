@@ -64,7 +64,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.howler` 可看到账户名为 `api-key` 的条目
 - [ ] 从配置了服务商的旧版本升级：首次启动后原服务商、模型与 Key 自动迁移，设置页直接显示该模型（状态 Not checked yet），发送可用
 - [ ] 退出并重启应用：模型服务、Key、快捷键仍然有效
-- [ ] 从 v0.1.4 升级：没改过快捷键（或曾点过 ↺ 恢复 ⌥Space）的，升级后默认为 ⌥H；录制过其他快捷键的保持不变
+- [ ] 从 v0.1.4 升级：没改过快捷键（或曾点过 ↺ 恢复 ⌥Space）的，升级后默认为 ⌥H；录制过其他快捷键的保持不变；升级后再特意录制 ⌥Space，重启后仍是 ⌥Space
 
 ### 3a. 命令行 / Command line
 
@@ -118,7 +118,7 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 - [ ] 关闭面板后再打开：对话已清空
 - [ ] 生成过程中关闭面板：请求被取消，再打开为空白，不会出现旧回答
 - [ ] `~/Library/Containers`、`~/Library/Application Support`、`~/Library/Caches` 中没有 Howler 的对话文件
-- [ ] `defaults read com.hiarieszhou.howler` 只包含 `service`、检查过时的 `serviceCheck`，以及改过时的 `hotKey`；其中没有 API Key
+- [ ] `defaults read com.hiarieszhou.howler` 只包含 `service`、检查过时的 `serviceCheck`、`hotKeyDefaultChecked`，以及改过时的 `hotKey`；其中没有 API Key
 - [ ] Console.app 中按进程 Howler 过滤，发送消息时没有对话内容日志
 
 ## 6. 错误处理 / Errors
