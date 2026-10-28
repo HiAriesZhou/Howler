@@ -228,9 +228,14 @@
       return { cols: cols, rows: rows, times: times, embers: embers, flakes: flakes };
     }
 
+    // The desk the paper burns away to: the first solid background up the tree.
     function pageColor() {
-      var m = getComputedStyle(document.body).backgroundColor.match(/\d+(\.\d+)?/g) || [233, 222, 198];
-      return [+m[0], +m[1], +m[2]];
+      var sources = [document.body, document.documentElement];
+      for (var i = 0; i < sources.length; i++) {
+        var m = getComputedStyle(sources[i]).backgroundColor.match(/[\d.]+/g);
+        if (m && m.length >= 3 && (m.length < 4 || +m[3] >= 1)) return [+m[0], +m[1], +m[2]];
+      }
+      return [233, 222, 198];
     }
 
     // One moment of the burn: where the paper is gone the desk shows through (painted in
@@ -266,8 +271,7 @@
         if (a > 0) { px[o] = r / a; px[o + 1] = g / a; px[o + 2] = b / a; px[o + 3] = a * 255; }
         else { px[o + 3] = 0; }
       }
-      tmp.width = pc; tmp.height = pr;
-      var tctx = tmp.getContext("2d");
+      var tctx = tmp.getContext("2d"); // sized once per burn, in play()
       var cw = w / f.cols, ch = h / f.rows; // one cell, in canvas points
       var x0 = MARGIN - cw, y0 = MARGIN - ch, ww = w + 2 * cw, hh = h + 2 * ch;
       ctx.imageSmoothingEnabled = true;
@@ -320,7 +324,8 @@
           var dt = (now - fl.start) / 1000;
           fl.x = MARGIN + fl.x0 + fl.drift * dt + Math.sin(fl.phase + dt * 4) * fl.flutter;
           fl.y = MARGIN + fl.y0 + fl.speed * dt + 260 * dt * dt;
-          fl.angle += fl.spin * 0.016;
+          fl.angle += fl.spin * Math.min(0.05, (now - (fl.last || now)) / 1000);
+          fl.last = now;
           var rest = floor + fl.rest * 10;
           if (fl.y >= rest) { fl.y = rest; fl.landedAt = now; } else falling = true;
         }
@@ -364,7 +369,11 @@
       clearTimeout(ashTimer);
       ashFrame = ashTimer = null;
       if (!ashCanvas) return;
+      // Back to opaque at once: a fade-in here would hide the next burn's first flakes.
+      ashCanvas.style.transition = "none";
       ashCanvas.classList.remove("fading");
+      void ashCanvas.offsetWidth;
+      ashCanvas.style.transition = "";
       ashCanvas.getContext("2d").clearRect(0, 0, ashCanvas.width, ashCanvas.height);
     }
 
@@ -395,14 +404,18 @@
       var ashCtx = ashCanvas ? size(ashCanvas, w, h, dpr) : null;
       var f = field(w, h, (Math.random() * 1e9) | 0);
       var page = pageColor();
+      var pc = f.cols + 2, pr = f.rows + 2;
+      if (tmp.width !== pc || tmp.height !== pr) { tmp.width = pc; tmp.height = pr; }
       paperEl.classList.add("burning"); // the shadow goes with the paper
       var start = performance.now();
       var p = -0.04;
 
-      function ash(now) {
-        if (!ashCtx) return false;
-        ashCtx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
-        return drawAsh(ashCtx, f, p, now, h);
+      // While the fire burns, flakes are drawn on the fire canvas, in front of the burned-away
+      // area they fall through; afterwards on the ash canvas, behind the next letter.
+      function ash(target, now) {
+        if (!target) return false;
+        if (target === ashCtx) ashCtx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
+        return drawAsh(target, f, p, now, h);
       }
 
       (function tick(now) {
@@ -410,7 +423,7 @@
         p = -0.04 + 1.12 * Math.pow(t, 1.35);
         ctx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
         draw(ctx, f, p, w, h, page);
-        ash(now);
+        ash(ctx, now);
         if (t < 1) { frame = requestAnimationFrame(tick); return; }
         frame = null;
         sheet.style.opacity = "0";
@@ -418,8 +431,9 @@
         ctx.clearRect(0, 0, w + MARGIN * 2, h + MARGIN + FLOOR);
         done();
         // The ash keeps falling, then lies on the floor a while before it fades.
+        if (!ashCtx) return;
         (function settle(now2) {
-          if (ash(now2)) { ashFrame = requestAnimationFrame(settle); return; }
+          if (ash(ashCtx, now2)) { ashFrame = requestAnimationFrame(settle); return; }
           ashFrame = null;
           ashTimer = setTimeout(function () {
             ashCanvas.classList.add("fading");
