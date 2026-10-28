@@ -163,14 +163,29 @@ h1 { font: 700 clamp(56px, 8vw, 84px)/.95 var(--display); margin: 0; letter-spac
 .ask::before { content: "✦ "; color: var(--gold); font-style: normal; font-size: .8em; }
 .answer { margin: 16px 2px 12px; min-height: 9.5em; font-size: 18.5px; line-height: 1.62; white-space: pre-wrap; }
 .answer .fresh { color: var(--gold); text-shadow: 0 0 8px rgba(240, 196, 106, .55); }
-.answer .quill::after { content: "✒"; display: inline-block; margin-left: 2px; color: var(--ink-soft); transform: translateY(-.3em) rotate(-12deg); }
+/* The quill rests after the last word, nib on the baseline; out of the flow, so lines don't jump. */
+.answer .quill { position: relative; }
+.answer .quill::after {
+  content: ""; position: absolute; left: 100%; bottom: .22em; width: 1.5em; height: 1.5em; margin-left: 1px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><path d='M13 27 C 14 15, 26 4, 39 1 C 35 13, 26 23, 13 27 Z' fill='%233a2b20'/><path d='M13.5 26.5 C 21 21, 28 13, 38.5 1.5' stroke='%23efe3c8' stroke-width='1' fill='none'/><path d='M16 22 C 20 21, 24 18, 27 14 M19 13 C 22 10, 26 7, 30 5' stroke='%236e5a44' stroke-width='.6' fill='none' opacity='.7'/><path d='M4 36 L 14 27' stroke='%23d8c7a2' stroke-width='2.4' stroke-linecap='round'/><path d='M1 39 L 5.2 34.2 L 6.8 35.8 Z' fill='%231a120d'/></svg>") no-repeat left bottom / contain;
+  transform-origin: 0 100%; animation: quill 0.9s ease-in-out infinite;
+}
+@keyframes quill { 50% { transform: translate(1px, -1.5px) rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { .answer .quill::after { animation: none; } }
 .sheet-foot {
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   border-top: 1px solid color-mix(in srgb, var(--rule) 70%, transparent); padding-top: 8px;
   font: italic 14.5px var(--text); color: var(--faded);
 }
-.fire { position: absolute; inset: -40px -40px 0 -40px; width: calc(100% + 80px); height: calc(100% + 40px); pointer-events: none; }
-.demo figcaption { display: flex; align-items: center; gap: 12px; justify-content: center; margin-top: 18px; font-size: 16px; }
+/* Both canvases reach 40px past the sheet on three sides (sparks) and 46px below it (the ash). */
+.fire, .ash { position: absolute; left: -40px; top: -40px; width: calc(100% + 80px); height: calc(100% + 86px); pointer-events: none; }
+/* Ash lies behind the paper, so the next letter covers any still in the air; fire burns in front. */
+.ash { z-index: 0; transition: opacity 2.4s ease; }
+.fire { z-index: 2; }
+.ash.fading { opacity: 0; }
+.paper { position: relative; z-index: 1; transition: filter .45s ease; }
+.paper.burning { filter: none; }
+.demo figcaption { display: flex; align-items: center; gap: 12px; justify-content: center; margin-top: 40px; font-size: 16px; }
 .burn-now {
   font: 600 17px var(--display); cursor: pointer; color: inherit; background: none;
   border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 999px; padding: 4px 16px;
