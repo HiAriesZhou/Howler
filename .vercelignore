@@ -1,4 +1,6 @@
 # CLI deploys upload only the website (vercel.json serves site/).
+# Keep .git: Git deployments apply this file too, and ignoreCommand runs git diff.
 /*
+!/.git
 !/site
 !/vercel.json
