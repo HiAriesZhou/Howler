@@ -1,0 +1,4 @@
+# CLI deploys upload only the website (vercel.json serves site/).
+/*
+!/site
+!/vercel.json
