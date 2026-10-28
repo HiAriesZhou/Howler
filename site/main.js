@@ -20,6 +20,58 @@
     });
   }
 
+  // MARK: Star seal
+
+  // A star is a reader's wax seal on the letter: pressed here, given on GitHub (the link
+  // opens it in a new tab; this page can't star for anyone).
+  (function () {
+    var link = document.querySelector("[data-star]");
+    if (!link) return;
+    var label = link.querySelector("[data-star-label]");
+    var meta = link.querySelector("[data-star-meta]");
+
+    function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+    function save(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+
+    function showSealed() {
+      link.classList.add("sealed");
+      label.innerHTML = '<span class="en">Sealed, with thanks</span><span class="zh">已封缄，谢谢你</span>';
+    }
+    function showCount(n) {
+      if (typeof n !== "number" || n < 0) return;
+      meta.innerHTML = n === 0
+        ? '<span class="en">be the first, on GitHub</span><span class="zh">来盖第一枚 · GitHub</span>'
+        : '<span class="en">✦ ' + n + (n === 1 ? " seal" : " seals") + ' on GitHub</span><span class="zh">GitHub 上已有 ' + n + ' 枚</span>';
+    }
+
+    if (load("howler-sealed")) showSealed();
+
+    // The count is a nicety: cached for an hour, and simply left out if the public API
+    // (60 requests an hour per address) says no.
+    var cached = null;
+    try { cached = JSON.parse(load("howler-stars") || "null"); } catch (e) {}
+    if (cached && Date.now() - cached.at < 3600e3) {
+      showCount(cached.n);
+    } else if (window.fetch) {
+      fetch("https://api.github.com/repos/HiAriesZhou/Howler", { headers: { Accept: "application/vnd.github+json" } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || typeof d.stargazers_count !== "number") return;
+          showCount(d.stargazers_count);
+          save("howler-stars", JSON.stringify({ n: d.stargazers_count, at: Date.now() }));
+        })
+        .catch(function () {});
+    }
+
+    link.addEventListener("click", function () {
+      link.classList.remove("pressing");
+      void link.offsetWidth; // a second press plays again
+      link.classList.add("pressing");
+      save("howler-sealed", "1");
+      setTimeout(function () { link.classList.remove("pressing"); showSealed(); }, reduceMotion ? 0 : 900);
+    });
+  })();
+
   // MARK: Letters
 
   var LETTERS = {
