@@ -21,14 +21,14 @@ struct HotKeyRecorder: View {
                     .foregroundStyle(.secondary)
             }
             // Reset sits to the left so the shortcut button keeps to the row's trailing edge.
-            if settings.hotKey != .optionSpace && !settings.isRecordingHotKey {
+            if settings.hotKey != .standard && !settings.isRecordingHotKey {
                 Button {
-                    settings.setHotKey(.optionSpace)
+                    settings.resetHotKey()
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                 }
                 .buttonStyle(.borderless)
-                .help("Reset to \(HotKeyCombo.optionSpace.display)")
+                .help("Reset to \(HotKeyCombo.standard.display)")
             }
             Button {
                 settings.isRecordingHotKey ? stopRecording() : startRecording()

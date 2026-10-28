@@ -34,7 +34,7 @@
 
 ## The letter
 
-Press **⌥Space** anywhere. A letter settles at the top of the screen, already sealed in wax.
+Press **⌥H** anywhere. A letter settles at the top of the screen, already sealed in wax.
 
 - **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. Your question sits on a ruled line, and the answer is set in a book face below it. The sheet grows with the answer up to an A4 page, then follows the quill.
 - **A quill that writes.** Answers stream in at a hand's pace. Fresh ink glows gold before it settles to sepia, and the quill rests after the last word. While the model thinks, the quill hovers and counts the seconds.
@@ -98,7 +98,7 @@ Changes take effect in the running app at once. Every request goes straight to t
 
 | | |
 | --- | --- |
-| **⌥Space** | Open the letter. Press again to burn it. The shortcut can be changed in Settings. |
+| **⌥H** | Open the letter. Press again to burn it. The shortcut can be changed in Settings. |
 | **↩** / **⌥↩** | Send / new line |
 | **⇧⌘C** | Copy the latest answer (or click ❧ Copy) |
 | **+ Attach** | Paste from the clipboard, or capture a screen region |
