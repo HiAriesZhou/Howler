@@ -51,8 +51,11 @@
   var letter = (function () {
     var index = 0;
     var timer = null;
-    var burning = false;
+    // writing → shown → burning → resting → writing … Only a letter on show can burn.
+    var phase = "idle";
     var run = 0; // bumps on restart, so stale callbacks stop
+    var visible = true;
+    var burnDue = false; // the automatic burn came due while the letter was off-screen
 
     function clear() { clearTimeout(timer); timer = null; }
 
@@ -69,15 +72,18 @@
     }
 
     function write(myRun) {
-      var pair = LETTERS[lang()][index % LETTERS[lang()].length];
+      var letters = LETTERS[lang()];
+      var pair = letters[index % letters.length];
+      var text = pair[1];
       askEl.textContent = pair[0];
       sheet.style.opacity = "1";
+      phase = "writing";
       if (reduceMotion) {
-        render(pair[1], true);
-        timer = setTimeout(function () { burn(myRun); }, 7000);
+        // No motion, no cycling: the letter stays until the reader burns it.
+        render(text, true);
+        phase = "shown";
         return;
       }
-      var text = pair[1];
       var shown = 0;
       (function step() {
         if (myRun !== run) return;
@@ -85,7 +91,10 @@
         render(text.slice(0, shown), false);
         if (shown >= text.length) {
           render(text, true);
-          timer = setTimeout(function () { burn(myRun); }, 4200);
+          phase = "shown";
+          timer = setTimeout(function () {
+            if (visible) burn(myRun); else burnDue = true;
+          }, 4200);
           return;
         }
         var ch = text.charAt(shown - 1);
@@ -95,12 +104,13 @@
     }
 
     function burn(myRun) {
-      if (burning || myRun !== run) return;
-      burning = true;
+      if (myRun !== run || (phase !== "writing" && phase !== "shown")) return;
+      phase = "burning";
+      burnDue = false;
       clear();
       fire.play(function () {
-        burning = false;
         if (myRun !== run) return;
+        phase = "resting";
         index += 1;
         askEl.textContent = "";
         answerEl.textContent = "";
@@ -109,9 +119,19 @@
     }
 
     function start() { write(run); }
-    function restart() { run += 1; clear(); fire.stop(); burning = false; sheet.style.opacity = "1"; write(run); }
+    function restart() {
+      run += 1;
+      clear();
+      fire.stop();
+      burnDue = false;
+      write(run);
+    }
     function burnNow() { burn(run); }
-    return { start: start, restart: restart, burnNow: burnNow };
+    function setVisible(isVisible) {
+      visible = isVisible;
+      if (visible && burnDue && phase === "shown") burn(run);
+    }
+    return { start: start, restart: restart, burnNow: burnNow, setVisible: setVisible };
   })();
 
   // MARK: Fire
@@ -185,14 +205,19 @@
     }
 
     var tmp = document.createElement("canvas");
+    var fadeTimer = null;
+    // Safari before 18 has no canvas filter; the glow then gets a soft halo drawn by hand.
+    var canFilter = typeof document.createElement("canvas").getContext("2d").filter === "string";
 
     // Paints one moment of the burn: the sheet is masked where the paper is gone, and the
     // canvas carries the scorch, char and glowing edge on what is left, plus the sparks.
     function draw(ctx, f, p, offX, offY, w, h) {
-      var img = ctx.createImageData(f.cols, f.rows);
-      var glow = ctx.createImageData(f.cols, f.rows);
-      var mask = ctx.createImageData(f.cols, f.rows);
+      // One set of buffers per burn, cleared each frame.
+      var img = f.img || (f.img = ctx.createImageData(f.cols, f.rows));
+      var glow = f.glow || (f.glow = ctx.createImageData(f.cols, f.rows));
+      var mask = f.mask || (f.mask = ctx.createImageData(f.cols, f.rows));
       var px = img.data, gl = glow.data, mk = mask.data;
+      px.fill(0); gl.fill(0); mk.fill(0);
       for (var i = 0; i < f.times.length; i++) {
         var d = f.times[i] - p; // > 0: not burned yet
         var o = i * 4;
@@ -221,14 +246,24 @@
       sheet.style.webkitMaskImage = url; sheet.style.maskImage = url;
       ctx.imageSmoothingEnabled = true;
       tctx.putImageData(img, 0, 0);
-      ctx.filter = "blur(1.4px)";
+      if (canFilter) ctx.filter = "blur(1.4px)";
       ctx.drawImage(tmp, offX, offY, w, h);
       tctx.putImageData(glow, 0, 0);
-      ctx.filter = "blur(7px)";
       ctx.globalCompositeOperation = "lighter";
-      ctx.drawImage(tmp, offX, offY, w, h);
+      if (canFilter) {
+        ctx.filter = "blur(7px)";
+        ctx.drawImage(tmp, offX, offY, w, h);
+        ctx.filter = "none";
+      } else {
+        // A halo from a few offset, faded copies.
+        ctx.globalAlpha = 0.35;
+        for (var k = 0; k < 4; k++) {
+          var dx = (k % 2 ? 1 : -1) * 3, dy = (k < 2 ? 1 : -1) * 3;
+          ctx.drawImage(tmp, offX + dx, offY + dy, w, h);
+        }
+        ctx.globalAlpha = 1;
+      }
       ctx.globalCompositeOperation = "source-over";
-      ctx.filter = "none";
 
       // Sparks leave from wherever the front passes.
       var life = 0.22;
@@ -255,6 +290,10 @@
     function stop() {
       if (frame) cancelAnimationFrame(frame);
       frame = null;
+      clearTimeout(fadeTimer);
+      fadeTimer = null;
+      sheet.style.transition = "";
+      sheet.style.opacity = "1";
       unmask();
       var ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -265,7 +304,7 @@
       if (reduceMotion) {
         sheet.style.transition = "opacity .3s ease";
         sheet.style.opacity = "0";
-        setTimeout(function () { sheet.style.transition = ""; done(); }, 320);
+        fadeTimer = setTimeout(function () { fadeTimer = null; sheet.style.transition = ""; done(); }, 320);
         return;
       }
       var rect = sheet.getBoundingClientRect();
@@ -295,6 +334,12 @@
   })();
 
   if (burnButton) burnButton.addEventListener("click", function () { letter.burnNow(); });
+  // Off-screen, the letter finishes writing but waits to burn until it is seen again.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      letter.setVisible(entries[0].isIntersecting);
+    }).observe(sheet);
+  }
   document.addEventListener("keydown", function (event) { if (event.key === "Escape") letter.burnNow(); });
 
   letter.start();

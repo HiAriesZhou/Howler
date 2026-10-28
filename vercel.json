@@ -5,7 +5,7 @@
   "buildCommand": "",
   "outputDirectory": "site",
   "cleanUrls": true,
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- site vercel.json",
+  "ignoreCommand": "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- site vercel.json",
   "headers": [
     {
       "source": "/assets/(.*)",

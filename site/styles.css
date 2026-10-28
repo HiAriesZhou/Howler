@@ -47,7 +47,6 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  overflow-x: clip; /* the fire canvas reaches past the letter for its sparks */
   background: var(--page);
   color: var(--ink);
   font: 400 19px/1.6 var(--text);
@@ -99,7 +98,7 @@ kbd {
   .topbar nav a:not([href^="https"]) { display: none; }
 }
 
-main { padding: 0 16px; }
+main { padding: 0 16px; overflow-x: clip; } /* the fire canvas reaches past the letter for its sparks */
 
 /* Hero */
 .hero {
@@ -187,9 +186,10 @@ h3 { font: 600 30px/1.15 var(--display); margin: 0 0 12px; }
 .feature { display: grid; grid-template-columns: 1.25fr 1fr; gap: 48px; align-items: center; margin: 56px 0; }
 .feature.flip { grid-template-columns: 1fr 1.25fr; }
 .feature.flip > img { order: 2; }
+.feature > * { min-width: 0; } /* let long code lines scroll instead of widening the column */
 .feature p { margin: 0 0 14px; }
 .feature img { filter: drop-shadow(0 16px 30px rgba(43, 30, 19, .3)); }
-.settings-shot { max-width: 460px; justify-self: center; border-radius: 12px; }
+.settings-shot { max-width: min(460px, 100%); justify-self: center; border-radius: 12px; }
 .aside { font-style: italic; opacity: .7; font-size: 17px; }
 @media (max-width: 860px) {
   .feature, .feature.flip { grid-template-columns: 1fr; gap: 24px; }
@@ -230,4 +230,6 @@ pre {
   body { font-size: 18px; }
   .sheet { padding: 20px 18px 14px; }
   .ask { font-size: 20px; }
+  /* Room for the longest answer, so the page below doesn't jump as letters come and go. */
+  .answer { min-height: 14em; }
 }
