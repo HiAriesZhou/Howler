@@ -226,7 +226,7 @@ final class ChatViewModel: ObservableObject {
             service: service,
             apiKey: apiKey,
             messages: history,
-            options: RequestOptions(appName: AppInfo.name)
+            options: RequestOptions(appName: AppInfo.name, systemPrompt: settings.systemPrompt)
         )
     }
 

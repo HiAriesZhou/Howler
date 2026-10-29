@@ -18,6 +18,8 @@ struct ServiceStore {
     private enum DefaultsKey {
         static let service = "service"
         static let check = "serviceCheck"
+        /// Absent until the instructions are edited, so a better suggestion reaches everyone else.
+        static let instructions = "systemPromptInstructions"
         // Before the single model service: the chosen provider and a model per provider.
         static let legacyProvider = "provider"
         static let legacyModels = "models"
@@ -52,6 +54,32 @@ struct ServiceStore {
         try Keychain.set(key, account: Self.keyAccount)
         defaults.removeObject(forKey: DefaultsKey.check)
         announce()
+    }
+
+    /// What follows the date in the system prompt. Edited in Settings; empty sends no prompt.
+    var instructions: String {
+        defaults.string(forKey: DefaultsKey.instructions) ?? SystemPrompt.suggested
+    }
+
+    var instructionsAreSuggested: Bool {
+        defaults.string(forKey: DefaultsKey.instructions) == nil
+    }
+
+    func setInstructions(_ text: String) {
+        if text == SystemPrompt.suggested {
+            resetInstructions()
+        } else {
+            defaults.set(text, forKey: DefaultsKey.instructions)
+        }
+    }
+
+    func resetInstructions() {
+        defaults.removeObject(forKey: DefaultsKey.instructions)
+    }
+
+    /// The system prompt as it is sent now, or nil when it is off.
+    var systemPrompt: String? {
+        SystemPrompt.compose(instructions: instructions)
     }
 
     var lastCheck: CheckRecord? {

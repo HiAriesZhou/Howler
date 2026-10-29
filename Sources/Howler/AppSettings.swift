@@ -2,8 +2,9 @@ import Foundation
 import HowlerCore
 import ServiceManagement
 
-/// The only persisted state: the model service, its last check and the hotkey
-/// (UserDefaults) plus the API key (Keychain). Conversations are never stored.
+/// The only persisted state: the model service, its last check, the system prompt's
+/// instructions and the hotkey (UserDefaults) plus the API key (Keychain). Conversations
+/// are never stored.
 /// The model service is set up from the command line (see `CLI`); this object mirrors it
 /// and reloads whenever the command line changes it.
 @MainActor
@@ -24,6 +25,9 @@ final class AppSettings: ObservableObject {
     /// While Settings records a new shortcut, the global one is suspended.
     @Published var isRecordingHotKey = false
     @Published private(set) var launchAtLogin: LoginItemState = .off
+    /// Sent after the date at the start of every conversation; see `SystemPrompt`.
+    @Published private(set) var instructions: String
+    @Published private(set) var instructionsAreSuggested: Bool
 
     let client: ChatClient
     private let defaults: UserDefaults
@@ -58,6 +62,8 @@ final class AppSettings: ObservableObject {
             defaults.set(true, forKey: DefaultsKey.hotKeyDefaultChecked)
         }
         hotKey = HotKeyCombo.effective(stored: stored)
+        instructions = store.instructions
+        instructionsAreSuggested = store.instructionsAreSuggested
         store.migrateLegacySetup()
         reload()
         refreshLaunchAtLogin()
@@ -82,6 +88,10 @@ final class AppSettings: ObservableObject {
         let present = store.hasKey
         if !present { keyCache = nil }
         if present != hasKey { hasKey = present }
+        let text = store.instructions
+        if text != instructions { instructions = text }
+        let suggested = store.instructionsAreSuggested
+        if suggested != instructionsAreSuggested { instructionsAreSuggested = suggested }
         guard checkState != .checking else { return }
         let state: CheckState = switch store.lastCheck {
         case .some(let record) where record.passed: .passed(record.date)
@@ -127,13 +137,35 @@ final class AppSettings: ObservableObject {
         }
         checkState = .checking
         do {
-            try await ConnectionTester.test(client: client, service: service, apiKey: key, appName: AppInfo.name)
+            try await ConnectionTester.test(
+                client: client, service: service, apiKey: key, appName: AppInfo.name, systemPrompt: systemPrompt
+            )
             checkState = .passed(Date())
             store.recordCheck(passed: true, message: nil)
         } catch {
             checkState = .failed(error.localizedDescription)
             store.recordCheck(passed: false, message: error.localizedDescription)
         }
+    }
+
+    // MARK: System prompt
+
+    /// The system prompt as it would be sent now, with today's date; nil when it is off.
+    var systemPrompt: String? {
+        SystemPrompt.compose(instructions: instructions)
+    }
+
+    func setInstructions(_ text: String) {
+        store.setInstructions(text)
+        instructions = text
+        instructionsAreSuggested = store.instructionsAreSuggested
+    }
+
+    /// Back to the suggestion by forgetting the edit, so a future suggestion applies too.
+    func resetInstructions() {
+        store.resetInstructions()
+        instructions = store.instructions
+        instructionsAreSuggested = true
     }
 
     // MARK: Hotkey
