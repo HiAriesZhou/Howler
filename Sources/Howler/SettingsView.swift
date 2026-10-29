@@ -23,9 +23,9 @@ enum SettingsTab: String, CaseIterable {
     }
 
     @MainActor
-    func pane(_ settings: AppSettings) -> AnyView {
+    func pane(_ settings: AppSettings, updater: Updater) -> AnyView {
         switch self {
-        case .general: return AnyView(GeneralPane(settings: settings))
+        case .general: return AnyView(GeneralPane(settings: settings, updater: updater))
         case .prompt: return AnyView(PromptPane(settings: settings))
         }
     }
@@ -51,9 +51,11 @@ private struct SettingsPage<Content: View>: View {
     }
 }
 
-/// The model that answers, the shortcut, launching at login, and where what you send goes.
+/// The model that answers, the shortcut, launching at login, updates, and where what you
+/// send goes.
 struct GeneralPane: View {
     @ObservedObject var settings: AppSettings
+    @ObservedObject var updater: Updater
 
     var body: some View {
         SettingsPage {
@@ -82,6 +84,10 @@ struct GeneralPane: View {
                         .labelsHidden()
                     }
                     loginItemNote
+                    if updater.isEnabled {
+                        Divider()
+                        UpdateRow(updater: updater)
+                    }
                 }
             }
             Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, with your next question — leave out passwords and other secrets.")
@@ -196,5 +202,41 @@ private struct SettingsRow<Control: View>: View {
             Spacer(minLength: 12)
             control()
         }
+    }
+}
+
+/// Automatic update checks, a manual check, and the gentle reminder when one is waiting.
+private struct UpdateRow: View {
+    @ObservedObject var updater: Updater
+
+    var body: some View {
+        SettingsRow("Check for updates automatically", detail: detail) {
+            HStack(spacing: 10) {
+                Group {
+                    if updater.available != nil {
+                        Button("Update…", action: updater.checkForUpdates)
+                            .buttonStyle(.borderedProminent)
+                            .tint(Wax.crimson.base)
+                    } else {
+                        Button("Check Now", action: updater.checkForUpdates)
+                    }
+                }
+                .controlSize(.small)
+                .disabled(!updater.canCheck) // a check or an install is already under way
+                Toggle("Check for updates automatically", isOn: Binding(
+                    get: { updater.checksAutomatically },
+                    set: { updater.setChecksAutomatically($0) }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
+            }
+        }
+    }
+
+    private var detail: String {
+        if let version = updater.available { return "\(AppInfo.name) \(version) is available." }
+        let schedule = updater.checksAutomatically ? "asks GitHub once a day" : "automatic checks are off"
+        return "\(AppInfo.name) \(AppInfo.version) · \(schedule)."
     }
 }
