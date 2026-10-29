@@ -318,12 +318,11 @@ final class PanelController {
         return true
     }
 
-    /// ⌘V with only a picture on the clipboard: seal it in, since the field can't hold it.
+    /// ⌘V with a picture on the clipboard: seal it in, since the field can't hold it.
     private func handlePasteImage(_ event: NSEvent) -> Bool {
         guard event.window === panel,
               event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-              Clipboard.holdsOnlyImage,
-              let image = Clipboard.image()
+              let image = Clipboard.pictureToSeal()
         else { return false }
         viewModel.pasteImage(image)
         return true
