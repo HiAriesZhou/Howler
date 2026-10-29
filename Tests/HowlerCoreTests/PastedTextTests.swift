@@ -19,3 +19,17 @@ final class PastedTextTests: XCTestCase {
         XCTAssertFalse(PastedText.isLoneLink("mailto:me@example.com"))
     }
 }
+
+final class PasteSealingTests: XCTestCase {
+    func testLongOrMultiLinePastesAreSealed() {
+        XCTAssertTrue(PastedText.belongsInAttachment(String(repeating: "a", count: 280)))
+        // A copied answer: short, but several lines of Markdown.
+        XCTAssertTrue(PastedText.belongsInAttachment("\"Howler\" 常见意思有：\n1. **大声哭喊**\n2. **大错**"))
+    }
+
+    func testShortPastesStayInTheQuestion() {
+        XCTAssertFalse(PastedText.belongsInAttachment("what does howler mean"))
+        XCTAssertFalse(PastedText.belongsInAttachment("first line\nsecond line"))
+        XCTAssertFalse(PastedText.belongsInAttachment("trailing newlines\n\n\n"))
+    }
+}

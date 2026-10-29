@@ -144,7 +144,7 @@ struct HowlerView: View {
                     .font(Lettering.hand(21))
                     .foregroundStyle(parchment.ink)
                     .tint(parchment.seal)
-                    .lineLimit(1...6)
+                    .lineLimit(1...4) // longer scrolls within the line, so the sheet keeps its shape
                     .focused($inputFocused)
                     .onSubmit(viewModel.send)
                 InkRule()
