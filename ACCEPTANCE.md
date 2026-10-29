@@ -53,8 +53,10 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ## 3. 设置 / Settings
 
-- [ ] 设置窗口顶部有 Model、Prompt、General 三个工具栏标签，窗口标题随标签变化；Model 页底部有隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
-- [ ] 切换标签：页面交叉淡入，窗口高度平滑过渡、上边缘不动，内容不上下跳；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 Model 页
+- [ ] 设置窗口顶部有 General、Prompt 两个工具栏标签，窗口标题随标签变化；General 页依次是模型卡片、快捷键与开机启动、隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
+- [ ] 切换标签：两页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
+- [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动
+- [ ] Check 失败使 General 变高：窗口平滑变高、上边缘不动，Prompt 页编辑框随之变高
 - [ ] 未配置：Model 显示问号火漆印、“No model yet”，下方 “Set up a model” 与 Copy Setup Prompt；没有 Check 按钮
 - [ ] 已配置：深红火漆印（DeepSeek 为 “D”、Gemini 为 ✦，其他服务为域名首字母）、模型名、“主机 · 格式”，状态为 Ready / Not checked yet / Failed / No API key
 - [ ] Copy Setup Prompt：按钮短暂显示 ✓ Copied；粘贴出的提示词包含本机可执行文件路径与当前配置（未配置时为 “not set up yet”），要求助手用 `pbpaste | Howler config set api-key --stdin` 写入 Key
