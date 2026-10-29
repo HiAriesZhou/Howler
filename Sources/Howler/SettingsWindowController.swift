@@ -61,7 +61,10 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         toolbar.displayMode = .iconAndLabel
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
-        window.toolbarStyle = .preference
+        // The tabs sit in the title bar beside the close button; a title would only repeat
+        // the selected tab. It is still set, for the Window menu and accessibility.
+        window.toolbarStyle = .unified
+        window.titleVisibility = .hidden
         // Settings is never minimized or zoomed; disabled buttons only look broken.
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true

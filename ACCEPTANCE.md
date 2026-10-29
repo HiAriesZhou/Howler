@@ -58,7 +58,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 ## 3. 设置 / Settings
 
 - [ ] 设置窗口左上角只有关闭按钮（没有灰色的最小化、缩放按钮）；按 Esc 关闭设置窗口，录制快捷键或输入法组字时 Esc 只取消录制 / 组字
-- [ ] 设置窗口顶部有 General、Prompt 两个工具栏标签，窗口标题随标签变化；General 页依次是模型卡片、快捷键与开机启动、隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
+- [ ] 设置窗口不显示标题，关闭按钮与 General、Prompt 两个标签在同一行，选中的标签有底色；General 页依次是模型卡片、快捷键与开机启动、隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
 - [ ] 切换标签：两页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
 - [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动
 - [ ] Check 失败使 General 变高：窗口平滑变高、上边缘不动，Prompt 页编辑框随之变高
