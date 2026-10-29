@@ -26,9 +26,6 @@ final class ChatViewModel: ObservableObject {
     /// The desktop is in Dark Mode: the letter is lit by candle rather than daylight.
     @Published private(set) var candlelit = false
 
-    /// Pasting at least this much at once turns the paste into an attachment.
-    static let pasteAttachmentThreshold = 280
-
     let settings: AppSettings
     let quill = QuillPacer()
     private var streamTask: Task<Void, Never>?
@@ -125,17 +122,20 @@ final class ChatViewModel: ObservableObject {
         attachmentStamp += 1
     }
 
-    /// A long paste would bury the question; keep it as an attachment instead and leave
-    /// the input as it was. The inserted run is found by diffing, so the clipboard is
-    /// never read here.
+    /// A long or multi-line paste would bury the question; keep it as an attachment instead
+    /// and leave the input as it was. The inserted run is found by diffing, so the clipboard
+    /// is never read here.
     private func absorbLongPaste(previous: String) {
-        guard !isAbsorbingPaste, input.count - previous.count >= Self.pasteAttachmentThreshold else { return }
+        // More than one character at once: a paste (or dictation), not typing.
+        guard !isAbsorbingPaste, input.count - previous.count > 1 else { return }
         let prefix = input.commonPrefix(with: previous)
         let remainingOld = previous.dropFirst(prefix.count)
         let remainingNew = input.dropFirst(prefix.count)
         let suffixLength = zip(remainingOld.reversed(), remainingNew.reversed()).prefix { $0 == $1 }.count
         let inserted = String(remainingNew.dropLast(suffixLength))
-        guard let pasted = ContextAttachment(source: .pasted, text: inserted) else { return }
+        guard PastedText.belongsInAttachment(inserted),
+              let pasted = ContextAttachment(source: .pasted, text: inserted)
+        else { return }
 
         isAbsorbingPaste = true
         DispatchQueue.main.async { [weak self] in
