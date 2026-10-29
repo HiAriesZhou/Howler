@@ -129,6 +129,7 @@ $H config show
 - 不记录日志，没有统计或遥测；网络请求使用 ephemeral `URLSession`。
 - 检查更新时，从 Howler 最新的 GitHub Release 读取 `appcast.xml`，最多每天一次，且要先经过你同意；不发送任何系统信息，GitHub 只能看到这次请求，以及 User-Agent 里的应用和 Sparkle 版本号。可以在 Settings › General 关闭。
 - 命令行从不打印 Key。
+- **Send Feedback…**（菜单里，或设置页的 Feedback）会在浏览器里打开 GitHub 的反馈表单，自动填好 Howler 版本、macOS 版本和芯片架构；你在网页上提交之前，什么都不会发出去。
 
 ## 从源码构建
 

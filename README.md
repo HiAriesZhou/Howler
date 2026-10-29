@@ -129,6 +129,7 @@ Follow-up questions stay on the same sheet, separated by a fleuron. ⏹ stops a 
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.
 - Update checks fetch `appcast.xml` from Howler's latest GitHub Release, at most once a day, and only after you allow it. They send no system profile; GitHub sees only the request, with the app and Sparkle versions in its User-Agent. Turn them off in Settings › General.
 - The command line never prints the key.
+- **Send Feedback…** (menu, or Feedback in Settings) opens a GitHub issue form in your browser with Howler's version, the macOS version and the chip filled in. Nothing is sent until you submit it there.
 
 ## Build from source
 
