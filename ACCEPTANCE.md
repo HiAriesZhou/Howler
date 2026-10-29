@@ -107,6 +107,11 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 问 “2026 GitHub Universe 总结” 之类训练截止之后的事：回答不再断言“尚未举办”，而是说明可能没有相关数据
 - [ ] 让模型对比几样东西：回答不用 `|` 表格（信纸会把表格显示成原样符号）
 
+### 3e. 反馈 / Feedback
+
+- [ ] 菜单 “Send Feedback…”（macOS 26 上有对话气泡图标）、设置页右下角 “Feedback”：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
+- [ ] 不点击时不访问任何网址
+
 ### 3d. 更新 / Updates
 
 - [ ] 菜单含 “Check for Updates…”；General 页有 “Check for updates automatically” 一行，只有一个开关；当前版本号以小号浅灰字显示在页面右下角
