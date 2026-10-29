@@ -24,6 +24,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     static let width: CGFloat = 460
 
     private let settings: AppSettings
+    private let updater: Updater
     private let state = SettingsTabState()
     private var window: NSWindow?
     private var observers: Set<AnyCancellable> = []
@@ -31,8 +32,9 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     /// and the window centered on it, so it never grows into place on first open.
     private var fitted = false
 
-    init(settings: AppSettings) {
+    init(settings: AppSettings, updater: Updater) {
         self.settings = settings
+        self.updater = updater
     }
 
     func show(tab: SettingsTab? = nil) {
@@ -48,7 +50,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     }
 
     private func makeWindow() {
-        let host = NSHostingController(rootView: SettingsTabsView(settings: settings, state: state))
+        let host = NSHostingController(rootView: SettingsTabsView(settings: settings, updater: updater, state: state))
         host.sizingOptions = [] // the window's height follows the selected page, below
         let window = NSWindow(contentViewController: host)
         window.styleMask = [.titled, .closable]
@@ -127,6 +129,16 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     }
 
     #if DEBUG
+    /// Demo: draws the window, title bar and toolbar included, into a PNG. Unlike
+    /// `screencapture` it needs no screen-recording permission.
+    func snapshot(to path: String) {
+        guard let frameView = window?.contentView?.superview else { return }
+        frameView.layoutSubtreeIfNeeded()
+        guard let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) else { return }
+        frameView.cacheDisplay(in: frameView.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+    }
+
     /// Demo: steps through the tabs to watch the switch.
     func cycleTabs() {
         Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
@@ -179,6 +191,7 @@ extension SettingsTab {
 /// input. General reports its natural height, which the window takes.
 private struct SettingsTabsView: View {
     @ObservedObject var settings: AppSettings
+    let updater: Updater
     @ObservedObject var state: SettingsTabState
 
     var body: some View {
@@ -188,7 +201,7 @@ private struct SettingsTabsView: View {
             ZStack(alignment: .top) {
                 ForEach(SettingsTab.allCases, id: \.self) { tab in
                     let shown = tab == state.selected
-                    tab.pane(settings)
+                    tab.pane(settings, updater: updater)
                         .background(GeometryReader { page in
                             Color.clear.preference(key: GeneralHeight.self, value: tab == .general ? page.size.height : 0)
                         })

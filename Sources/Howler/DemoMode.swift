@@ -10,7 +10,8 @@ import SwiftUI
 /// `multi` (a follow-up question), `burn` (dismissed once written), `image` (a captured screen region),
 /// `settings` (the Settings window with the real setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one,
 /// `HOWLER_DEMO_TAB=general|prompt` opens that tab, `cycle` switches tabs every 1.5 s; without a
-/// model Settings always opens on General),
+/// model Settings always opens on General; `HOWLER_DEMO_UPDATE=1` shows the update row, `=0.1.9` a
+/// waiting update, `HOWLER_DEMO_SNAPSHOT=out.png` saves the window as a PNG and quits),
 /// `appicon` (renders the app icon into the folder `HOWLER_DEMO_OUT`; see scripts/icon.sh);
 /// `HOWLER_DEMO_DARK=1` forces Dark Mode.
 extension PanelController {

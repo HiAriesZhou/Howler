@@ -5,9 +5,11 @@ import HowlerCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = AppSettings()
+    private let updater = Updater()
     private var statusItem: NSStatusItem?
     private var openItem: NSMenuItem?
     private var hotKeyWarningItem: NSMenuItem?
+    private var updateItem: NSMenuItem?
     private var panelController: PanelController?
     private var settingsController: SettingsWindowController?
     private var hotKey: HotKey?
@@ -15,7 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installEditMenu()
-        let settingsController = SettingsWindowController(settings: settings)
+        let settingsController = SettingsWindowController(settings: settings, updater: updater)
         self.settingsController = settingsController
         panelController = PanelController(settings: settings) { [weak self] in
             self?.openSettings()
@@ -42,6 +44,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let tab = ProcessInfo.processInfo.environment["HOWLER_DEMO_TAB"]
                 settingsController.show(tab: tab.flatMap(SettingsTab.init(rawValue:)))
                 if tab == "cycle" { settingsController.cycleTabs() }
+                if let path = ProcessInfo.processInfo.environment["HOWLER_DEMO_SNAPSHOT"] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        settingsController.snapshot(to: path)
+                        NSApp.terminate(nil)
+                    }
+                }
             } else {
                 panelController?.runDemo()
             }
@@ -71,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.image = MenuBarMark.image()
 
         let menu = NSMenu()
+        menu.autoenablesItems = false // the update item follows Sparkle's canCheckForUpdates
         let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")
         open.target = self
         if #available(macOS 26, *) {
@@ -87,12 +96,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
+        if updater.isEnabled {
+            let update = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+            update.target = self
+            menu.addItem(update)
+            updateItem = update
+            updater.$available.combineLatest(updater.$canCheck)
+                .sink { [weak self] available, canCheck in
+                    MainActor.assumeIsolated { self?.updateUpdateItem(available: available, canCheck: canCheck) }
+                }
+                .store(in: &cancellables)
+        }
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         item.menu = menu
         statusItem = item
         openItem = open
         hotKeyWarningItem = warning
+    }
+
+    /// "Check for Updates…", or the gentle reminder when a scheduled check found one.
+    private func updateUpdateItem(available: String?, canCheck: Bool) {
+        guard let updateItem else { return }
+        updateItem.title = available.map { "Update to \(AppInfo.name) \($0)…" } ?? "Check for Updates…"
+        updateItem.isEnabled = canCheck
+        updateItem.image = available == nil ? nil : NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: "Update available")
+        statusItem?.button?.toolTip = available.map { "\(AppInfo.name) \($0) is available" }
     }
 
     /// Shows the shortcut next to "Open Howler", or explains why it isn't active.
@@ -147,6 +176,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func togglePanel() {
         panelController?.toggle()
+    }
+
+    @objc private func checkForUpdates() {
+        panelController?.hide(burning: false)
+        updater.checkForUpdates()
     }
 
     @objc private func openSettings() {
