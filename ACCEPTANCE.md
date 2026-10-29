@@ -34,6 +34,9 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 右上角为淡色虚线圆圈 “+ Attach”；点击弹出菜单：Paste from Clipboard、Capture Screen Region…
 - [ ] 复制一段文字后选择 Paste from Clipboard：右上角压上琥珀色火漆印（刻符文、文档图标），下方写 “Pasted text / N chars”；输入框**不**包含这段文字
 - [ ] 复制一张图片（如在预览中 ⌘C）后在输入框按 ⌘V：封成 “Pasted image / 宽×高” 火漆印（图片图标）
+- [ ] 在 Safari / Chrome 里对图片「拷贝图像」后按 ⌘V：封成图片附件，不把链接粘进输入框
+- [ ] 在访达里拷贝一个图片文件（PNG、JPEG、HEIC）后按 ⌘V：封成图片附件；拷贝非图片文件时照旧粘贴文件名
+- [ ] 在 Word / 备忘录里拷贝一段文字后按 ⌘V：仍按文字处理，不变成图片
 - [ ] 向输入框粘贴 300 字以上文本：文本不留在输入框，变成 “Pasted text” 火漆印；短文本照常进入输入框
 - [ ] 剪贴板为空时选择 Paste from Clipboard：显示 “There's no text or picture on the clipboard.”
 - [ ] Capture Screen Region…（首次）：提示到“录屏与系统录音”中允许 Howler；允许后再次选择：信纸让开，出现十字准星，拖出区域后信纸带着原对话回来，压上 “Screenshot / 宽×高” 火漆印；Esc 取消时信纸原样回来
