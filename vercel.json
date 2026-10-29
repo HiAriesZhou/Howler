@@ -5,6 +5,7 @@
   "buildCommand": "",
   "outputDirectory": "site",
   "cleanUrls": true,
+  "ignoreCommand": "exit 1",
   "headers": [
     {
       "source": "/assets/(.*)",
