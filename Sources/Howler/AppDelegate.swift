@@ -32,6 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         #if DEBUG
         if let demo = ProcessInfo.processInfo.environment["HOWLER_DEMO"] {
+            if ProcessInfo.processInfo.environment["HOWLER_DEMO_DARK"] != nil {
+                NSApp.appearance = NSAppearance(named: .darkAqua)
+            }
             if demo == "settings" {
                 if let raw = ProcessInfo.processInfo.environment["HOWLER_DEMO_PROVIDER"], let provider = Provider(rawValue: raw) {
                     settings.useDemoService(provider)

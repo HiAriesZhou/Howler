@@ -14,9 +14,6 @@ import SwiftUI
 extension PanelController {
     func runDemo() {
         let variant = ProcessInfo.processInfo.environment["HOWLER_DEMO"] ?? "1"
-        if ProcessInfo.processInfo.environment["HOWLER_DEMO_DARK"] != nil {
-            NSApp.appearance = NSAppearance(named: .darkAqua)
-        }
         panel.dismissesOnResignKey = false
         if variant == "setup" {
             show()
