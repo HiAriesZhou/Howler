@@ -37,7 +37,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 在 Safari / Chrome 里对图片「拷贝图像」后按 ⌘V：封成图片附件，不把链接粘进输入框
 - [ ] 在访达里拷贝一个图片文件（PNG、JPEG、HEIC）后按 ⌘V：封成图片附件；拷贝非图片文件时照旧粘贴文件名
 - [ ] 在 Word / 备忘录里拷贝一段文字后按 ⌘V：仍按文字处理，不变成图片
-- [ ] 向输入框粘贴 300 字以上文本：文本不留在输入框，变成 “Pasted text” 火漆印；短文本照常进入输入框
+- [ ] 向输入框粘贴 280 字以上、或 3 行以上（如复制的一段回答）的文本：文本不留在输入框，变成 “Pasted text” 火漆印；一两行的短文本照常进入输入框
+- [ ] 输入框最多显示 4 行，更多内容在框内滚动，信纸不被撑高
 - [ ] 剪贴板为空时选择 Paste from Clipboard：显示 “There's no text or picture on the clipboard.”
 - [ ] Capture Screen Region…（首次）：提示到“录屏与系统录音”中允许 Howler；允许后再次选择：信纸让开，出现十字准星，拖出区域后信纸带着原对话回来，压上 “Screenshot / 宽×高” 火漆印；Esc 取消时信纸原样回来
 - [ ] 点火漆印：展开预览卡片（文字显示前几行，图片显示缩略图），可 Remove
@@ -56,6 +57,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ## 3. 设置 / Settings
 
+- [ ] 设置窗口左上角只有关闭按钮（没有灰色的最小化、缩放按钮）；按 Esc 关闭设置窗口，录制快捷键或输入法组字时 Esc 只取消录制 / 组字
 - [ ] 设置窗口顶部有 General、Prompt 两个工具栏标签，窗口标题随标签变化；General 页依次是模型卡片、快捷键与开机启动、隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
 - [ ] 切换标签：两页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
 - [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动

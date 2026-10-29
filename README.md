@@ -115,7 +115,7 @@ The model can't search the web: it answers from what it was trained on, and the 
 | **↩** / **⌥↩** | Send / new line |
 | **⌘C** | Copy the latest answer (or click ❧ Copy). With text selected, it copies the selection. |
 | **+ Attach** | Paste from the clipboard, or capture a screen region |
-| **⌘V** | Short text goes into the question. Long text or a picture is sealed as an attachment, including an image copied in a browser or an image file copied in Finder. |
+| **⌘V** | Short text goes into the question. Text of 280+ characters or 3+ lines, or a picture, is sealed as an attachment, including an image copied in a browser or an image file copied in Finder. |
 | **Esc** / click outside | Burn the letter, and the conversation with it |
 
 Follow-up questions stay on the same sheet, separated by a fleuron. ⏹ stops a reply and keeps what is already written. Attachments travel only with your next question, so leave out passwords and other secrets. Screen capture asks for Screen & System Audio Recording permission the first time. Howler only takes a still image of the region you drag and never records audio; macOS simply grants screen and audio access together.
