@@ -16,13 +16,13 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ## 2. 全局快捷键与面板 / Hotkey & panel
 
-- [ ] 在任意应用（Finder、Safari、全屏应用）中按 ⌥, 呼出信纸，位于当前屏幕上方居中，带纸张落下的动画与火漆印“盖章”动画
-- [ ] 再按 ⌥,：信纸从底边起火烧掉（约 0.8 秒，不拖沓），然后消失
+- [ ] 在任意应用（Finder、Safari、全屏应用）中按 ⌥H 呼出信纸，位于当前屏幕上方居中，带纸张落下的动画与火漆印“盖章”动画
+- [ ] 再按 ⌥H：信纸从底边起火烧掉（约 0.8 秒，不拖沓），然后消失
 - [ ] 信纸出现时输入框自动获得焦点，可直接输入；前台应用不会被切走（菜单栏仍显示原应用名）
 - [ ] 中文输入法：可正常输入拼音选词；选词过程中按 Esc 只取消组字，不关闭信纸
 - [ ] ⌘V / ⌘C / ⌘A / ⌘Z 在输入框中可用
 - [ ] Esc 烧掉信纸；点击纸张外部（包括纸张阴影区域）烧掉信纸
-- [ ] 燃烧中再按 ⌥,：立即出现一张新的空白信纸
+- [ ] 燃烧中再按 ⌥H：立即出现一张新的空白信纸
 - [ ] 从菜单或火漆印打开 Settings：信纸直接收起，不燃烧
 - [ ] 多显示器：在鼠标所在屏幕上弹出
 - [ ] 未配置时，信纸显示 “This parchment has no ink yet.” 与 “Open Settings” 按钮，点击打开设置
@@ -67,7 +67,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.howler` 可看到账户名为 `api-key` 的条目
 - [ ] 从配置了服务商的旧版本升级：首次启动后原服务商、模型与 Key 自动迁移，设置页直接显示该模型（状态 Not checked yet），发送可用
 - [ ] 退出并重启应用：模型服务、Key、快捷键仍然有效
-- [ ] 从 v0.1.7 升级：没录制过快捷键的，升级后默认为 ⌥,；特意录制过 ⌥H 或其他快捷键的保持不变
+- [ ] 从 v0.1.8 / v0.1.9 升级：没录制过快捷键的，升级后恢复为 ⌥H；录制过其他快捷键的保持不变
+- [ ] 在任意应用里按 ⌥,：打开设置窗口；录制快捷键时按 ⌥,，提示 “⌥, opens Settings” 且不被采用
 - [ ] 从 v0.1.4 升级：没改过快捷键（或曾点过 ↺ 恢复 ⌥Space）的，升级后跟随默认快捷键；录制过其他快捷键的保持不变；升级后再特意录制 ⌥Space，重启后仍是 ⌥Space
 
 ### 3a. 命令行 / Command line
@@ -86,8 +87,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ### 3b. 通用 / General
 
-- [ ] General → Keyboard shortcut：点按钮后按 ⌃⌥K，⌃⌥K 可呼出、⌥, 不再响应；录制中按 Esc 取消
-- [ ] Keyboard shortcut：只含 ⇧ 的组合提示需加 ⌘/⌥/⌃；⌘V、⌘C、⌘Space 等系统快捷键被拒绝；被其他应用占用时显示红色提示；点 ↺ 恢复 ⌥,
+- [ ] General → Keyboard shortcut：点按钮后按 ⌃⌥K，⌃⌥K 可呼出、⌥H 不再响应；录制中按 Esc 取消
+- [ ] Keyboard shortcut：只含 ⇧ 的组合提示需加 ⌘/⌥/⌃；⌘V、⌘C、⌘Space 等系统快捷键被拒绝；被其他应用占用时显示红色提示；点 ↺ 恢复 ⌥H
 - [ ] Keyboard shortcut：开始录制后切到其他窗口或关闭设置窗口，录制自动结束，原快捷键恢复可用
 - [ ] General → Launch at login：打开后注销重新登录，Howler 自动启动（若提示需批准，按提示到“登录项”中允许）
 
