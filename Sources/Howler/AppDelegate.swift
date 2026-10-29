@@ -7,7 +7,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = AppSettings()
     private let updater = Updater()
     private var statusItem: NSStatusItem?
-    private var openItem: NSMenuItem?
     private var hotKeyWarningItem: NSMenuItem?
     private var updateItem: NSMenuItem?
     private var panelController: PanelController?
@@ -74,26 +73,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The size macOS 26 draws menu item symbols at.
     private static let menuIconSide: CGFloat = 16
 
+    private static func menuSymbol(_ name: String) -> NSImage? {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil)
+    }
+
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = MenuBarMark.image()
 
         let menu = NSMenu()
         menu.autoenablesItems = false // the update item follows Sparkle's canCheckForUpdates
+        // No key equivalents: the global shortcut opens the letter, and a menu shortcut is one
+        // more thing to press by accident.
         let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")
         open.target = self
-        if #available(macOS 26, *) {
-            // macOS 26 gives Settings… and Quit icons; without one this row's title sits apart.
-            // Howler's own seal, at the size of the symbols beside it.
-            open.image = MenuBarMark.image(side: Self.menuIconSide)
-        }
         menu.addItem(open)
         let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         warning.isEnabled = false
         warning.isHidden = true
         menu.addItem(warning)
         menu.addItem(.separator())
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
         if updater.isEnabled {
@@ -108,10 +108,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .store(in: &cancellables)
         }
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        let quit = NSMenuItem(title: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        menu.addItem(quit)
+        if #available(macOS 26, *) {
+            // macOS 26 draws icons beside menu items; give every row one, in one style,
+            // instead of the system's defaults for Settings… and Quit.
+            open.image = MenuBarMark.image(side: Self.menuIconSide)
+            settingsItem.image = Self.menuSymbol("gearshape")
+            updateItem?.image = Self.menuSymbol("arrow.triangle.2.circlepath")
+            quit.image = Self.menuSymbol("power")
+        }
         item.menu = menu
         statusItem = item
-        openItem = open
         hotKeyWarningItem = warning
     }
 
@@ -120,39 +128,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let updateItem else { return }
         updateItem.title = available.map { "Update to \(AppInfo.name) \($0)…" } ?? "Check for Updates…"
         updateItem.isEnabled = canCheck
-        updateItem.image = available == nil ? nil : NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: "Update available")
+        if #available(macOS 26, *) {
+            updateItem.image = Self.menuSymbol(available == nil ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
+        } else {
+            updateItem.image = available == nil ? nil : Self.menuSymbol("arrow.down.circle")
+        }
         statusItem?.button?.toolTip = available.map { "\(AppInfo.name) \($0) is available" }
     }
 
-    /// Shows the shortcut next to "Open Howler", or explains why it isn't active.
+    /// Explains in the menu when the shortcut isn't active.
     private func updateMenu(for combo: HotKeyCombo) {
-        guard let openItem, let hotKeyWarningItem else { return }
-        let equivalent = Self.keyEquivalent(for: combo)
-        openItem.keyEquivalent = equivalent ?? ""
-        openItem.keyEquivalentModifierMask = equivalent == nil ? [] : Self.modifierFlags(for: combo)
-        openItem.title = equivalent == nil ? "Open \(AppInfo.name)  (\(combo.display))" : "Open \(AppInfo.name)"
+        guard let hotKeyWarningItem else { return }
         hotKeyWarningItem.title = "\(combo.display) is used by another app"
         hotKeyWarningItem.isHidden = settings.hotKeyRegistered
-    }
-
-    private static func keyEquivalent(for combo: HotKeyCombo) -> String? {
-        if combo.keyCode == HotKeyCombo.spaceKeyCode { return " " }
-        if let number = Int(combo.keyLabel.dropFirst()), combo.keyLabel.hasPrefix("F"), (1...20).contains(number),
-           let scalar = UnicodeScalar(NSF1FunctionKey + number - 1) {
-            return String(Character(scalar))
-        }
-        // Symbol labels (↩, ←, …) are not the characters those keys type; show them in the title.
-        guard combo.keyLabel.count == 1, combo.keyLabel.allSatisfy({ $0.isASCII }) else { return nil }
-        return combo.keyLabel.lowercased()
-    }
-
-    private static func modifierFlags(for combo: HotKeyCombo) -> NSEvent.ModifierFlags {
-        var flags: NSEvent.ModifierFlags = []
-        if combo.modifiers.contains(.command) { flags.insert(.command) }
-        if combo.modifiers.contains(.option) { flags.insert(.option) }
-        if combo.modifiers.contains(.control) { flags.insert(.control) }
-        if combo.modifiers.contains(.shift) { flags.insert(.shift) }
-        return flags
     }
 
     /// Accessory apps show no menu bar, but key equivalents still route through the main
