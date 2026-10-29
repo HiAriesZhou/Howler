@@ -10,7 +10,8 @@ enum ScreenCaptureError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .permissionNeeded:
-            return "To capture the screen, allow \(AppInfo.name) in System Settings › Privacy & Security › Screen & System Audio Recording, then try again."
+            // macOS files screen and audio under one permission; Howler only takes a still image.
+            return "To capture a region, allow \(AppInfo.name) in System Settings › Privacy & Security › Screen & System Audio Recording, then try again. \(AppInfo.name) only takes a still image of the region you drag; it never records audio, but macOS grants both together."
         case .unreadable:
             return "The screen capture couldn't be read."
         }
