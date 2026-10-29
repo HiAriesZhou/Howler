@@ -25,9 +25,10 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
         self.keyLabel = keyLabel
     }
 
-    /// The shortcut until the user records another: ⌥H, H for Howler. (⌥Space, the
-    /// default before v0.1.5, collides with other assistants' launchers.)
-    public static let standard = HotKeyCombo(keyCode: 4, modifiers: .option, keyLabel: "H")
+    /// The shortcut until the user records another: ⌥, (beside ⌘, for Settings). ⌥Space,
+    /// the default before v0.1.5, collides with other assistants' launchers; ⌥H, the default
+    /// until v0.1.8, with other apps' shortcuts (e.g. WeChat). A recorded ⌥H stays.
+    public static let standard = HotKeyCombo(keyCode: 43, modifiers: .option, keyLabel: ",")
 
     /// ⌥Space, the default until v0.1.5. Only the old Reset button stored it, so a stored
     /// copy found on upgrade means "the default", not a choice.
@@ -41,7 +42,7 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
         return stored
     }
 
-    /// Applied once, on the first launch after the default moved to ⌥H: a stored ⌥Space is
+    /// Applied once, on the first launch after the default moved off ⌥Space: a stored ⌥Space is
     /// dropped so it follows the default. After that, ⌥Space recorded on purpose stays.
     public static func storedAfterDefaultChange(_ stored: HotKeyCombo?) -> HotKeyCombo? {
         stored == previousStandard ? nil : stored
