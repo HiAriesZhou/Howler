@@ -73,6 +73,10 @@ struct HotKeyRecorder: View {
             return
         }
         let combo = HotKeyCombo(keyCode: UInt32(event.keyCode), modifiers: Self.modifiers(event.modifierFlags), keyLabel: label)
+        if combo.isSettings {
+            hint = "\(HotKeyCombo.settings.display) opens Settings"
+            return
+        }
         guard combo.isValid else {
             hint = combo.modifiers.isDisjoint(with: [.command, .option, .control])
                 ? "Add ⌘, ⌥ or ⌃"

@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelController: PanelController?
     private var settingsController: SettingsWindowController?
     private var hotKey: HotKey?
+    private var settingsHotKey: HotKey?
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -62,9 +63,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func registerHotKey(_ combo: HotKeyCombo, suspended: Bool) {
         hotKey = nil // unregister first: re-registering our own combo would fail
+        settingsHotKey = nil
         guard !suspended else { return }
         hotKey = HotKey(keyCode: combo.keyCode, modifiers: combo.modifiers.rawValue) { [weak self] in
             MainActor.assumeIsolated { self?.togglePanel() }
+        }
+        // ⌥, opens Settings from any app; if another app holds it, the menu still does.
+        let settingsCombo = HotKeyCombo.settings
+        settingsHotKey = HotKey(keyCode: settingsCombo.keyCode, modifiers: settingsCombo.modifiers.rawValue) { [weak self] in
+            MainActor.assumeIsolated { self?.openSettings() }
         }
         settings.hotKeyRegistered = hotKey != nil
         updateMenu(for: combo)
