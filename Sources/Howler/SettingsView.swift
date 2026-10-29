@@ -90,6 +90,11 @@ struct GeneralPane: View {
                         Divider()
                         UpdateRow(updater: updater)
                     }
+                    Divider()
+                    SettingsRow("Feedback", detail: "Report a problem or suggest an idea on GitHub.") {
+                        Button("Send Feedback…", action: Feedback.open)
+                            .help("Opens a feedback form on GitHub, with this version filled in")
+                    }
                 }
             }
             Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, with your next question — leave out passwords and other secrets.")
@@ -225,8 +230,8 @@ private struct UpdateRow: View {
     }
 }
 
-/// The running version in small type at the foot of the page, beside a quiet feedback link
-/// and, when an update is waiting, a blue one.
+/// The running version in small type at the foot of the page, with a quiet link when an
+/// update is waiting.
 private struct VersionFootnote: View {
     @ObservedObject var updater: Updater
 
@@ -240,11 +245,6 @@ private struct VersionFootnote: View {
                     .disabled(!updater.canCheck)
                 Text("·")
             }
-            Button("Feedback", action: Feedback.open)
-                .buttonStyle(.link)
-                .foregroundStyle(.tertiary)
-                .help("Opens a feedback form on GitHub, with this version filled in")
-            Text("·")
             Text("\(AppInfo.name) \(AppInfo.version)")
                 .textSelection(.enabled)
         }

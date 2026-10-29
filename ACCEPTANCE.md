@@ -109,7 +109,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ### 3e. 反馈 / Feedback
 
-- [ ] 菜单 “Send Feedback…”（macOS 26 上有对话气泡图标）、设置页右下角 “Feedback”：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
+- [ ] 菜单 “Send Feedback…”（macOS 26 上有对话气泡图标）、设置页 General 卡片里的 “Feedback” 一行（Send Feedback… 按钮）：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
 - [ ] 不点击时不访问任何网址
 
 ### 3d. 更新 / Updates
