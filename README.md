@@ -94,6 +94,17 @@ $H config show
 
 Changes take effect in the running app at once. Every request goes straight to the service you configured, never through a relay.
 
+### System prompt
+
+Every conversation starts with a short system prompt, shown in full in **Settings › System Prompt**:
+
+- **The date, in UTC**, e.g. `Current date: 2026-10-29 (UTC).` Without it a model takes its training cutoff for today. UTC says nothing about your time zone or location. Howler adds it; it can't be edited.
+- **Instructions**, editable. The suggested ones ask for short answers without tables (the letter can't show them), in the language of your question. **Reset** brings them back.
+
+Leave the instructions empty to turn the whole prompt off, date included, for models that reject a system prompt. A `body` that sets `system` (Anthropic) or `systemInstruction` / `system_instruction` (Gemini) replaces it.
+
+The model can't search the web: it answers from what it was trained on, and the date only lets it say when something may be too recent for it.
+
 ## Use
 
 | | |
@@ -110,7 +121,8 @@ Follow-up questions stay on the same sheet, separated by a fleuron. ⏹ stops a 
 ## Privacy
 
 - No chat history, ever. Messages live in memory and burn with the letter.
-- Stored: the model setup, its last check and your shortcut (UserDefaults), plus the API key (Keychain).
+- Stored: the model setup, its last check, your system prompt instructions and your shortcut (UserDefaults), plus the API key (Keychain).
+- The system prompt carries the date in UTC and nothing about you: no name, language setting, time zone or location.
 - The clipboard and the screen are read only when you paste or capture.
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.
 - The command line never prints the key.
