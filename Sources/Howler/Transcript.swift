@@ -69,10 +69,7 @@ struct Transcript: View {
         } else if !message.content.isEmpty {
             VStack(alignment: .trailing, spacing: 2) {
                 InkMarkdown(markdown: message.content)
-                CopyAnswerButton(
-                    copied: viewModel.copiedID == message.id,
-                    isLatest: message.id == viewModel.lastAnswer?.id
-                ) {
+                CopyAnswerButton(copied: viewModel.copiedID == message.id) {
                     viewModel.copy(message)
                 }
             }
@@ -151,7 +148,6 @@ private struct ErrorLine: View {
 
 private struct CopyAnswerButton: View {
     let copied: Bool
-    let isLatest: Bool
     let action: () -> Void
 
     @Environment(\.parchment) private var parchment
@@ -165,7 +161,6 @@ private struct CopyAnswerButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .keyboardShortcut(isLatest ? KeyboardShortcut("c", modifiers: [.command, .shift]) : nil)
         .help("Copy this answer")
         .animation(.easeOut(duration: 0.15), value: copied)
     }

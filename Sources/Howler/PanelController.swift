@@ -281,6 +281,7 @@ final class PanelController {
                     switch event.keyCode {
                     case 53: return self?.handleEscape(event) ?? false // kVK_Escape
                     case 9: return self?.handlePasteImage(event) ?? false // kVK_ANSI_V
+                    case 8: return self?.handleCopyAnswer(event) ?? false // kVK_ANSI_C
                     default: return false
                     }
                 }
@@ -326,6 +327,29 @@ final class PanelController {
         else { return false }
         viewModel.pasteImage(image)
         return true
+    }
+
+    /// ⌘C with nothing selected copies the latest answer; with a selection it copies that,
+    /// as everywhere else.
+    private func handleCopyAnswer(_ event: NSEvent) -> Bool {
+        guard event.window === panel,
+              event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+              !viewModel.isStreaming,
+              let answer = viewModel.lastAnswer,
+              !hasSelectionToCopy()
+        else { return false }
+        viewModel.copy(answer)
+        return true
+    }
+
+    /// Whether whatever would take a plain ⌘C (the question field, or answer text the user
+    /// selected) has something selected.
+    private func hasSelectionToCopy() -> Bool {
+        let copy = #selector(NSText.copy(_:))
+        guard let target = NSApp.target(forAction: copy, to: nil, from: nil) else { return false }
+        if let textView = target as? NSTextView { return textView.selectedRange().length > 0 }
+        guard let validator = target as? NSMenuItemValidation else { return true }
+        return validator.validateMenuItem(NSMenuItem(title: "", action: copy, keyEquivalent: ""))
     }
 
     private func removeMonitors() {

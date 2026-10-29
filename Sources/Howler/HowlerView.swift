@@ -220,7 +220,7 @@ struct HowlerView: View {
                         .truncationMode(.middle)
                 }
                 Spacer(minLength: 16)
-                Text("↩ write · ⇧⌘C copy · esc burn")
+                Text("↩ write · ⌘C copy · esc burn")
             }
             .font(Lettering.marginalia(11.5))
             .foregroundStyle(parchment.fadedInk)
