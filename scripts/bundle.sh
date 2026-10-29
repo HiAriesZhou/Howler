@@ -27,9 +27,15 @@ OUT="$ROOT/build"
 APP="$OUT/stage.noindex/$APP_NAME.app"
 ZIP="$OUT/$APP_NAME.zip"
 rm -rf "$APP" "$ZIP" "$OUT/$APP_NAME.app" # the last: where earlier versions put the app
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 
 cp "$BINARY" "$APP/Contents/MacOS/$APP_NAME"
+# Sparkle, which installs updates. Its XPC services are only for sandboxed apps; Howler
+# isn't one, so they are left out (fewer pieces to sign and notarize).
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+ditto "$BIN_DIR/Sparkle.framework" "$SPARKLE"
+rm -rf "$SPARKLE/Versions/B/XPCServices" "$SPARKLE/XPCServices"
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/$APP_NAME"
 # The icon is rendered from source by scripts/icon.sh and committed.
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
@@ -68,6 +74,14 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUFeedURL</key>
+    <string>${SPARKLE_FEED_URL}</string>
+    <key>SUPublicEDKey</key>
+    <string>${SPARKLE_PUBLIC_KEY}</string>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
+    <key>SUAllowsAutomaticUpdates</key>
+    <false/>
 </dict>
 </plist>
 PLIST
@@ -78,12 +92,17 @@ if [[ -n "${SIGN_IDENTITY:-}" ]]; then
     # A stable identity keeps Keychain and privacy grants across updates; notarization
     # requires the hardened runtime and a secure timestamp.
     echo "==> codesign (${SIGN_IDENTITY}, hardened runtime)"
-    codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+    sign() { codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$1"; }
 else
     echo "==> ad-hoc codesign"
-    codesign --force --sign - --timestamp=none "$APP"
+    sign() { codesign --force --sign - --timestamp=none "$1"; }
 fi
-codesign --verify --strict --verbose=2 "$APP"
+# Inside out: Sparkle's helpers, the framework, then the app.
+sign "$SPARKLE/Versions/B/Autoupdate"
+sign "$SPARKLE/Versions/B/Updater.app"
+sign "$SPARKLE"
+sign "$APP"
+codesign --verify --deep --strict --verbose=2 "$APP"
 lipo -info "$APP/Contents/MacOS/$APP_NAME"
 # shellcheck disable=SC2086 # ARCHS is a space-separated list
 lipo "$APP/Contents/MacOS/$APP_NAME" -verify_arch $ARCHS \
