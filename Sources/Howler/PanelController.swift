@@ -347,7 +347,8 @@ final class PanelController {
     private func hasSelectionToCopy() -> Bool {
         let copy = #selector(NSText.copy(_:))
         guard let target = NSApp.target(forAction: copy, to: nil, from: nil) else { return false }
-        if let textView = target as? NSTextView { return textView.selectedRange().length > 0 }
+        // Mid-composition (e.g. Pinyin), ⌘C belongs to the input method, as Esc does.
+        if let textView = target as? NSTextView { return textView.selectedRange().length > 0 || textView.hasMarkedText() }
         guard let validator = target as? NSMenuItemValidation else { return true }
         return validator.validateMenuItem(NSMenuItem(title: "", action: copy, keyEquivalent: ""))
     }
