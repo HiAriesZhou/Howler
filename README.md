@@ -34,7 +34,7 @@
 
 ## The letter
 
-Press **⌥H** anywhere. A letter settles at the top of the screen, already sealed in wax.
+Press **⌥,** anywhere. A letter settles at the top of the screen, already sealed in wax.
 
 - **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. Your question sits on a ruled line, and the answer is set in a book face below it. The sheet grows with the answer up to an A4 page, then follows the quill.
 - **A quill that writes.** Answers stream in at a hand's pace. Fresh ink glows gold before it settles to sepia, and the quill rests after the last word. While the model thinks, the quill hovers and counts the seconds.
@@ -58,7 +58,7 @@ Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the
 
 1. [Download **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg), open it, and drag Howler onto Applications. Older versions and `Howler.zip` (the same app) are on [Releases](https://github.com/HiAriesZhou/Howler/releases).
 2. Open Howler. It is signed with a Developer ID and notarized by Apple, so it opens like any other app. Updates keep your Keychain and screen-recording permissions.
-3. A small wax seal marked H appears in the menu bar. Howler has no Dock icon.
+3. A small quill appears in the menu bar. Howler has no Dock icon.
 4. From v0.1.7 on, Howler updates itself. Choose **Check for Updates…** in the menu, or let it check once a day (Settings › General). A new version shows up quietly in the menu and in Settings instead of popping up a window. Nothing installs until you say so. Updates are installed by [Sparkle](https://sparkle-project.org), which checks the download's EdDSA signature and Developer ID first. Versions up to 0.1.6 need one manual download.
 
 Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, right-click it and choose **Open**.
@@ -110,7 +110,7 @@ The model can't search the web: it answers from what it was trained on, and the 
 
 | | |
 | --- | --- |
-| **⌥H** | Open the letter. Press again to burn it. The shortcut can be changed in Settings. |
+| **⌥,** | Open the letter. Press again to burn it. The shortcut can be changed in Settings. |
 | **↩** / **⌥↩** | Send / new line |
 | **⇧⌘C** | Copy the latest answer (or click ❧ Copy) |
 | **+ Attach** | Paste from the clipboard, or capture a screen region |

@@ -34,7 +34,7 @@
 
 ## 一封信
 
-在任何应用里按 **⌥H**，一封封好火漆的信就落在屏幕上方。
+在任何应用里按 **⌥,**，一封封好火漆的信就落在屏幕上方。
 
 - **一张纸，不是输入框**：毛边、纤维纹理、中间一道折痕。问题写在横线上，回答用书卷字体写在下方。纸随回答向下展开，最长到 A4 比例，之后跟着羽毛笔滚动。
 - **羽毛笔书写**：回答按手写的节奏逐字出现，新墨先泛起金光，再沉为墨色，羽毛笔停在最后一个字后面。模型思考时，羽毛笔悬在纸上，并显示已经思考了几秒。
@@ -58,7 +58,7 @@
 
 1. [下载 **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg)，打开后把 Howler 拖到 Applications。旧版本与 `Howler.zip`（同一个应用）在 [Releases](https://github.com/HiAriesZhou/Howler/releases)。
 2. 打开 Howler。应用使用 Developer ID 签名并经过 Apple 公证，可以像其他应用一样直接打开。更新后，钥匙串和录屏权限都会保留。
-3. 菜单栏会出现一枚刻着 H 的小火漆印。Howler 没有 Dock 图标。
+3. 菜单栏会出现一支小羽毛笔。Howler 没有 Dock 图标。
 4. 从 v0.1.7 起，Howler 可以自动更新。在菜单里选 **Check for Updates…**，或者让它每天检查一次（Settings › General）。发现新版本时，只在菜单和设置里安静地提示，不弹窗打扰；你确认之前不会安装任何东西。更新由 [Sparkle](https://sparkle-project.org) 安装，安装前会校验下载包的 EdDSA 签名和 Developer ID。0.1.6 及更早的版本需要手动下载一次。
 
 v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以在 Finder 中右键点 Howler，选**打开**。
@@ -110,7 +110,7 @@ $H config show
 
 | | |
 | --- | --- |
-| **⌥H** | 呼出信纸；再按一次烧掉。可在 Settings 中改成其他快捷键 |
+| **⌥,** | 呼出信纸；再按一次烧掉。可在 Settings 中改成其他快捷键 |
 | **↩** / **⌥↩** | 发送 / 换行 |
 | **⇧⌘C** | 复制最新一条回答（也可点 ❧ Copy） |
 | **+ Attach** | 从剪贴板粘贴，或截取屏幕区域 |
