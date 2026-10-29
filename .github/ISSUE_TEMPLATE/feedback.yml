@@ -1,0 +1,22 @@
+name: 反馈 Feedback
+description: 问题、想法或建议都可以。A problem, an idea or a suggestion.
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么 / 想要什么 (What happened / what you want)
+      description: 问题请写怎么操作、看到了什么、本来期望什么；截图或录屏可以直接拖进来。For a problem, say what you did, what you saw and what you expected.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Howler 版本 (Howler version)
+  - type: input
+    id: macos
+    attributes:
+      label: macOS 版本 (macOS version)
+  - type: input
+    id: arch
+    attributes:
+      label: 芯片架构 (Architecture)

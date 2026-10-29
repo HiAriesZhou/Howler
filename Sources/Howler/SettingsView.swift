@@ -225,8 +225,8 @@ private struct UpdateRow: View {
     }
 }
 
-/// The running version in small type at the foot of the page, with a quiet link when an
-/// update is waiting.
+/// The running version in small type at the foot of the page, beside a quiet feedback link
+/// and, when an update is waiting, a blue one.
 private struct VersionFootnote: View {
     @ObservedObject var updater: Updater
 
@@ -240,6 +240,11 @@ private struct VersionFootnote: View {
                     .disabled(!updater.canCheck)
                 Text("·")
             }
+            Button("Feedback", action: Feedback.open)
+                .buttonStyle(.link)
+                .foregroundStyle(.tertiary)
+                .help("Opens a feedback form on GitHub, with this version filled in")
+            Text("·")
             Text("\(AppInfo.name) \(AppInfo.version)")
                 .textSelection(.enabled)
         }
