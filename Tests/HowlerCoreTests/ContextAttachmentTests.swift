@@ -78,10 +78,14 @@ final class ContextAttachmentTests: XCTestCase {
 }
 
 final class HotKeyComboTests: XCTestCase {
-    func testDefaultIsOptionH() {
-        XCTAssertEqual(HotKeyCombo.standard.display, "⌥H")
-        XCTAssertEqual(HotKeyCombo.standard.keyCode, 4) // kVK_ANSI_H
+    func testDefaultIsOptionComma() {
+        // ⌥H clashed with other apps' shortcuts (e.g. WeChat); ⌥, sits beside ⌘, (Settings).
+        XCTAssertEqual(HotKeyCombo.standard.display, "⌥,")
+        XCTAssertEqual(HotKeyCombo.standard.keyCode, 43) // kVK_ANSI_Comma
         XCTAssertTrue(HotKeyCombo.standard.isValid)
+        // Recorded on purpose, the old default stays.
+        let optionH = HotKeyCombo(keyCode: 4, modifiers: .option, keyLabel: "H")
+        XCTAssertEqual(HotKeyCombo.effective(stored: optionH), optionH)
         XCTAssertEqual(HotKeyCombo.previousStandard.display, "⌥Space")
         XCTAssertNotEqual(HotKeyCombo.standard, HotKeyCombo.previousStandard)
     }
@@ -96,7 +100,7 @@ final class HotKeyComboTests: XCTestCase {
     }
 
     func testDefaultChangeDropsOnlyTheOldDefault() {
-        // The old Reset stored ⌥Space; on the one-time upgrade it follows the default to ⌥H.
+        // The old Reset stored ⌥Space; on the one-time upgrade it follows the default.
         XCTAssertNil(HotKeyCombo.storedAfterDefaultChange(.previousStandard))
         let custom = HotKeyCombo(keyCode: 40, modifiers: [.control, .option], keyLabel: "K")
         XCTAssertEqual(HotKeyCombo.storedAfterDefaultChange(custom), custom)

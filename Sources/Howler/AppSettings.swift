@@ -38,7 +38,7 @@ final class AppSettings: ObservableObject {
 
     private enum DefaultsKey {
         static let hotKey = "hotKey"
-        /// Set once the ⌥Space → ⌥H default change has been applied to stored settings.
+        /// Set once the move of the default off ⌥Space has been applied to stored settings.
         static let hotKeyDefaultChecked = "hotKeyDefaultChecked"
     }
 
