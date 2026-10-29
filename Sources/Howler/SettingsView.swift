@@ -15,6 +15,8 @@ struct SettingsView: View {
 
             SettingsSection("System Prompt") {
                 SystemPromptSettings(settings: settings)
+            } accessory: {
+                SystemPromptReset(settings: settings)
             }
 
             SettingsSection("General") {
@@ -80,21 +82,27 @@ struct SettingsView: View {
     }
 }
 
-/// A titled group on a quiet card, like System Settings.
-private struct SettingsSection<Content: View>: View {
+/// A titled group on a quiet card, like System Settings. An accessory (e.g. Reset) follows
+/// the title.
+private struct SettingsSection<Content: View, Accessory: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
+    @ViewBuilder let accessory: () -> Accessory
 
-    init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+    init(_ title: String, @ViewBuilder content: @escaping () -> Content, @ViewBuilder accessory: @escaping () -> Accessory) {
         self.title = title
         self.content = content
+        self.accessory = accessory
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                accessory()
+            }
             content()
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -104,6 +112,12 @@ private struct SettingsSection<Content: View>: View {
                         .strokeBorder(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 0.5)
                 )
         }
+    }
+}
+
+extension SettingsSection where Accessory == EmptyView {
+    init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+        self.init(title, content: content, accessory: { EmptyView() })
     }
 }
 
