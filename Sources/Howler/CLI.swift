@@ -92,11 +92,18 @@ enum CLI {
             ("body", service.body.isEmpty ? "—" : JSONValue.compact(service.body)),
             ("headers", service.headers.isEmpty ? "—" : JSONValue.compact(service.headers.mapValues(JSONValue.string))),
             ("api-key", store.hasKey ? "saved in Keychain" : "not set"),
+            ("prompt", promptSummary(store)),
             ("check", checkSummary(store.lastCheck)),
         ]
         for (label, value) in rows {
             print(label.padding(toLength: 10, withPad: " ", startingAt: 0) + value)
         }
+    }
+
+    private static func promptSummary(_ store: ServiceStore) -> String {
+        if store.instructionsAreSuggested { return "date (UTC) + suggested instructions; edit in Settings" }
+        if store.systemPrompt == nil { return "off (instructions are empty); edit in Settings" }
+        return "date (UTC) + your instructions; edit in Settings"
     }
 
     private static func checkSummary(_ record: ServiceStore.CheckRecord?) -> String {
@@ -152,11 +159,13 @@ enum CLI {
             printError("No API key saved. Copy it, then run: pbpaste | \(name) config set api-key --stdin")
             return 1
         }
-        if verbose { describeRequest(service: service, apiKey: key) }
+        if verbose { describeRequest(service: service, apiKey: key, systemPrompt: store.systemPrompt) }
         print("Checking \(service.summary) …")
 
         let result = wait {
-            try await ConnectionTester.test(client: ChatClient(), service: service, apiKey: key, appName: name)
+            try await ConnectionTester.test(
+                client: ChatClient(), service: service, apiKey: key, appName: name, systemPrompt: store.systemPrompt
+            )
         }
         switch result {
         case .success:
@@ -175,12 +184,12 @@ enum CLI {
     }
 
     /// Prints the probe request as it will be sent, with the key masked.
-    private static func describeRequest(service: ModelService, apiKey: String) {
+    private static func describeRequest(service: ModelService, apiKey: String, systemPrompt: String?) {
         do {
             let request = try RequestBuilder.streamingRequest(
                 service: service, apiKey: apiKey,
                 messages: ConnectionTester.probeMessages,
-                options: ConnectionTester.probeOptions(appName: name)
+                options: ConnectionTester.probeOptions(appName: name, systemPrompt: systemPrompt)
             )
             print("\(request.httpMethod ?? "POST") \(request.url?.absoluteString ?? "?")")
             for (field, value) in (request.allHTTPHeaderFields ?? [:]).sorted(by: { $0.key < $1.key }) {

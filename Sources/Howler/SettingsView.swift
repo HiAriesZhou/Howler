@@ -2,7 +2,8 @@ import AppKit
 import HowlerCore
 import SwiftUI
 
-/// Everything on one page: the model that answers, then the two general preferences.
+/// Everything on one page: the model that answers, what it is told first, then the two
+/// general preferences.
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
 
@@ -10,6 +11,10 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 20) {
             SettingsSection("Model") {
                 ModelSettings(settings: settings)
+            }
+
+            SettingsSection("System Prompt") {
+                SystemPromptSettings(settings: settings)
             }
 
             SettingsSection("General") {

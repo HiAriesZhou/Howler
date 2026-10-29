@@ -16,8 +16,10 @@ public enum ConnectionTester {
     public static let timeout: TimeInterval = 120
     public static let probeMessages = [ChatMessage(role: .user, content: probePrompt)]
 
-    public static func probeOptions(appName: String) -> RequestOptions {
-        RequestOptions(appName: appName, timeout: timeout)
+    /// Carries the system prompt too, so a service that rejects one fails the check
+    /// rather than the first question.
+    public static func probeOptions(appName: String, systemPrompt: String? = nil) -> RequestOptions {
+        RequestOptions(appName: appName, timeout: timeout, systemPrompt: systemPrompt)
     }
 
     /// Sends a tiny real streaming request. Succeeds as soon as the service streams the
@@ -26,13 +28,14 @@ public enum ConnectionTester {
         client: ChatClient,
         service: ModelService,
         apiKey: String,
-        appName: String = "Howler"
+        appName: String = "Howler",
+        systemPrompt: String? = nil
     ) async throws {
         let stream = client.stream(
             service: service,
             apiKey: apiKey,
             messages: probeMessages,
-            options: probeOptions(appName: appName)
+            options: probeOptions(appName: appName, systemPrompt: systemPrompt)
         )
         for try await _ in stream {
             return // first text delta is enough; leaving the loop cancels the request

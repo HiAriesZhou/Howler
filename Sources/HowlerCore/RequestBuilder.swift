@@ -13,11 +13,15 @@ public struct RequestOptions: Equatable, Sendable {
     /// silent for minutes before the first token; `ChatClient`'s 600s resource timeout still
     /// caps the whole request.
     public var timeout: TimeInterval
+    /// Sent where each format expects it (a system message, `system`, `systemInstruction`).
+    /// Blank sends none.
+    public var systemPrompt: String?
 
-    public init(maxTokens: Int? = nil, appName: String = "Howler", timeout: TimeInterval = 600) {
+    public init(maxTokens: Int? = nil, appName: String = "Howler", timeout: TimeInterval = 600, systemPrompt: String? = nil) {
         self.maxTokens = maxTokens
         self.appName = appName
         self.timeout = timeout
+        self.systemPrompt = systemPrompt
     }
 }
 
@@ -59,6 +63,9 @@ public enum RequestBuilder {
         // Whether a model reads images is up to the service; its own error says when it can't.
         let known = service.knownProvider
         let model = service.model
+        let system = options.systemPrompt.flatMap {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0
+        }
 
         var request: URLRequest
         var body: [String: Any]
@@ -70,10 +77,11 @@ public enum RequestBuilder {
                 request.setValue(projectURL, forHTTPHeaderField: "HTTP-Referer")
                 request.setValue(options.appName, forHTTPHeaderField: "X-Title")
             }
+            let systemMessages: [[String: Any]] = system.map { [["role": "system", "content": $0]] } ?? []
             body = [
                 "model": model,
                 "stream": true,
-                "messages": turns.map { ["role": $0.role.rawValue, "content": openAIContent($0)] },
+                "messages": systemMessages + turns.map { ["role": $0.role.rawValue, "content": openAIContent($0)] },
             ]
 
         case .anthropic:
@@ -86,6 +94,7 @@ public enum RequestBuilder {
                 "max_tokens": options.maxTokens ?? anthropicDefaultMaxTokens,
                 "messages": turns.map { ["role": $0.role.rawValue, "content": anthropicContent($0)] },
             ]
+            if let system { anthropicBody["system"] = system }
             if known == .anthropic, anthropicFallbackModels.contains(model) {
                 request.setValue(anthropicFallbackBeta, forHTTPHeaderField: "anthropic-beta")
                 anthropicBody["fallbacks"] = "default"
@@ -110,6 +119,10 @@ public enum RequestBuilder {
                     ["role": $0.role == .user ? "user" : "model", "parts": geminiParts($0)]
                 },
             ]
+            // A setup that writes Google's snake_case spelling keeps it, rather than sending both.
+            if let system, service.body["system_instruction"] == nil {
+                geminiBody["systemInstruction"] = ["parts": [["text": system]]]
+            }
             if let maxTokens = options.maxTokens {
                 geminiBody["generationConfig"] = ["maxOutputTokens": maxTokens]
             }
