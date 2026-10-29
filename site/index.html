@@ -11,12 +11,26 @@
   <link rel="canonical" href="https://howler.arieszhou.com/">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <!-- Share cards (Open Graph, read by X too). The image is 1200×630, the 1.91:1 that
+       large cards show uncropped; site/assets/og.png. -->
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Howler">
   <meta property="og:url" content="https://howler.arieszhou.com/">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
   <meta property="og:title" content="Howler — Burn after reading">
   <meta property="og:description" content="A sealed letter for quick AI questions on macOS. A quill writes the answer; the letter burns when you're done.">
-  <meta property="og:image" content="https://howler.arieszhou.com/assets/letter.png">
+  <meta property="og:image" content="https://howler.arieszhou.com/assets/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Howler: a wax-sealed letter on parchment with a question and the answer written below it in ink. Burn after reading.">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:creator" content="@AriesZhou">
+  <meta name="twitter:title" content="Howler — Burn after reading">
+  <meta name="twitter:description" content="A sealed letter for quick AI questions on macOS. A quill writes the answer; the letter burns when you're done.">
+  <meta name="twitter:image" content="https://howler.arieszhou.com/assets/og.png">
+  <meta name="twitter:image:alt" content="Howler: a wax-sealed letter on parchment with a question and the answer written below it in ink. Burn after reading.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -158,7 +172,7 @@
     <section class="chapter" id="setup">
       <h2><span class="en">Any model. Set up by your assistant.</span><span class="zh">任何模型，交给 AI 助手配置</span></h2>
       <div class="feature flip">
-        <img class="settings-shot" src="assets/settings.webp" width="1144" height="1090" loading="lazy" decoding="async" alt="Howler Settings: the model, its host and status, a Check button and Copy Setup Prompt">
+        <img class="settings-shot" src="assets/settings.webp" width="1144" height="1290" loading="lazy" decoding="async" alt="Howler Settings, General tab: the model with its host, status, Check and Copy Setup Prompt, then the shortcut, launch at login, automatic updates and feedback">
         <div>
           <p><span class="en">Howler writes with one model service. Copy the setup prompt from Settings and paste it into Claude Code, Codex or any assistant that can run commands. It asks which model you want, reads the docs, configures Howler's built-in command line and checks it works.</span>
           <span class="zh">Howler 只连接一个模型服务。在设置里复制配置提示词，粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪个模型、查官方文档、用 Howler 自带的命令行写好配置，并检查能否正常回答。</span></p>
