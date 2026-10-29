@@ -94,6 +94,7 @@ struct GeneralPane: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            VersionFootnote(updater: updater)
         }
     }
 
@@ -205,38 +206,42 @@ private struct SettingsRow<Control: View>: View {
     }
 }
 
-/// Automatic update checks, a manual check, and the gentle reminder when one is waiting.
+/// One switch for the daily update check. Checking by hand lives in the menu.
 private struct UpdateRow: View {
     @ObservedObject var updater: Updater
 
     var body: some View {
-        SettingsRow("Check for updates automatically", detail: detail) {
-            HStack(spacing: 10) {
-                Group {
-                    if updater.available != nil {
-                        Button("Update…", action: updater.checkForUpdates)
-                            .buttonStyle(.borderedProminent)
-                            .tint(Wax.crimson.base)
-                    } else {
-                        Button("Check Now", action: updater.checkForUpdates)
-                    }
-                }
-                .controlSize(.small)
-                .disabled(!updater.canCheck) // a check or an install is already under way
-                Toggle("Check for updates automatically", isOn: Binding(
-                    get: { updater.checksAutomatically },
-                    set: { updater.setChecksAutomatically($0) }
-                ))
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .labelsHidden()
-            }
+        SettingsRow("Check for updates automatically", detail: nil) {
+            Toggle("Check for updates automatically", isOn: Binding(
+                get: { updater.checksAutomatically },
+                set: { updater.setChecksAutomatically($0) }
+            ))
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .labelsHidden()
         }
     }
+}
 
-    private var detail: String {
-        if let version = updater.available { return "\(AppInfo.name) \(version) is available." }
-        let schedule = updater.checksAutomatically ? "asks GitHub once a day" : "automatic checks are off"
-        return "\(AppInfo.name) \(AppInfo.version) · \(schedule)."
+/// The running version in small type at the foot of the page, with a quiet link when an
+/// update is waiting.
+private struct VersionFootnote: View {
+    @ObservedObject var updater: Updater
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Spacer(minLength: 0)
+            if let version = updater.available {
+                Button("Update to \(version)", action: updater.checkForUpdates)
+                    .buttonStyle(.link)
+                    .foregroundStyle(Color.accentColor) // the one thing here worth noticing
+                    .disabled(!updater.canCheck)
+                Text("·")
+            }
+            Text("\(AppInfo.name) \(AppInfo.version)")
+                .textSelection(.enabled)
+        }
+        .font(.caption2)
+        .foregroundStyle(.tertiary)
     }
 }

@@ -103,10 +103,10 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ### 3d. 更新 / Updates
 
-- [ ] 菜单含 “Check for Updates…”；General 页有 “Check for updates automatically” 一行（版本号、Check Now、开关）
+- [ ] 菜单含 “Check for Updates…”；General 页有 “Check for updates automatically” 一行，只有一个开关；当前版本号以小号浅灰字显示在页面右下角
 - [ ] 首次装 0.1.7 后第二次启动：Sparkle 询问是否自动检查；选择后开关状态一致
 - [ ] 点 Check for Updates…（已是最新）：提示已是最新版本；窗口在前台
-- [ ] 后台检查发现新版本：不弹窗；菜单变为 “Update to Howler <版本>…”，菜单栏图标悬停提示有新版本，General 页显示 Update… 按钮；点它弹出更新说明
+- [ ] 后台检查发现新版本：不弹窗；菜单变为 “Update to Howler <版本>…”，菜单栏图标悬停提示有新版本，General 页右下角版本号旁出现蓝色 “Update to <版本>” 链接；点它弹出更新说明
 - [ ] 安装更新后重启：版本号更新，`$H check` 不要求输入登录密码（钥匙串授权保留），录屏权限保留
 - [ ] 改坏 appcast 里的签名：下载后拒绝安装，版本不变
 - [ ] 关闭自动检查：之后不再请求 appcast.xml
