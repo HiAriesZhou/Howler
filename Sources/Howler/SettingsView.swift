@@ -41,7 +41,9 @@ private struct SettingsPage<Content: View>: View {
         let page = VStack(alignment: .leading, spacing: 16) {
             content()
         }
-        .padding(20)
+        .padding(.horizontal, 20)
+        .padding(.top, 26) // a little air below the title bar
+        .padding(.bottom, 20)
         .frame(width: SettingsWindowController.width)
         if fills {
             page.frame(maxHeight: .infinity, alignment: .top)

@@ -29,6 +29,9 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     private var window: NSWindow?
     private var observers: Set<AnyCancellable> = []
     private var escapeMonitor: Any?
+    /// The tabs: one segmented control in the title bar, a row high.
+    private var tabControl: NSSegmentedControl?
+    nonisolated private static let tabsIdentifier = NSToolbarItem.Identifier("settings.tabs")
     /// False until the window has its first real size; that one is set without animation
     /// and the window centered on it, so it never grows into place on first open.
     private var fitted = false
@@ -54,19 +57,18 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         let host = NSHostingController(rootView: SettingsTabsView(settings: settings, updater: updater, state: state))
         host.sizingOptions = [] // the window's height follows the selected page, below
         let window = NSWindow(contentViewController: host)
-        window.styleMask = [.titled, .closable]
+        window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
+        window.title = "\(AppInfo.name) Settings"
         let toolbar = NSToolbar(identifier: "settings")
         toolbar.delegate = self
-        toolbar.displayMode = .iconAndLabel
+        toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
+        toolbar.centeredItemIdentifiers = [Self.tabsIdentifier]
         window.toolbar = toolbar
-        // The tabs sit in the title bar beside the close button; a title would only repeat
-        // the selected tab. It is still set, for the Window menu and accessibility.
+        // Title, window buttons and tabs share one row.
         window.toolbarStyle = .unified
-        window.titleVisibility = .hidden
-        // Settings is never minimized or zoomed; disabled buttons only look broken.
-        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        // The window has a fixed size; a disabled zoom button only looks broken.
         window.standardWindowButton(.zoomButton)?.isHidden = true
         self.window = window
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -104,8 +106,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     }
 
     private func select(_ tab: SettingsTab, animated: Bool) {
-        window?.toolbar?.selectedItemIdentifier = tab.toolbarIdentifier
-        window?.title = tab.title
+        tabControl?.selectedSegment = SettingsTab.allCases.firstIndex(of: tab) ?? 0
         guard tab != state.selected else { return }
         // Typing must not reach a page that is going away, nor a shortcut be recorded on it.
         window?.makeFirstResponder(nil)
@@ -124,9 +125,26 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         }
     }
 
-    @objc private func toolbarItemClicked(_ item: NSToolbarItem) {
-        guard let tab = SettingsTab.allCases.first(where: { $0.toolbarIdentifier == item.itemIdentifier }) else { return }
-        select(tab, animated: true)
+    @objc private func tabChosen(_ control: NSSegmentedControl) {
+        let tabs = SettingsTab.allCases
+        guard tabs.indices.contains(control.selectedSegment) else { return }
+        select(tabs[control.selectedSegment], animated: true)
+    }
+
+    private func makeTabControl() -> NSSegmentedControl {
+        let tabs = SettingsTab.allCases
+        let control = NSSegmentedControl(
+            labels: tabs.map(\.title), trackingMode: .selectOne, target: self, action: #selector(tabChosen(_:))
+        )
+        for (index, tab) in tabs.enumerated() {
+            control.setImage(NSImage(systemSymbolName: tab.symbol, accessibilityDescription: nil), forSegment: index)
+            control.setImageScaling(.scaleProportionallyDown, forSegment: index)
+            control.setWidth(0, forSegment: index) // fits its label; the title bar is narrow
+        }
+        control.selectedSegment = tabs.firstIndex(of: state.selected) ?? 0
+        control.setAccessibilityLabel("Settings sections")
+        tabControl = control
+        return control
     }
 
     /// Sizes the window to the pages' shared height, keeping its top edge where it is.
@@ -179,15 +197,11 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     // MARK: NSToolbarDelegate
 
     nonisolated func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.flexibleSpace] + SettingsTab.allCases.map(\.toolbarIdentifier) + [.flexibleSpace]
+        [Self.tabsIdentifier]
     }
 
     nonisolated func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         toolbarDefaultItemIdentifiers(toolbar)
-    }
-
-    nonisolated func toolbarSelectableItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        SettingsTab.allCases.map(\.toolbarIdentifier)
     }
 
     nonisolated func toolbar(
@@ -196,20 +210,15 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
         MainActor.assumeIsolated {
-            guard let tab = SettingsTab.allCases.first(where: { $0.toolbarIdentifier == identifier }) else { return nil }
+            guard identifier == Self.tabsIdentifier else { return nil }
             let item = NSToolbarItem(itemIdentifier: identifier)
-            item.label = tab.title
-            item.image = NSImage(systemSymbolName: tab.symbol, accessibilityDescription: tab.title)
-            item.target = self
-            item.action = #selector(toolbarItemClicked(_:))
+            item.view = makeTabControl()
+            item.label = "Sections"
             return item
         }
     }
 }
 
-extension SettingsTab {
-    nonisolated var toolbarIdentifier: NSToolbarItem.Identifier { NSToolbarItem.Identifier("settings." + rawValue) }
-}
 
 /// Every page at once, stacked from the top; only the selected one is visible and takes
 /// input. General reports its natural height, which the window takes.
