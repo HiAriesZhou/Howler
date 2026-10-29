@@ -100,6 +100,17 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 问 “2026 GitHub Universe 总结” 之类训练截止之后的事：回答不再断言“尚未举办”，而是说明可能没有相关数据
 - [ ] 让模型对比几样东西：回答不用 `|` 表格（信纸会把表格显示成原样符号）
 
+### 3d. 更新 / Updates
+
+- [ ] 菜单含 “Check for Updates…”；General 页有 “Check for updates automatically” 一行（版本号、Check Now、开关）
+- [ ] 首次装 0.1.7 后第二次启动：Sparkle 询问是否自动检查；选择后开关状态一致
+- [ ] 点 Check for Updates…（已是最新）：提示已是最新版本；窗口在前台
+- [ ] 后台检查发现新版本：不弹窗；菜单变为 “Update to Howler <版本>…”，菜单栏图标悬停提示有新版本，General 页显示 Update… 按钮；点它弹出更新说明
+- [ ] 安装更新后重启：版本号更新，`$H check` 不要求输入登录密码（钥匙串授权保留），录屏权限保留
+- [ ] 改坏 appcast 里的签名：下载后拒绝安装，版本不变
+- [ ] 关闭自动检查：之后不再请求 appcast.xml
+- [ ] 发布 tag 后 Release 附件含 `appcast.xml`，其中 `sparkle:version` 为 BUILD_NUMBER、下载地址指向本版本的 Howler.zip
+
 ## 4. 各服务真实流式 / Per-service real streaming
 
 对每个预设：用 `config set preset=…` 写入并保存 Key、`check` 通过后，呼出面板，发送下列提示词。

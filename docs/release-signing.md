@@ -20,6 +20,7 @@ These steps need the Apple Developer Program **Account Holder** role. Only the A
    base64 -i ~/Downloads/AuthKey_<KEYID>.p8 | gh secret set NOTARY_KEY_P8_BASE64 -R $R
    gh secret set NOTARY_KEY_ID -R $R                # prompts; paste the Key ID
    gh secret set NOTARY_ISSUER_ID -R $R             # prompts; paste the Issuer ID
+   K="$(mktemp)"; generate_keys --account howler -x "$K" && gh secret set SPARKLE_ED_PRIVATE_KEY -R $R < "$K"; rm -f "$K"   # Sparkle's tool; see below
    gh secret list -R $R
    ```
 
@@ -32,6 +33,11 @@ These steps need the Apple Developer Program **Account Holder** role. Only the A
 3. On `v*` tags, `scripts/notarize.sh app` submits the app, staples the ticket and rebuilds the zip.
 4. `scripts/dmg.sh` builds the disk image from the stapled app and signs it. `scripts/notarize.sh dmg` then notarizes and staples the disk image.
 5. A tagged build that is signed but has no notarization secrets fails on purpose. Gatekeeper would still block such a release.
+6. On `v*` tags, CI fetches Sparkle's `sign_update` (the version `Package.swift` pins, checked against its SHA-256). `scripts/appcast.sh` then signs the stapled zip with `SPARKLE_ED_PRIVATE_KEY` and writes `appcast.xml`, which is attached to the release. Installed copies read it through `SUFeedURL` (`app.config`). A tag without the secret fails, because installed copies would never be offered that release.
+
+## The update key
+
+Sparkle verifies every update against `SPARKLE_PUBLIC_KEY` in `app.config`, the public half of an EdDSA key. The private half lives in the login keychain (account `howler`, made with Sparkle's `generate_keys --account howler`), in a backup outside the repo, and in the `SPARKLE_ED_PRIVATE_KEY` secret. If it is lost, installed copies can't verify new updates and need one manual download. Never put it in the repo or a chat.
 
 ## Local builds
 

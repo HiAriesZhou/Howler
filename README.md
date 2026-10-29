@@ -18,7 +18,7 @@
   <a href="https://github.com/HiAriesZhou/Howler/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/HiAriesZhou/Howler/build.yml?branch=main&style=flat-square&label=build" alt="Build status"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-3b2f25?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-5.10-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift 5.10">
-  <img src="https://img.shields.io/badge/dependencies-none-b5801f?style=flat-square" alt="No dependencies">
+  <img src="https://img.shields.io/badge/dependencies-Sparkle-b5801f?style=flat-square" alt="One dependency: Sparkle">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/HiAriesZhou/Howler?style=flat-square&color=5e3b08" alt="MIT license"></a>
 </p>
 
@@ -59,6 +59,7 @@ Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the
 1. [Download **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg), open it, and drag Howler onto Applications. Older versions and `Howler.zip` (the same app) are on [Releases](https://github.com/HiAriesZhou/Howler/releases).
 2. Open Howler. It is signed with a Developer ID and notarized by Apple, so it opens like any other app. Updates keep your Keychain and screen-recording permissions.
 3. A small wax seal marked H appears in the menu bar. Howler has no Dock icon.
+4. From v0.1.7 on, Howler updates itself. Choose **Check for Updates…** in the menu, or let it check once a day (Settings › General). A new version shows up quietly in the menu and in Settings instead of popping up a window. Nothing installs until you say so. Updates are installed by [Sparkle](https://sparkle-project.org), which checks the download's EdDSA signature and Developer ID first. Versions up to 0.1.6 need one manual download.
 
 Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, right-click it and choose **Open**.
 
@@ -125,11 +126,12 @@ Follow-up questions stay on the same sheet, separated by a fleuron. ⏹ stops a 
 - The system prompt carries the date in UTC and nothing about you: no name, language setting, time zone or location.
 - The clipboard and the screen are read only when you paste or capture.
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.
+- Update checks fetch `appcast.xml` from Howler's latest GitHub Release, at most once a day, and only after you allow it. They send no system profile; GitHub sees only the request, with the app and Sparkle versions in its User-Agent. Turn them off in Settings › General.
 - The command line never prints the key.
 
 ## Build from source
 
-Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. No third-party dependencies.
+Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. The one third-party dependency is [Sparkle](https://github.com/sparkle-project/Sparkle) (pinned in `Package.swift`), which installs updates.
 
 ```bash
 make test   # unit tests: config, requests, streaming, attachments, hotkeys, quill pacing

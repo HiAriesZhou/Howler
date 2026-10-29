@@ -18,7 +18,7 @@
   <a href="https://github.com/HiAriesZhou/Howler/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/HiAriesZhou/Howler/build.yml?branch=main&style=flat-square&label=build" alt="构建状态"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-3b2f25?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-5.10-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift 5.10">
-  <img src="https://img.shields.io/badge/dependencies-none-b5801f?style=flat-square" alt="无第三方依赖">
+  <img src="https://img.shields.io/badge/dependencies-Sparkle-b5801f?style=flat-square" alt="唯一依赖：Sparkle">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/HiAriesZhou/Howler?style=flat-square&color=5e3b08" alt="MIT 许可证"></a>
 </p>
 
@@ -59,6 +59,7 @@
 1. [下载 **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg)，打开后把 Howler 拖到 Applications。旧版本与 `Howler.zip`（同一个应用）在 [Releases](https://github.com/HiAriesZhou/Howler/releases)。
 2. 打开 Howler。应用使用 Developer ID 签名并经过 Apple 公证，可以像其他应用一样直接打开。更新后，钥匙串和录屏权限都会保留。
 3. 菜单栏会出现一枚刻着 H 的小火漆印。Howler 没有 Dock 图标。
+4. 从 v0.1.7 起，Howler 可以自动更新。在菜单里选 **Check for Updates…**，或者让它每天检查一次（Settings › General）。发现新版本时，只在菜单和设置里安静地提示，不弹窗打扰；你确认之前不会安装任何东西。更新由 [Sparkle](https://sparkle-project.org) 安装，安装前会校验下载包的 EdDSA 签名和 Developer ID。0.1.6 及更早的版本需要手动下载一次。
 
 v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以在 Finder 中右键点 Howler，选**打开**。
 
@@ -125,11 +126,12 @@ $H config show
 - 系统提示词只带 UTC 日期，不含任何关于你的信息：没有名字、语言设置、时区或所在地。
 - 只在你粘贴或截屏时读取剪贴板和屏幕。
 - 不记录日志，没有统计或遥测；网络请求使用 ephemeral `URLSession`。
+- 检查更新时，从 Howler 最新的 GitHub Release 读取 `appcast.xml`，最多每天一次，且要先经过你同意；不发送任何系统信息，GitHub 只能看到这次请求，以及 User-Agent 里的应用和 Sparkle 版本号。可以在 Settings › General 关闭。
 - 命令行从不打印 Key。
 
 ## 从源码构建
 
-需要 Xcode 15.3+（Swift 5.10+）和 macOS 14+，没有第三方依赖。
+需要 Xcode 15.3+（Swift 5.10+）和 macOS 14+。唯一的第三方依赖是负责安装更新的 [Sparkle](https://github.com/sparkle-project/Sparkle)（版本固定在 `Package.swift`）。
 
 ```bash
 make test   # 单元测试：配置、请求、流式解析、附件、快捷键、书写节奏
