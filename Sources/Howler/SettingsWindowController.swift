@@ -28,6 +28,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     private let state = SettingsTabState()
     private var window: NSWindow?
     private var observers: Set<AnyCancellable> = []
+    private var escapeMonitor: Any?
     /// False until the window has its first real size; that one is set without animation
     /// and the window centered on it, so it never grows into place on first open.
     private var fitted = false
@@ -61,7 +62,14 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
         window.toolbarStyle = .preference
+        // Settings is never minimized or zoomed; disabled buttons only look broken.
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
         self.window = window
+        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let consumed: Bool = MainActor.assumeIsolated { self?.closeOnEscape(event) ?? false }
+            return consumed ? nil : event
+        }
 
         state.$height
             .sink { [weak self] _ in
@@ -73,6 +81,19 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         host.view.layoutSubtreeIfNeeded()
         fitWindow(animated: false)
         if !fitted { window.center() }
+    }
+
+    /// Esc closes Settings, unless it is cancelling a shortcut being recorded or an input
+    /// method's composition.
+    private func closeOnEscape(_ event: NSEvent) -> Bool {
+        guard let window, event.window === window, window.isKeyWindow,
+              event.keyCode == 53, // kVK_Escape
+              event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
+              !settings.isRecordingHotKey
+        else { return false }
+        if let editor = window.firstResponder as? NSTextInputClient, editor.hasMarkedText() { return false }
+        window.performClose(nil)
+        return true
     }
 
     private var reduceMotion: Bool {
