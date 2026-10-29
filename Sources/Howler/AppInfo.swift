@@ -16,6 +16,10 @@ enum AppInfo {
         string(for: "CFBundleShortVersionString") ?? "dev"
     }
 
+    static var build: String? {
+        string(for: "CFBundleVersion")
+    }
+
     private static func string(for key: String) -> String? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String, !value.isEmpty else {
             return nil

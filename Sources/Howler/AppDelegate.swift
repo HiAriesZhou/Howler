@@ -114,6 +114,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 .store(in: &cancellables)
         }
+        let feedback = NSMenuItem(title: "Send Feedback…", action: #selector(sendFeedback), keyEquivalent: "")
+        feedback.target = self
+        menu.addItem(feedback)
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         menu.addItem(quit)
@@ -123,6 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             open.image = MenuBarMark.image(side: Self.menuIconSide)
             settingsItem.image = Self.menuSymbol("gearshape")
             updateItem?.image = Self.menuSymbol("arrow.triangle.2.circlepath")
+            feedback.image = Self.menuSymbol("bubble.left")
             quit.image = Self.menuSymbol("power")
         }
         item.menu = menu
@@ -171,6 +175,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func togglePanel() {
         panelController?.toggle()
+    }
+
+    @objc private func sendFeedback() {
+        panelController?.hide(burning: false)
+        Feedback.open()
     }
 
     @objc private func checkForUpdates() {
