@@ -1,5 +1,6 @@
 # CLI deploys upload only the website (vercel.json serves site/).
-# Keep .git: Git deployments apply this file too, and ignoreCommand runs git diff.
+# Git deployments apply this file too. vercel.json sets ignoreCommand to "exit 1"
+# (always build), so a project setting in the dashboard can never skip or break a deploy.
 /*
 !/.git
 !/site
