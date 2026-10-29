@@ -5,8 +5,8 @@ import SwiftUI
 /// it. Fire is lit at two points below the bottom edge and climbs, with a ragged front
 /// from layered noise, so the seal and the first line are the last to go.
 struct BurnField {
-    /// Seconds from the first flame to ash.
-    static let duration: TimeInterval = 1.1
+    /// Seconds from the first flame to ash. Longer reads as dragging once you're done.
+    static let duration: TimeInterval = 0.8
     /// Points per cell; the images are scaled up smoothly, which softens the front.
     private static let cell: CGFloat = 3
 
@@ -71,10 +71,10 @@ struct BurnField {
         self.embers = embers
     }
 
-    /// Burn progress for a moment of the animation: slow catch, then the fire takes hold.
+    /// Burn progress for a moment of the animation: a brief catch, then the fire takes hold.
     static func progress(elapsed: TimeInterval) -> Double {
         let t = min(max(elapsed / duration, 0), 1)
-        return -0.04 + 1.12 * pow(t, 1.35)
+        return -0.04 + 1.12 * pow(t, 1.2)
     }
 
     struct Frame {
