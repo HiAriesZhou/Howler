@@ -67,10 +67,10 @@ Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, rig
 Howler writes with one model service. The setup is short enough to hand to an AI assistant.
 
 <p align="center">
-  <img src="docs/images/settings.png" width="460" alt="Howler Settings, Model tab: the model, its host and status, Check and Copy Setup Prompt">
+  <img src="docs/images/settings.png" width="460" alt="Howler Settings, General tab: the model with its host, status, Check and Copy Setup Prompt, then the shortcut and Launch at login">
 </p>
 
-Open **Settings › Model › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It asks which service and model you want, checks the official docs, writes the setup and runs a check until it passes. It never asks for your API key in the chat. When it needs the key, it asks you to copy it, then runs `pbpaste | Howler config set api-key --stdin`, which sends the key straight into the Keychain.
+Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It asks which service and model you want, checks the official docs, writes the setup and runs a check until it passes. It never asks for your API key in the chat. When it needs the key, it asks you to copy it, then runs `pbpaste | Howler config set api-key --stdin`, which sends the key straight into the Keychain.
 
 You can run the same commands yourself. They live in the app binary:
 

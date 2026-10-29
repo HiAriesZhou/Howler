@@ -67,10 +67,10 @@ v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以�
 Howler 只连接一个模型服务。配置步骤很少，可以直接交给 AI 助手完成。
 
 <p align="center">
-  <img src="docs/images/settings.png" width="460" alt="Howler 设置的 Model 标签页：模型、地址、状态、Check 与 Copy Setup Prompt">
+  <img src="docs/images/settings.png" width="460" alt="Howler 设置的 General 标签页：模型、地址、状态、Check 与 Copy Setup Prompt，下面是快捷键与开机启动">
 </p>
 
-打开 **Settings › Model › Copy Setup Prompt**，把复制的提示词粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪家服务、哪个模型，查官方文档，写入配置，然后检查直到通过。它不会让你把 API Key 发到聊天里：需要 Key 时，它请你先复制，再运行 `pbpaste | Howler config set api-key --stdin`，Key 直接存进钥匙串。
+打开 **Settings › General › Copy Setup Prompt**，把复制的提示词粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪家服务、哪个模型，查官方文档，写入配置，然后检查直到通过。它不会让你把 API Key 发到聊天里：需要 Key 时，它请你先复制，再运行 `pbpaste | Howler config set api-key --stdin`，Key 直接存进钥匙串。
 
 同样的命令你也可以自己运行，它们就在应用本身的可执行文件里：
 
