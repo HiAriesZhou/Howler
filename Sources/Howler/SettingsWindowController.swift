@@ -5,18 +5,18 @@ import SwiftUI
 /// Which Settings tab is showing, shared by the toolbar and the pages.
 @MainActor
 final class SettingsTabState: ObservableObject {
-    @Published var selected: SettingsTab = .model
+    @Published var selected: SettingsTab = .general
     /// The page fading out, which stays enabled until it has gone; every other hidden page
     /// is disabled so it leaves the keyboard focus order.
     @Published var leaving: SettingsTab?
-    /// The natural height of each page, measured by SwiftUI.
-    @Published var heights: [SettingsTab: CGFloat] = [:]
+    /// The General page's natural height, which every page shares.
+    @Published var height: CGFloat = 0
 }
 
-/// The Settings window: toolbar tabs, like System Settings' older panes. All pages stay
-/// mounted, so a switch never rebuilds one: the pages crossfade while the window eases to
-/// the new page's height, its top edge fixed. A page that grows on its own (e.g. a failed
-/// check) is followed the same way. Reduce Motion switches at once.
+/// The Settings window: toolbar tabs, like System Settings' older panes. Every page has the
+/// General page's height and all stay mounted, so a switch is only a crossfade: the window
+/// keeps its size and nothing is rebuilt. When General grows (e.g. a failed check) the window
+/// eases to the new height, top edge fixed. Reduce Motion switches and resizes at once.
 @MainActor
 final class SettingsWindowController: NSObject, NSToolbarDelegate {
     static let switchDuration: TimeInterval = 0.22
@@ -39,8 +39,8 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         settings.reload()
         settings.refreshLaunchAtLogin()
         if window == nil { makeWindow() }
-        // Without a model, the Model tab is the only one that matters.
-        let target = settings.isConfigured ? tab : .model
+        // Without a model, General (where it is set up) is the only tab that matters.
+        let target = settings.isConfigured ? tab : .general
         if let target { select(target, animated: false) }
         // Accessory apps must activate explicitly for a regular window to take focus.
         NSApp.activate()
@@ -61,7 +61,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         window.toolbarStyle = .preference
         self.window = window
 
-        state.$heights
+        state.$height
             .sink { [weak self] _ in
                 // Published before the change lands; read it on the next turn.
                 DispatchQueue.main.async { self?.fitWindow(animated: true) }
@@ -96,7 +96,6 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
             state.leaving = nil
             state.selected = tab
         }
-        fitWindow(animated: animated)
     }
 
     @objc private func toolbarItemClicked(_ item: NSToolbarItem) {
@@ -104,9 +103,10 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         select(tab, animated: true)
     }
 
-    /// Sizes the window to the selected page, keeping its top edge where it is.
+    /// Sizes the window to the pages' shared height, keeping its top edge where it is.
     private func fitWindow(animated: Bool) {
-        guard let window, let height = state.heights[state.selected], height > 0 else { return }
+        let height = state.height
+        guard let window, height > 0 else { return }
         let content = window.contentRect(forFrameRect: window.frame)
         guard abs(content.height - height) > 0.5 || content.width != Self.width else { return }
         var frame = window.frameRect(forContentRect: NSRect(x: content.minX, y: content.minY, width: Self.width, height: height))
@@ -176,21 +176,21 @@ extension SettingsTab {
 }
 
 /// Every page at once, stacked from the top; only the selected one is visible and takes
-/// input. Each reports its natural height so the window can fit the selected one.
+/// input. General reports its natural height, which the window takes.
 private struct SettingsTabsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var state: SettingsTabState
 
     var body: some View {
-        // The stack is as tall as the tallest page; pinning it to the window's height from
-        // the top keeps a shorter page from being centered up under the toolbar.
+        // Pinned to the window's height from the top, so a page that is momentarily taller
+        // (before the window catches up) is never centered up under the toolbar.
         GeometryReader { window in
             ZStack(alignment: .top) {
                 ForEach(SettingsTab.allCases, id: \.self) { tab in
                     let shown = tab == state.selected
                     tab.pane(settings)
                         .background(GeometryReader { page in
-                            Color.clear.preference(key: PageHeights.self, value: [tab: page.size.height])
+                            Color.clear.preference(key: GeneralHeight.self, value: tab == .general ? page.size.height : 0)
                         })
                         .opacity(shown ? 1 : 0)
                         .zIndex(shown ? 1 : 0) // clicks land on the page you see
@@ -202,15 +202,15 @@ private struct SettingsTabsView: View {
             .frame(width: window.size.width, height: window.size.height, alignment: .top)
             .clipped()
         }
-        .onPreferenceChange(PageHeights.self) { heights in
-            if heights != state.heights { state.heights = heights }
+        .onPreferenceChange(GeneralHeight.self) { height in
+            if height > 0, abs(height - state.height) > 0.5 { state.height = height }
         }
     }
 }
 
-private struct PageHeights: PreferenceKey {
-    static let defaultValue: [SettingsTab: CGFloat] = [:]
-    static func reduce(value: inout [SettingsTab: CGFloat], nextValue: () -> [SettingsTab: CGFloat]) {
-        value.merge(nextValue()) { $1 }
+private struct GeneralHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }

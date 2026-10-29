@@ -4,54 +4,55 @@ import SwiftUI
 
 /// The tabs of the Settings window, in toolbar order.
 enum SettingsTab: String, CaseIterable {
-    case model
-    case prompt
     case general
+    case prompt
 
     var title: String {
         switch self {
-        case .model: return "Model"
-        case .prompt: return "Prompt"
         case .general: return "General"
+        case .prompt: return "Prompt"
         }
     }
 
-    /// SF Symbols in the letter's vocabulary: the seal that names the model, the scroll it
-    /// is handed first.
+    /// SF Symbols; the scroll is what the model is handed first.
     var symbol: String {
         switch self {
-        case .model: return "seal"
-        case .prompt: return "scroll"
         case .general: return "gearshape"
+        case .prompt: return "scroll"
         }
     }
 
     @MainActor
     func pane(_ settings: AppSettings) -> AnyView {
         switch self {
-        case .model: return AnyView(ModelPane(settings: settings))
-        case .prompt: return AnyView(PromptPane(settings: settings))
         case .general: return AnyView(GeneralPane(settings: settings))
+        case .prompt: return AnyView(PromptPane(settings: settings))
         }
     }
 }
 
-/// One tab's page at its natural height; `SettingsTabsView` stacks them from the top.
+/// One tab's page. General sits at its natural height, which sets the window's; a page that
+/// `fills` stretches to that height instead, so switching tabs never resizes the window.
 private struct SettingsPage<Content: View>: View {
+    var fills = false
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        let page = VStack(alignment: .leading, spacing: 16) {
             content()
         }
         .padding(20)
         .frame(width: SettingsWindowController.width)
-        .fixedSize(horizontal: false, vertical: true)
+        if fills {
+            page.frame(maxHeight: .infinity, alignment: .top)
+        } else {
+            page.fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
-/// The model that answers, and where what you send goes.
-struct ModelPane: View {
+/// The model that answers, the shortcut, launching at login, and where what you send goes.
+struct GeneralPane: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
@@ -59,41 +60,12 @@ struct ModelPane: View {
             SettingsSection(nil) {
                 ModelSettings(settings: settings)
             }
-            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to this model service, with your next question — leave out passwords and other secrets.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-/// What the model is told before the conversation.
-struct PromptPane: View {
-    @ObservedObject var settings: AppSettings
-
-    var body: some View {
-        SettingsPage {
-            SettingsSection("System Prompt") {
-                SystemPromptSettings(settings: settings)
-            } accessory: {
-                SystemPromptReset(settings: settings)
-            }
-        }
-    }
-}
-
-/// The shortcut and launching at login.
-struct GeneralPane: View {
-    @ObservedObject var settings: AppSettings
-
-    var body: some View {
-        SettingsPage {
             SettingsSection(nil) {
                 VStack(alignment: .leading, spacing: 12) {
                     SettingsRow("Keyboard shortcut", detail: "Opens \(AppInfo.name) from any app.") {
                         HotKeyRecorder(settings: settings)
                     }
-                    if !settings.hotKeyRegistered && !settings.isRecordingHotKey {
+                    if !settings.hotKeyRegistered { // kept while recording, so leaving the tab never changes the height
                         Text("\(settings.hotKey.display) is already used by another app. Choose a different shortcut, or open \(AppInfo.name) from the menu bar.")
                             .font(.caption)
                             .foregroundStyle(.red)
@@ -112,6 +84,10 @@ struct GeneralPane: View {
                     loginItemNote
                 }
             }
+            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, with your next question — leave out passwords and other secrets.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -138,6 +114,21 @@ struct GeneralPane: View {
                 .fixedSize(horizontal: false, vertical: true)
         case .on, .off:
             EmptyView()
+        }
+    }
+}
+
+/// What the model is told before the conversation; the editor takes the page's spare height.
+struct PromptPane: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        SettingsPage(fills: true) {
+            SettingsSection("System Prompt") {
+                SystemPromptSettings(settings: settings)
+            } accessory: {
+                SystemPromptReset(settings: settings)
+            }
         }
     }
 }

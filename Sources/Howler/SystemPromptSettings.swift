@@ -44,7 +44,7 @@ struct SystemPromptSettings: View {
                 .scrollContentBackground(.hidden)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 6)
-                .frame(height: 168)
+                .frame(minHeight: 96, maxHeight: .infinity)
             }
             .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(
