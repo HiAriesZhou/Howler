@@ -38,6 +38,10 @@ struct HotKeyRecorder: View {
             }
         }
         .onDisappear(perform: stopRecording)
+        // Settings ends recording when its page is switched away (the page stays mounted).
+        .onChange(of: settings.isRecordingHotKey) { _, recording in
+            if !recording { stopRecording() }
+        }
     }
 
     private func startRecording() {

@@ -39,7 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if let raw = ProcessInfo.processInfo.environment["HOWLER_DEMO_PROVIDER"], let provider = Provider(rawValue: raw) {
                     settings.useDemoService(provider)
                 }
-                openSettings()
+                let tab = ProcessInfo.processInfo.environment["HOWLER_DEMO_TAB"]
+                settingsController.show(tab: tab.flatMap(SettingsTab.init(rawValue:)))
+                if tab == "cycle" { settingsController.cycleTabs() }
             } else {
                 panelController?.runDemo()
             }

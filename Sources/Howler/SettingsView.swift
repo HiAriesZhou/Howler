@@ -2,24 +2,93 @@ import AppKit
 import HowlerCore
 import SwiftUI
 
-/// Everything on one page: the model that answers, what it is told first, then the two
-/// general preferences.
-struct SettingsView: View {
+/// The tabs of the Settings window, in toolbar order.
+enum SettingsTab: String, CaseIterable {
+    case model
+    case prompt
+    case general
+
+    var title: String {
+        switch self {
+        case .model: return "Model"
+        case .prompt: return "Prompt"
+        case .general: return "General"
+        }
+    }
+
+    /// SF Symbols in the letter's vocabulary: the seal that names the model, the scroll it
+    /// is handed first.
+    var symbol: String {
+        switch self {
+        case .model: return "seal"
+        case .prompt: return "scroll"
+        case .general: return "gearshape"
+        }
+    }
+
+    @MainActor
+    func pane(_ settings: AppSettings) -> AnyView {
+        switch self {
+        case .model: return AnyView(ModelPane(settings: settings))
+        case .prompt: return AnyView(PromptPane(settings: settings))
+        case .general: return AnyView(GeneralPane(settings: settings))
+        }
+    }
+}
+
+/// One tab's page at its natural height; `SettingsTabsView` stacks them from the top.
+private struct SettingsPage<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            content()
+        }
+        .padding(20)
+        .frame(width: SettingsWindowController.width)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// The model that answers, and where what you send goes.
+struct ModelPane: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            SettingsSection("Model") {
+        SettingsPage {
+            SettingsSection(nil) {
                 ModelSettings(settings: settings)
             }
+            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to this model service, with your next question — leave out passwords and other secrets.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
 
+/// What the model is told before the conversation.
+struct PromptPane: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        SettingsPage {
             SettingsSection("System Prompt") {
                 SystemPromptSettings(settings: settings)
             } accessory: {
                 SystemPromptReset(settings: settings)
             }
+        }
+    }
+}
 
-            SettingsSection("General") {
+/// The shortcut and launching at login.
+struct GeneralPane: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        SettingsPage {
+            SettingsSection(nil) {
                 VStack(alignment: .leading, spacing: 12) {
                     SettingsRow("Keyboard shortcut", detail: "Opens \(AppInfo.name) from any app.") {
                         HotKeyRecorder(settings: settings)
@@ -43,16 +112,7 @@ struct SettingsView: View {
                     loginItemNote
                 }
             }
-
-            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, with your next question — leave out passwords and other secrets.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(20)
-        .frame(width: 460)
-        .fixedSize(horizontal: false, vertical: true)
-        .onAppear { settings.refreshLaunchAtLogin() }
     }
 
     @ViewBuilder
@@ -82,14 +142,14 @@ struct SettingsView: View {
     }
 }
 
-/// A titled group on a quiet card, like System Settings. An accessory (e.g. Reset) follows
-/// the title.
+/// A group on a quiet card, like System Settings. A page whose window title already names
+/// it needs no title; an accessory (e.g. Reset) follows the title.
 private struct SettingsSection<Content: View, Accessory: View>: View {
-    let title: String
+    let title: String?
     @ViewBuilder let content: () -> Content
     @ViewBuilder let accessory: () -> Accessory
 
-    init(_ title: String, @ViewBuilder content: @escaping () -> Content, @ViewBuilder accessory: @escaping () -> Accessory) {
+    init(_ title: String?, @ViewBuilder content: @escaping () -> Content, @ViewBuilder accessory: @escaping () -> Accessory) {
         self.title = title
         self.content = content
         self.accessory = accessory
@@ -97,11 +157,13 @@ private struct SettingsSection<Content: View, Accessory: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                accessory()
+            if let title {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    accessory()
+                }
             }
             content()
                 .padding(14)
@@ -116,7 +178,7 @@ private struct SettingsSection<Content: View, Accessory: View>: View {
 }
 
 extension SettingsSection where Accessory == EmptyView {
-    init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+    init(_ title: String?, @ViewBuilder content: @escaping () -> Content) {
         self.init(title, content: content, accessory: { EmptyView() })
     }
 }
