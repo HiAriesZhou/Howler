@@ -78,16 +78,20 @@ final class ContextAttachmentTests: XCTestCase {
 }
 
 final class HotKeyComboTests: XCTestCase {
-    func testDefaultIsOptionComma() {
-        // ⌥H clashed with other apps' shortcuts (e.g. WeChat); ⌥, sits beside ⌘, (Settings).
-        XCTAssertEqual(HotKeyCombo.standard.display, "⌥,")
-        XCTAssertEqual(HotKeyCombo.standard.keyCode, 43) // kVK_ANSI_Comma
+    func testDefaultIsOptionH() {
+        XCTAssertEqual(HotKeyCombo.standard.display, "⌥H")
+        XCTAssertEqual(HotKeyCombo.standard.keyCode, 4) // kVK_ANSI_H
         XCTAssertTrue(HotKeyCombo.standard.isValid)
-        // Recorded on purpose, the old default stays.
-        let optionH = HotKeyCombo(keyCode: 4, modifiers: .option, keyLabel: "H")
-        XCTAssertEqual(HotKeyCombo.effective(stored: optionH), optionH)
         XCTAssertEqual(HotKeyCombo.previousStandard.display, "⌥Space")
         XCTAssertNotEqual(HotKeyCombo.standard, HotKeyCombo.previousStandard)
+    }
+
+    func testOptionCommaIsKeptForSettings() {
+        XCTAssertEqual(HotKeyCombo.settings.display, "⌥,")
+        XCTAssertEqual(HotKeyCombo.settings.keyCode, 43) // kVK_ANSI_Comma
+        // It can't also open the letter; a stored ⌥, (the default in 0.1.8–0.1.9) falls back to ⌥H.
+        XCTAssertFalse(HotKeyCombo.settings.isValid)
+        XCTAssertEqual(HotKeyCombo.effective(stored: .settings), .standard)
     }
 
     func testStoredShortcutResolution() {

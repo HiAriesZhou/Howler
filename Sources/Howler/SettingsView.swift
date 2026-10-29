@@ -64,7 +64,7 @@ struct GeneralPane: View {
             }
             SettingsSection(nil) {
                 VStack(alignment: .leading, spacing: 12) {
-                    SettingsRow("Keyboard shortcut", detail: "Opens \(AppInfo.name) from any app.") {
+                    SettingsRow("Keyboard shortcut", detail: "Opens \(AppInfo.name) from any app. \(HotKeyCombo.settings.display) opens Settings.") {
                         HotKeyRecorder(settings: settings)
                     }
                     if !settings.hotKeyRegistered { // kept while recording, so leaving the tab never changes the height
