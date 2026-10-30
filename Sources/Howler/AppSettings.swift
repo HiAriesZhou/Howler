@@ -33,7 +33,8 @@ final class AppSettings: ObservableObject {
     private let defaults: UserDefaults
     private let store: ServiceStore
     /// The key read this session, so the keychain is queried once until the setup changes.
-    private var keyCache: String?
+    private var keyCache: (revision: String, service: ModelService, key: String)?
+    private var checkingRevision: String?
     private var observer: NSObjectProtocol?
 
     private enum DefaultsKey {
@@ -50,10 +51,10 @@ final class AppSettings: ObservableObject {
         case failed(String)
     }
 
-    init(client: ChatClient = ChatClient(), defaults: UserDefaults = .standard) {
+    init(client: ChatClient = ChatClient(), defaults: UserDefaults = .standard, keys: ServiceStore.KeyAccess = .keychain) {
         self.client = client
         self.defaults = defaults
-        store = ServiceStore(defaults: defaults)
+        store = ServiceStore(defaults: defaults, keys: keys)
         var stored = defaults.data(forKey: DefaultsKey.hotKey)
             .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
         if !defaults.bool(forKey: DefaultsKey.hotKeyDefaultChecked) {
@@ -92,7 +93,8 @@ final class AppSettings: ObservableObject {
         if text != instructions { instructions = text }
         let suggested = store.instructionsAreSuggested
         if suggested != instructionsAreSuggested { instructionsAreSuggested = suggested }
-        guard checkState != .checking else { return }
+        if checkState == .checking, checkingRevision == store.revision { return }
+        checkingRevision = nil
         let state: CheckState = switch store.lastCheck {
         case .some(let record) where record.passed: .passed(record.date)
         case .some(let record): .failed(record.message ?? "The last check failed.")
@@ -121,9 +123,15 @@ final class AppSettings: ObservableObject {
     #endif
 
     func apiKey() -> String? {
-        if let keyCache { return keyCache }
-        keyCache = store.apiKey()
-        return keyCache
+        guard let service, service == store.service else { return nil }
+        let revision = store.revision
+        if let keyCache, keyCache.revision == revision, keyCache.service == service { return keyCache.key }
+        guard let key = store.apiKey(for: service), store.revision == revision else {
+            keyCache = nil
+            return nil
+        }
+        keyCache = (revision, service, key)
+        return key
     }
 
     /// Sends a tiny real request with the current setup and records the outcome, which the
@@ -131,21 +139,26 @@ final class AppSettings: ObservableObject {
     func check() async {
         guard checkState != .checking else { return }
         guard let service else { return }
+        let revision = store.revision
         guard let key = apiKey(), !key.isEmpty else {
             checkState = .failed("No API key saved.")
             return
         }
+        guard revision == store.revision else { return }
+        checkingRevision = revision
         checkState = .checking
         do {
             try await ConnectionTester.test(
                 client: client, service: service, apiKey: key, appName: AppInfo.name, systemPrompt: systemPrompt
             )
-            checkState = .passed(Date())
-            store.recordCheck(passed: true, message: nil)
+            store.recordCheck(passed: true, message: nil, for: revision)
         } catch {
-            checkState = .failed(error.localizedDescription)
-            store.recordCheck(passed: false, message: error.localizedDescription)
+            store.recordCheck(passed: false, message: error.localizedDescription, for: revision)
         }
+        guard checkingRevision == revision else { return }
+        checkingRevision = nil
+        checkState = .unchecked
+        reload()
     }
 
     // MARK: System prompt
@@ -157,15 +170,13 @@ final class AppSettings: ObservableObject {
 
     func setInstructions(_ text: String) {
         store.setInstructions(text)
-        instructions = text
-        instructionsAreSuggested = store.instructionsAreSuggested
+        reload()
     }
 
     /// Back to the suggestion by forgetting the edit, so a future suggestion applies too.
     func resetInstructions() {
         store.resetInstructions()
-        instructions = store.instructions
-        instructionsAreSuggested = true
+        reload()
     }
 
     // MARK: Hotkey

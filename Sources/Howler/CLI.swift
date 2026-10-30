@@ -151,12 +151,17 @@ enum CLI {
     // MARK: check
 
     private static func check(verbose: Bool, store: ServiceStore) -> Int32 {
+        let revision = store.revision
         guard let service = store.service else {
             printError("No model service yet. See: \(name) config schema")
             return 1
         }
-        guard let key = store.apiKey(), !key.isEmpty else {
+        guard let key = store.apiKey(for: service), !key.isEmpty else {
             printError("No API key saved. Copy it, then run: pbpaste | \(name) config set api-key --stdin")
+            return 1
+        }
+        guard store.revision == revision else {
+            printError("The setup changed. Run check again for the current setup.")
             return 1
         }
         if verbose { describeRequest(service: service, apiKey: key, systemPrompt: store.systemPrompt) }
@@ -169,11 +174,17 @@ enum CLI {
         }
         switch result {
         case .success:
-            store.recordCheck(passed: true, message: nil)
+            guard store.recordCheck(passed: true, message: nil, for: revision) else {
+                printError("The setup changed during the check. Run check again.")
+                return 1
+            }
             print("✓ Passed: \(service.model) answered.")
             return 0
         case .failure(let error):
-            store.recordCheck(passed: false, message: error.localizedDescription)
+            guard store.recordCheck(passed: false, message: error.localizedDescription, for: revision) else {
+                printError("The setup changed during the check. Run check again.")
+                return 1
+            }
             if verbose, case ChatClientError.http(let status, _) = error {
                 printError("HTTP \(status) from \(service.endpointDescription)")
             }
