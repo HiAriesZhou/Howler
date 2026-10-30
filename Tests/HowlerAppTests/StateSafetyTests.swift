@@ -46,6 +46,8 @@ final class DelayedProbe: URLProtocol {
 }
 
 final class StateSafetyTests: XCTestCase {
+    private enum FixtureKeyWriteError: Error { case unavailable }
+
     private var suite: String!
     private var defaults: UserDefaults!
     private var keys: MemoryKeys!
@@ -83,6 +85,76 @@ final class StateSafetyTests: XCTestCase {
         try store.save(service(model: "another-model"))
         XCTAssertTrue(store.hasKey)
         XCTAssertEqual(store.apiKey(), "fixture-secret-a")
+    }
+
+    func testFailedKeyReplacementPreservesTheScopedKeyAndInvalidatesItsCheck() throws {
+        try store.save(service())
+        try store.setAPIKey("fixture-secret-a")
+        let revision = store.revision
+        XCTAssertTrue(store.recordCheck(passed: true, message: nil, for: revision))
+        XCTAssertEqual(store.lastCheck?.passed, true)
+        let previousKeys = keys.values
+        var access = keys.access
+        access.set = { _, _ in throw FixtureKeyWriteError.unavailable }
+        let failing = ServiceStore(defaults: defaults, keys: access)
+
+        XCTAssertThrowsError(try failing.setAPIKey("fixture-replacement"))
+        XCTAssertEqual(keys.values, previousKeys)
+        XCTAssertTrue(failing.hasKey)
+        XCTAssertEqual(failing.apiKey(), "fixture-secret-a")
+        XCTAssertNil(failing.lastCheck)
+        XCTAssertNotEqual(failing.revision, revision)
+        XCTAssertFalse(failing.recordCheck(passed: true, message: nil, for: revision))
+        let reopened = ServiceStore(defaults: defaults, keys: keys.access)
+        XCTAssertTrue(reopened.hasKey)
+        XCTAssertEqual(reopened.apiKey(), "fixture-secret-a")
+        try reopened.setAPIKey("fixture-replacement")
+        XCTAssertEqual(reopened.apiKey(), "fixture-replacement")
+    }
+
+    func testFailedKeyReplacementPreservesTheLegacyKeyAfterReopen() throws {
+        defaults.set(try JSONEncoder().encode(service()), forKey: "service")
+        defaults.removeObject(forKey: "apiKeyScopeMigrated")
+        keys.values["api-key"] = "fixture-legacy-secret"
+        let upgraded = ServiceStore(defaults: defaults, keys: keys.access)
+        XCTAssertEqual(upgraded.apiKey(), "fixture-legacy-secret")
+        var access = keys.access
+        access.set = { _, _ in throw FixtureKeyWriteError.unavailable }
+        let failing = ServiceStore(defaults: defaults, keys: access)
+
+        XCTAssertThrowsError(try failing.setAPIKey("fixture-replacement"))
+        let reopened = ServiceStore(defaults: defaults, keys: keys.access)
+        XCTAssertTrue(reopened.hasKey)
+        XCTAssertEqual(reopened.apiKey(), "fixture-legacy-secret")
+        XCTAssertEqual(keys.values["api-key"], "fixture-legacy-secret")
+    }
+
+    func testFailedKeyWriteCannotRestoreAnOldBindingOverANewerService() throws {
+        try store.save(service())
+        try store.setAPIKey("fixture-secret-a")
+        var access = keys.access
+        access.set = { _, _ in
+            try self.store.save(self.service("https://service-b.example/v1"))
+            try self.store.setAPIKey("fixture-secret-b")
+            throw FixtureKeyWriteError.unavailable
+        }
+        let failing = ServiceStore(defaults: defaults, keys: access)
+
+        XCTAssertThrowsError(try failing.setAPIKey("fixture-replacement"))
+        XCTAssertEqual(store.service?.host, "service-b.example")
+        XCTAssertTrue(store.hasKey)
+        XCTAssertEqual(store.apiKey(), "fixture-secret-b")
+    }
+
+    func testFailedFirstKeyWriteDoesNotCreateABinding() throws {
+        try store.save(service())
+        XCTAssertFalse(store.hasKey)
+        var access = keys.access
+        access.set = { _, _ in throw FixtureKeyWriteError.unavailable }
+        let failing = ServiceStore(defaults: defaults, keys: access)
+        XCTAssertThrowsError(try failing.setAPIKey("fixture-replacement"))
+        XCTAssertFalse(failing.hasKey)
+        XCTAssertNil(failing.apiKey())
     }
 
     func testDefaultPortsAndPathChangesKeepTheKeyButDifferentPortsDoNot() throws {

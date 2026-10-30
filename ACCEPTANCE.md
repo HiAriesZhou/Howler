@@ -68,6 +68,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 把提示词交给 Claude Code（或 Codex）：助手询问服务与模型，运行 `config schema` → `config set` → 请你复制 Key 后运行 `pbpaste | … --stdin` → `check` → `config show`；全程 Key 不出现在聊天与输出中
 - [ ] 应用运行时在终端执行 `config set model=…`：设置页与信纸页脚立即显示新模型，状态变为 Not checked yet
 - [ ] 同一来源只改模型或 API 路径：Key 保留；更改主机、协议、端口或认证格式：显示 No API key，保存新 Key 前不能检查或发送，不会把旧 Key 发给新服务
+- [ ] 替换 Key 失败且旧钥匙串条目仍在时：旧 Key 仍可用，重启后亦可，检查状态回到 Not checked yet；重试成功后使用新 Key
 - [ ] Check 尚未完成时通过 CLI 修改配置或 Key：旧请求完成后不把新配置标为 Ready / Failed；编辑系统指令同样使旧检查失效
 - [ ] 服务错误回显提交的 Key（使用合成凭据和测试服务）：界面、CLI 和持久化检查结果中均不出现该 Key，仍保留可读错误原因
 - [ ] 点 Check：显示 Checking…，正确配置变为绿色 Ready；在终端执行 `config show` 的 check 一行为 passed
