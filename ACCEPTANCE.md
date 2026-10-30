@@ -67,9 +67,12 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] Copy Setup Prompt：按钮短暂显示 ✓ Copied；粘贴出的提示词包含本机可执行文件路径与当前配置（未配置时为 “not set up yet”），要求助手用 `pbpaste | Howler config set api-key --stdin` 写入 Key
 - [ ] 把提示词交给 Claude Code（或 Codex）：助手询问服务与模型，运行 `config schema` → `config set` → 请你复制 Key 后运行 `pbpaste | … --stdin` → `check` → `config show`；全程 Key 不出现在聊天与输出中
 - [ ] 应用运行时在终端执行 `config set model=…`：设置页与信纸页脚立即显示新模型，状态变为 Not checked yet
+- [ ] 同一来源只改模型或 API 路径：Key 保留；更改主机、协议、端口或认证格式：显示 No API key，保存新 Key 前不能检查或发送，不会把旧 Key 发给新服务
+- [ ] Check 尚未完成时通过 CLI 修改配置或 Key：旧请求完成后不把新配置标为 Ready / Failed；编辑系统指令同样使旧检查失效
+- [ ] 服务错误回显提交的 Key（使用合成凭据和测试服务）：界面、CLI 和持久化检查结果中均不出现该 Key，仍保留可读错误原因
 - [ ] 点 Check：显示 Checking…，正确配置变为绿色 Ready；在终端执行 `config show` 的 check 一行为 passed
 - [ ] 错误 Key 或不存在的模型 → Check：红色 Failed，下方显示服务返回的错误（如 HTTP 401）
-- [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.howler` 可看到账户名为 `api-key` 的条目
+- [ ] 打开“钥匙串访问”，搜索 `com.hiarieszhou.howler`：新 Key 的账户名以 `api-key:` 开头，并绑定服务来源；升级保留的旧 Key 可以仍使用 `api-key`，不会被新来源复用
 - [ ] 从配置了服务商的旧版本升级：首次启动后原服务商、模型与 Key 自动迁移，设置页直接显示该模型（状态 Not checked yet），发送可用
 - [ ] 退出并重启应用：模型服务、Key、快捷键仍然有效
 - [ ] 从 v0.1.8 / v0.1.9 升级：没录制过快捷键的，升级后恢复为 ⌥H；录制过其他快捷键的保持不变
@@ -154,7 +157,7 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 - [ ] 关闭面板后再打开：对话已清空
 - [ ] 生成过程中关闭面板：请求被取消，再打开为空白，不会出现旧回答
 - [ ] `~/Library/Containers`、`~/Library/Application Support`、`~/Library/Caches` 中没有 Howler 的对话文件
-- [ ] `defaults read com.hiarieszhou.howler` 只包含 `service`、检查过时的 `serviceCheck`、`hotKeyDefaultChecked`，以及改过时的 `hotKey`；其中没有 API Key
+- [ ] UserDefaults 只持久化模型配置、密钥归属与配置版本元数据、检查结果、系统指令、快捷键及更新偏好；其中没有 API Key 或对话内容
 - [ ] Console.app 中按进程 Howler 过滤，发送消息时没有对话内容日志
 
 ## 6. 错误处理 / Errors
@@ -169,5 +172,6 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 
 ## 8. 发布 / Release
 
-- [ ] 推送与 `app.config` 中 `VERSION` 一致的 tag（如 `v0.1.2`）：CI 创建 pre-release 并附上 `Howler.zip` 与 `Howler.dmg`
+- [ ] 递增 `VERSION` 和 `BUILD_NUMBER`，推送匹配的附注 tag：CI 完成签名和公证后创建正式 Release，附上 `Howler.zip`、`Howler.dmg` 与 `appcast.xml`
+- [ ] tag 构建缺少 Developer ID 证书时失败，不发布 ad-hoc 包；普通分支构建仍允许 ad-hoc 签名
 - [ ] 推送不一致的 tag：CI 的 “Publish release” 步骤失败并说明原因
