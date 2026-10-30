@@ -37,6 +37,10 @@ jobs:
           CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         run: |
           if [[ -z "$CERT_P12_BASE64" ]]; then
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              echo "error: tagged releases require a Developer ID signing certificate" >&2
+              exit 1
+            fi
             echo "No signing certificate configured; building ad-hoc."
             exit 0
           fi
