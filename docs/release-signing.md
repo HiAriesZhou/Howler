@@ -1,6 +1,6 @@
 # Release signing and notarization
 
-Tagged releases are signed with a **Developer ID Application** certificate and notarized by Apple. When the secrets below are missing, CI falls back to an ad-hoc signature. That is what forks get, and what Howler shipped with up to v0.1.3.
+Tagged releases require a **Developer ID Application** certificate and Apple notarization; missing signing credentials fail the release. Ordinary branch and pull-request builds can fall back to an ad-hoc signature, as Howler shipped with up to v0.1.3.
 
 A stable signature matters beyond Gatekeeper. macOS ties Keychain access and privacy grants (screen recording) to the app's signing identity. An ad-hoc signature changes with every build, so each update asks for Keychain access again. A Developer ID signature stays the same across builds.
 
