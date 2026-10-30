@@ -15,18 +15,23 @@ struct WritingState: Equatable {
 struct InkMarkdown: View {
     let markdown: String
     var writing: WritingState?
+    /// Explicit for offscreen rendering; ordinary app views follow the system preference.
+    var reduceMotion: Bool?
 
     @Environment(\.parchment) private var parchment
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     var body: some View {
         let source = writing == nil ? markdown : Self.hidingPartialFence(markdown)
         let blocks = Self.paragraphs(MarkdownBlocks.parse(source))
         VStack(alignment: .leading, spacing: 10) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { index, block in
-                let isWritingBlock = writing != nil && index == blocks.count - 1
+                let isLiveBlock = writing != nil && index == blocks.count - 1
+                let isWritingBlock = !(reduceMotion ?? systemReduceMotion) && isLiveBlock
                 switch block {
                 case .prose(let text):
-                    InkProse(text: text, writing: isWritingBlock ? writing : nil)
+                    InkProse(text: isLiveBlock ? Self.closingOpenMarks(text) : text,
+                             writing: isWritingBlock ? writing : nil)
                 case .code(let language, let code):
                     CodeBlockView(language: language, code: code)
                         .overlay(alignment: .bottomLeading) {
@@ -83,7 +88,7 @@ private struct InkProse: View {
     @Environment(\.parchment) private var parchment
 
     var body: some View {
-        let base = Text(InkAttributed.make(writing == nil ? text : InkMarkdown.closingOpenMarks(text)))
+        let base = Text(InkAttributed.make(text))
             .font(Lettering.prose(InkMarkdown.fontSize))
             .foregroundStyle(parchment.ink)
             .lineSpacing(4)

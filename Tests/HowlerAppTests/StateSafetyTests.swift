@@ -273,4 +273,13 @@ final class StateSafetyTests: XCTestCase {
         XCTAssertFalse(String(decoding: saved, as: UTF8.self).contains("fixture-secret-a"))
     }
 
+    @MainActor
+    func testReduceMotionRevealsTextImmediately() async {
+        let pacer = QuillPacer()
+        pacer.instant = true
+        pacer.begin()
+        pacer.update(target: 12)
+        XCTAssertEqual(pacer.frame.revealed, 12)
+        pacer.endStream()
+    }
 }
