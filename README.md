@@ -95,6 +95,8 @@ $H config show
 
 Changes take effect in the running app at once. Every request goes straight to the service you configured, never through a relay.
 
+Changing the host, scheme, port or authentication format clears the saved key. Save a key for the new service before checking or sending. Changing only the model or API path on the same origin keeps the key. Editing the setup, key or system instructions invalidates the previous check.
+
 ### System prompt
 
 Every conversation starts with a short system prompt, shown in full in **Settings › Prompt**:
@@ -122,14 +124,14 @@ Follow-up questions stay on the same sheet, separated by a fleuron. ⏹ stops a 
 
 ## Privacy
 
-- No chat history, ever. Messages live in memory and burn with the letter.
+- No chat history, ever. Messages and parsed-answer caches are cleared when the letter closes. A screen capture uses a temporary PNG that Howler attempts to delete after reading it.
 - Stored: the model setup, its last check, your system prompt instructions and your shortcut (UserDefaults), plus the API key (Keychain).
 - The system prompt carries the date in UTC and nothing about you: no name, language setting, time zone or location.
 - The clipboard and the screen are read only when you paste or capture.
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.
 - Update checks fetch `appcast.xml` from Howler's latest GitHub Release, at most once a day, and only after you allow it. They send no system profile; GitHub sees only the request, with the app and Sparkle versions in its User-Agent. Turn them off in Settings › General.
 - The command line never prints the key.
-- **Send Feedback…** (in the menu, or in Settings › General) opens a GitHub issue form in your browser with Howler's version, the macOS version and the chip filled in. Nothing is sent until you submit it there.
+- **Send Feedback…** (in the menu, or in Settings › General) opens a GitHub issue form in your browser. Opening it sends Howler's version, the macOS version and the chip to GitHub in the page URL to prefill the form. The issue is created only when you submit it.
 
 ## Build from source
 
@@ -151,7 +153,7 @@ HOWLER_DEMO=1 .build/debug/Howler          # also: long, multi, burn, image, set
 HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
 ```
 
-To rename the app or change its bundle ID, edit [`app.config`](app.config) and rebuild. To release, bump `VERSION` there and push a matching `v` tag. CI tests, builds, signs, notarizes and publishes the release (see [release signing](docs/release-signing.md)). Manual checks are listed in [ACCEPTANCE.md](ACCEPTANCE.md).
+To rename the app or change its bundle ID, edit [`app.config`](app.config) and rebuild. To release, increment both `VERSION` (within `0.1.x`) and `BUILD_NUMBER`, merge through a pull request, then push a matching annotated `v` tag. CI tests, builds, signs, notarizes and publishes the release (see [release signing](docs/release-signing.md)). Manual checks are listed in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 <details>
 <summary>Upgrading from Napkin or QuickAsk</summary>

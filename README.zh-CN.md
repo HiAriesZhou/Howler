@@ -95,6 +95,8 @@ $H config show
 
 改动会立即在正在运行的 Howler 中生效。请求直接发往你配置的服务，不经过任何中转。
 
+更改主机、协议、端口或认证格式会清除已保存的 Key。请先保存新服务的 Key，再检查或发送。只修改同一来源的模型或 API 路径会保留 Key。修改配置、Key 或系统指令后，之前的检查结果会失效。
+
 ### 系统提示词
 
 每次对话开头都会带一段简短的系统提示词，完整内容在 **Settings › Prompt** 里可以看到：
@@ -122,14 +124,14 @@ $H config show
 
 ## 隐私
 
-- 从不保存对话：消息只在内存里，信纸烧掉就没了。
+- 从不保存聊天历史：关闭信纸会清空消息和回答解析缓存。截屏会使用临时 PNG 文件，Howler 读取后会尝试删除。
 - 只持久化这些：模型配置、最近一次检查结果、系统提示词的指令、快捷键（UserDefaults），以及 API Key（钥匙串）。
 - 系统提示词只带 UTC 日期，不含任何关于你的信息：没有名字、语言设置、时区或所在地。
 - 只在你粘贴或截屏时读取剪贴板和屏幕。
 - 不记录日志，没有统计或遥测；网络请求使用 ephemeral `URLSession`。
 - 检查更新时，从 Howler 最新的 GitHub Release 读取 `appcast.xml`，最多每天一次，且要先经过你同意；不发送任何系统信息，GitHub 只能看到这次请求，以及 User-Agent 里的应用和 Sparkle 版本号。可以在 Settings › General 关闭。
 - 命令行从不打印 Key。
-- **Send Feedback…**（菜单里，或 Settings › General）会在浏览器里打开 GitHub 的反馈表单，自动填好 Howler 版本、macOS 版本和芯片架构；你在网页上提交之前，什么都不会发出去。
+- **Send Feedback…**（菜单里，或 Settings › General）会在浏览器里打开 GitHub 的反馈表单。打开页面时，Howler 版本、macOS 版本和芯片架构会通过网址发送给 GitHub，用于预填表单；你提交后才会创建 issue。
 
 ## 从源码构建
 
@@ -151,7 +153,7 @@ HOWLER_DEMO=1 .build/debug/Howler          # 其他变体：long、multi、burn�
 HOWLER_DEMO_DARK=1 HOWLER_DEMO=1 .build/debug/Howler
 ```
 
-改应用名或 Bundle ID：修改 [`app.config`](app.config) 后重新构建。发布：在同一文件里改好 `VERSION`，推送同名的 `v` tag，CI 会自动测试、构建、签名、公证并发布 Release（见 [release signing](docs/release-signing.md)）。手动验收清单见 [ACCEPTANCE.md](ACCEPTANCE.md)。
+改应用名或 Bundle ID：修改 [`app.config`](app.config) 后重新构建。发布：递增 `VERSION`（保持在 `0.1.x`）和 `BUILD_NUMBER`，通过 pull request 合并后推送同名的附注 `v` tag，CI 会自动测试、构建、签名、公证并发布 Release（见 [release signing](docs/release-signing.md)）。手动验收清单见 [ACCEPTANCE.md](ACCEPTANCE.md)。
 
 <details>
 <summary>从 Napkin 或 QuickAsk 升级</summary>
