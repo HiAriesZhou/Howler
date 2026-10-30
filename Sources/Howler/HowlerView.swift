@@ -56,6 +56,9 @@ struct HowlerView: View {
         .environment(\.parchment, parchment)
         .environment(\.copyText, viewModel.copyText)
         .onAppear(perform: focusInput)
+        .onChange(of: reduceMotion, initial: true) { _, reduced in
+            viewModel.quill.instant = reduced
+        }
         .onChange(of: viewModel.openCount) { _, _ in
             unfold()
             focusInput()

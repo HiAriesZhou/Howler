@@ -17,7 +17,13 @@ final class QuillPacer: ObservableObject {
     /// Called once the stream has ended and the ink has caught up with it.
     var onCaughtUp: (() -> Void)?
     /// Reduce Motion: reveal text as it arrives, without pacing.
-    var instant = false
+    var instant = false {
+        didSet {
+            guard instant != oldValue else { return }
+            if instant { frame.revealed = Double(target) }
+            if timer != nil { startTimer() }
+        }
+    }
 
     private var target = 0
     private var streamEnded = false
@@ -32,7 +38,12 @@ final class QuillPacer: ObservableObject {
         startedAt = CACurrentMediaTime()
         lastTick = startedAt
         frame = Frame()
-        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+        startTimer()
+    }
+
+    private func startTimer() {
+        stopTimer()
+        let timer = Timer(timeInterval: instant ? 1 : 1.0 / 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common) // keep writing while the user scrolls
@@ -41,11 +52,12 @@ final class QuillPacer: ObservableObject {
 
     func update(target: Int) {
         self.target = target
+        if instant { frame.revealed = Double(target) }
     }
 
     func endStream() {
         streamEnded = true
-        if timer == nil { finish() }
+        if instant || timer == nil { finish() }
     }
 
     /// Ink everything received so far at once (Stop, or a new question cutting in).
@@ -209,19 +221,22 @@ struct QuillView: View {
     let motion: QuillArt.Motion
     let time: Double
     var height: CGFloat = 34
+    var reduceMotion: Bool?
 
     @Environment(\.parchment) private var parchment
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     var body: some View {
         Canvas { context, size in
-            let pose = QuillArt.pose(motion, time: time)
+            let clock = (reduceMotion ?? systemReduceMotion) ? 0 : time
+            let pose = QuillArt.pose(motion, time: clock)
             QuillArt.draw(
                 in: &context,
                 nibPoint: CGPoint(x: 4 + pose.lift.width, y: size.height - 4 + pose.lift.height),
                 height: height,
                 angle: pose.angle,
                 inks: parchment.quillInks,
-                glow: motion == .writing ? 1 : 0.5 + 0.5 * sin(time * 3)
+                glow: motion == .writing ? 1 : 0.5 + 0.5 * sin(clock * 3)
             )
         }
         .frame(width: height + 12, height: height + 12)
