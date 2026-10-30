@@ -11,7 +11,8 @@ struct KeychainError: LocalizedError {
 }
 
 /// API keys live in the login keychain as generic passwords
-/// (service = bundle identifier, account = provider id).
+/// (service = bundle identifier, account = api-key:<destination scope>).
+/// Older installations use api-key or a provider ID until migrated.
 enum Keychain {
     private static var service: String { AppInfo.bundleIdentifier }
 

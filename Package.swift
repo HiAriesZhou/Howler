@@ -22,6 +22,7 @@ targets.append(
         linkerSettings: [.linkedFramework("Carbon")]
     )
 )
+targets.append(.testTarget(name: "HowlerAppTests", dependencies: ["Howler"]))
 #endif
 
 let package = Package(
