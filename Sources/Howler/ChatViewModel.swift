@@ -70,6 +70,7 @@ final class ChatViewModel: ObservableObject {
         quill.reset()
         writingID = nil
         messages.removeAll()
+        InkAttributed.clear()
         input = ""
         errorText = nil
         attachment = nil

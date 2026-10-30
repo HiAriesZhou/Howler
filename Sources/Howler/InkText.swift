@@ -158,7 +158,11 @@ private struct InkRenderer: TextRenderer {
 /// re-renders the reply, but only the block under the nib actually changes.
 @MainActor
 enum InkAttributed {
-    private static var cache: [String: AttributedString] = [:]
+    private(set) static var cache: [String: AttributedString] = [:]
+
+    static func clear() {
+        cache.removeAll()
+    }
 
     static func make(_ text: String) -> AttributedString {
         if let cached = cache[text] { return cached }

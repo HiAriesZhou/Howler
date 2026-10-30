@@ -241,6 +241,15 @@ final class StateSafetyTests: XCTestCase {
         XCTAssertNil(store.lastCheck)
     }
 
+    @MainActor
+    func testClosingTheConversationClearsParsedAnswers() async {
+        let settings = AppSettings(defaults: defaults, keys: keys.access)
+        let model = ChatViewModel(settings: settings)
+        _ = InkAttributed.make("Synthetic answer used for a cache lifecycle check.")
+        XCTAssertFalse(InkAttributed.cache.isEmpty)
+        model.reset()
+        XCTAssertTrue(InkAttributed.cache.isEmpty)
+    }
 
     @MainActor
     func testProviderKeyEchoIsNotSavedInCheckResults() async throws {
