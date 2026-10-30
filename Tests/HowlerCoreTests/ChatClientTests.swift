@@ -45,6 +45,26 @@ final class StubURLProtocol: URLProtocol {
 }
 
 final class ChatClientTests: XCTestCase {
+    func testProviderErrorsCannotExposeTheSubmittedKey() async throws {
+        let credential = "fixture-auth-secret"
+        for (status, response) in [
+            (401, "{\"error\":{\"message\":\"Rejected credential: \(credential)\"}}"),
+            (200, "data: {\"error\":{\"message\":\"Rejected credential: \(credential)\"}}\n\n")
+        ] {
+            StubURLProtocol.stub = .init(status: status, body: Data(response.utf8))
+            do {
+                for try await _ in makeClient().stream(
+                    service: Provider.openAI.service(), apiKey: credential,
+                    messages: [ChatMessage(role: .user, content: "synthetic probe")]
+                ) {}
+                XCTFail("expected a provider error")
+            } catch {
+                XCTAssertTrue(error.localizedDescription.contains("Rejected credential"))
+                XCTAssertFalse(error.localizedDescription.contains(credential))
+            }
+        }
+    }
+
     private func makeClient() -> ChatClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -54,7 +74,7 @@ final class ChatClientTests: XCTestCase {
     private func collect(_ provider: Provider) async throws -> String {
         var text = ""
         for try await delta in makeClient().stream(
-            service: provider.service(), apiKey: "k",
+            service: provider.service(), apiKey: "fixture-auth-value",
             messages: [ChatMessage(role: .user, content: "hi")]
         ) {
             text += delta

@@ -57,7 +57,23 @@ public final class ChatClient: @unchecked Sendable {
                     }
                     continuation.finish()
                 } catch {
-                    continuation.finish(throwing: error)
+                    // Providers can echo credentials in HTTP/SSE diagnostics. Sanitize at
+                    // the boundary, before callers display or persist the message.
+                    let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                    func redact(_ message: String) -> String {
+                        key.isEmpty ? message : message.replacingOccurrences(of: key, with: "••••")
+                    }
+                    let safe: Error
+                    switch error {
+                    case ChatClientError.http(let status, let message):
+                        safe = ChatClientError.http(status: status, message: redact(message))
+                    case ChatClientError.stream(let message):
+                        safe = ChatClientError.stream(redact(message))
+                    default:
+                        let message = error.localizedDescription
+                        safe = redact(message) == message ? error : ChatClientError.stream(redact(message))
+                    }
+                    continuation.finish(throwing: safe)
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
