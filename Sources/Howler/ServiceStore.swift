@@ -98,8 +98,8 @@ struct ServiceStore {
         guard let service else { throw ServiceConfigError.missing(["format", "base-url", "model"]) }
         invalidateCheck()
         let revision = self.revision
-        defaults.removeObject(forKey: DefaultsKey.keyScope)
         defer { finishChange() }
+        // Keep the current binding if the Keychain write fails without changing its item.
         // Separate Keychain items prevent a late writer for A from overwriting B's key.
         try keys.set(key, Self.keyAccount(for: service))
         guard self.revision == revision, self.service == service else {
