@@ -59,7 +59,7 @@ Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the
 1. [Download **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg), open it, and drag Howler onto Applications. Older versions and `Howler.zip` (the same app) are on [Releases](https://github.com/HiAriesZhou/Howler/releases).
 2. Open Howler. It is signed with a Developer ID and notarized by Apple, so it opens like any other app. Updates keep your Keychain and screen-recording permissions.
 3. A small quill appears in the menu bar. Howler has no Dock icon.
-4. From v0.1.7 on, Howler updates itself. Choose **Check for Updates…** in the menu, or let it check once a day (Settings › General). A new version shows up quietly in the menu and in Settings instead of popping up a window. Nothing installs until you say so. Updates are installed by [Sparkle](https://sparkle-project.org), which checks the download's EdDSA signature and Developer ID first. Versions up to 0.1.6 need one manual download.
+4. From v0.1.7 on, Howler updates itself. Choose **Check for Updates…** in the menu, or let it check once a day (Settings › General). When a background check finds a new version, a small dot appears beside the menu bar quill and the version label in Settings becomes an **Update** button. Click it to download, install and restart Howler. Nothing installs until you choose to update. [Sparkle](https://sparkle-project.org) handles progress, cancellation and errors, and verifies the download's EdDSA signature and Developer ID. Versions up to 0.1.6 need one manual download.
 
 Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, right-click it and choose **Open**.
 

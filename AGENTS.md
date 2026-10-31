@@ -16,6 +16,7 @@ Howler is a macOS 14+ menu bar app (Swift 5.10, SwiftPM). `HowlerCore` holds the
 - Conversations stay in memory and are cleared when the letter closes. Stop cancelled streams from writing into a later conversation. Screen capture uses a temporary file: keep its cleanup and describe that exception accurately.
 - API keys belong in Keychain, never command arguments, logs, fixtures or documentation. Read the clipboard and screen only after a user action; use an ephemeral session for chat requests.
 - Preserve input-method composition, selection-aware copy, Reduce Motion, and legacy configuration/shortcut migration. Add manual checks when behavior changes.
+- The Settings footer shows either the current version or one Update button. A click authorizes only the offered update, including restart; cancellation, failure or session end clears that consent. Keep download validation and installation in Sparkle, with its progress and error UI. Informational and major-upgrade offers retain Sparkle's standard confirmation.
 
 ## Commands
 

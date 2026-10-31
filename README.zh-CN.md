@@ -59,7 +59,7 @@
 1. [下载 **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg)，打开后把 Howler 拖到 Applications。旧版本与 `Howler.zip`（同一个应用）在 [Releases](https://github.com/HiAriesZhou/Howler/releases)。
 2. 打开 Howler。应用使用 Developer ID 签名并经过 Apple 公证，可以像其他应用一样直接打开。更新后，钥匙串和录屏权限都会保留。
 3. 菜单栏会出现一支小羽毛笔。Howler 没有 Dock 图标。
-4. 从 v0.1.7 起，Howler 可以自动更新。在菜单里选 **Check for Updates…**，或者让它每天检查一次（Settings › General）。发现新版本时，只在菜单和设置里安静地提示，不弹窗打扰；你确认之前不会安装任何东西。更新由 [Sparkle](https://sparkle-project.org) 安装，安装前会校验下载包的 EdDSA 签名和 Developer ID。0.1.6 及更早的版本需要手动下载一次。
+4. 从 v0.1.7 起，Howler 可以自动更新。在菜单里选 **Check for Updates…**，或者让它每天检查一次（Settings › General）。后台检查发现新版本时，菜单栏羽毛笔旁会出现小圆点，设置页的版本号会变为 **Update** 按钮。点击后会自动下载、安装并重启 Howler；没有选择升级就不会安装。进度、取消和错误提示由 [Sparkle](https://sparkle-project.org) 处理，它也会校验下载包的 EdDSA 签名和 Developer ID。0.1.6 及更早的版本需要手动下载一次。
 
 v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以在 Finder 中右键点 Howler，选**打开**。
 
