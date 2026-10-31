@@ -108,11 +108,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             update.target = self
             menu.addItem(update)
             updateItem = update
-            updater.$available.combineLatest(updater.$canCheck)
-                .sink { [weak self] available, canCheck in
-                    MainActor.assumeIsolated { self?.updateUpdateItem(available: available, canCheck: canCheck) }
-                }
-                .store(in: &cancellables)
         }
         let feedback = NSMenuItem(title: "Send Feedback…", action: #selector(sendFeedback), keyEquivalent: "")
         feedback.target = self
@@ -132,11 +127,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.menu = menu
         statusItem = item
         hotKeyWarningItem = warning
+        if let updateItem {
+            // Subscribe after the controls exist: @Published emits its current value immediately.
+            updater.$available.combineLatest(updater.$canCheck)
+                .sink { [weak item, weak updateItem] available, canCheck in
+                    MainActor.assumeIsolated {
+                        guard let item, let updateItem else { return }
+                        Self.updateUpdateItem(updateItem, statusItem: item, available: available, canCheck: canCheck)
+                    }
+                }
+                .store(in: &cancellables)
+        }
     }
 
     /// "Check for Updates…", or the gentle reminder when a scheduled check found one.
-    private func updateUpdateItem(available: String?, canCheck: Bool) {
-        guard let updateItem else { return }
+    static func updateUpdateItem(_ updateItem: NSMenuItem, statusItem: NSStatusItem, available: String?, canCheck: Bool) {
         updateItem.title = available.map { "Update to \(AppInfo.name) \($0)…" } ?? "Check for Updates…"
         updateItem.isEnabled = canCheck
         if #available(macOS 26, *) {
@@ -144,7 +149,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             updateItem.image = available == nil ? nil : Self.menuSymbol("arrow.down.circle")
         }
-        statusItem?.button?.toolTip = available.map { "\(AppInfo.name) \($0) is available" }
+        let description = available.map { "\(AppInfo.name) \(AppInfo.version), version \($0) is available" }
+            ?? "\(AppInfo.name) \(AppInfo.version)"
+        statusItem.button?.image = MenuBarMark.image(updateAvailable: available != nil)
+        statusItem.button?.toolTip = description
+        statusItem.button?.setAccessibilityLabel(description)
     }
 
     /// Explains in the menu when the shortcut isn't active.
@@ -184,7 +193,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func checkForUpdates() {
         panelController?.hide(burning: false)
-        updater.checkForUpdates()
+        if updater.available != nil {
+            updater.installAvailableUpdate()
+        } else {
+            updater.checkForUpdates()
+        }
     }
 
     @objc private func openSettings() {

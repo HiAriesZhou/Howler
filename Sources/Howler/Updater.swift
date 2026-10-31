@@ -21,7 +21,8 @@ final class Updater: NSObject, ObservableObject {
     /// Sparkle would only complain.
     private(set) var isEnabled = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil
 
-    private var controller: SPUStandardUpdaterController?
+    private var core: SPUUpdater?
+    private var userDriver: UpdateUserDriver?
     private var observers: [NSKeyValueObservation] = []
 
     override init() {
@@ -37,9 +38,11 @@ final class Updater: NSObject, ObservableObject {
         }
         #endif
         guard isEnabled else { return }
-        let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: self)
-        self.controller = controller
-        let updater = controller.updater
+        let userDriver = UpdateUserDriver(standard: SPUStandardUserDriver(hostBundle: .main, delegate: self))
+        userDriver.onAvailable = { [weak self] version in self?.available = version }
+        let updater = SPUUpdater(hostBundle: .main, applicationBundle: .main, userDriver: userDriver, delegate: nil)
+        self.userDriver = userDriver
+        core = updater
         observers = [
             updater.observe(\.canCheckForUpdates, options: [.initial, .new]) { [weak self] updater, _ in
                 MainActor.assumeIsolated { self?.canCheck = updater.canCheckForUpdates }
@@ -48,42 +51,43 @@ final class Updater: NSObject, ObservableObject {
                 MainActor.assumeIsolated { self?.checksAutomatically = updater.automaticallyChecksForUpdates }
             },
         ]
+        do {
+            try updater.start()
+        } catch {
+            isEnabled = false
+            userDriver.showUpdaterError(error, acknowledgement: {})
+        }
     }
 
     /// Looks for an update now, or shows the one the reminder is about.
     func checkForUpdates() {
-        guard let controller else { return }
+        guard let core else { return }
         // An accessory app must come forward for Sparkle's window to take focus.
         NSApp.activate()
-        controller.checkForUpdates(nil)
+        core.checkForUpdates()
+    }
+
+    func installAvailableUpdate() {
+        guard canCheck, available != nil else { return }
+        NSApp.activate()
+        userDriver?.installAvailableUpdate()
     }
 
     func setChecksAutomatically(_ enabled: Bool) {
-        controller?.updater.automaticallyChecksForUpdates = enabled
+        core?.automaticallyChecksForUpdates = enabled
     }
 }
 
 extension Updater: SPUStandardUserDriverDelegate {
     nonisolated var supportsGentleScheduledUpdateReminders: Bool { true }
 
-    /// Sparkle shows a scheduled update itself only when Howler already has your attention;
-    /// otherwise the reminder waits in the menu and Settings.
+    /// Ordinary scheduled offers wait in UpdateUserDriver. Offers routed to the standard
+    /// UI (manual checks, informational notices and major upgrades) must remain visible.
     nonisolated func standardUserDriverShouldHandleShowingScheduledUpdate(
         _ update: SUAppcastItem,
         andInImmediateFocus immediateFocus: Bool
     ) -> Bool {
-        immediateFocus
-    }
-
-    nonisolated func standardUserDriverWillHandleShowingUpdate(
-        _ handleShowingUpdate: Bool,
-        forUpdate update: SUAppcastItem,
-        state: SPUUserUpdateState
-    ) {
-        let version = update.displayVersionString
-        MainActor.assumeIsolated {
-            if !handleShowingUpdate && !state.userInitiated { available = version }
-        }
+        true
     }
 
     nonisolated func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
