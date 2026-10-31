@@ -101,7 +101,7 @@ struct GeneralPane: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            VersionFootnote(updater: updater)
+            VersionFootnote(available: updater.available, canCheck: updater.canCheck, installUpdate: updater.installAvailableUpdate)
         }
     }
 
@@ -230,25 +230,28 @@ private struct UpdateRow: View {
     }
 }
 
-/// The running version in small type at the foot of the page, with a quiet link when an
-/// update is waiting.
-private struct VersionFootnote: View {
-    @ObservedObject var updater: Updater
+/// One quiet footer slot: the running version, or the action to install a waiting update.
+struct VersionFootnote: View {
+    let available: String?
+    let canCheck: Bool
+    let installUpdate: () -> Void
 
     var body: some View {
         HStack(spacing: 6) {
             Spacer(minLength: 0)
-            if let version = updater.available {
-                Button("Update to \(version)", action: updater.checkForUpdates)
+            if let version = available {
+                Button("Update", action: installUpdate)
                     .buttonStyle(.link)
-                    .foregroundStyle(Color.accentColor) // the one thing here worth noticing
-                    .disabled(!updater.canCheck)
-                Text("·")
+                    .foregroundStyle(Color.accentColor)
+                    .help("Install \(AppInfo.name) \(version) and restart")
+                    .accessibilityLabel("Update \(AppInfo.name) to \(version)")
+                    .disabled(!canCheck)
+            } else {
+                Text("\(AppInfo.name) \(AppInfo.version)")
+                    .textSelection(.enabled)
             }
-            Text("\(AppInfo.name) \(AppInfo.version)")
-                .textSelection(.enabled)
         }
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
 }

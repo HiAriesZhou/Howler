@@ -4,7 +4,7 @@ import AppKit
 /// takes the menu bar's own color in light, dark and tinted menu bars. Drawn on an 18-point
 /// grid; `side` is 18 for the status item and smaller beside menu item titles.
 enum MenuBarMark {
-    static func image(side: CGFloat = 18) -> NSImage {
+    static func image(side: CGFloat = 18, updateAvailable: Bool = false) -> NSImage {
         let image = NSImage(size: NSSize(width: side, height: side), flipped: true) { _ in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
             context.scaleBy(x: side / 18, y: side / 18)
@@ -39,10 +39,14 @@ enum MenuBarMark {
             context.move(to: CGPoint(x: 3.4, y: 15.8))
             context.addLine(to: CGPoint(x: 1.6, y: 17.4))
             context.strokePath()
+            if updateAvailable {
+                // The open corner opposite the nib, separate from the feather's silhouette.
+                context.fillEllipse(in: CGRect(x: 13, y: 13, width: 4, height: 4))
+            }
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = AppInfo.name
+        image.accessibilityDescription = updateAvailable ? "\(AppInfo.name), update available" : AppInfo.name
         return image
     }
 }
