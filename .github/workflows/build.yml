@@ -136,14 +136,17 @@ jobs:
             echo "error: SPARKLE_ED_PRIVATE_KEY is not set; installed copies won't be offered this update" >&2
             exit 1
           fi
-          NOTES="$RUNNER_TEMP/notes.md"
+          # The release page and the in-app update panel use the same authored notes.
+          NOTES="docs/releases/$VERSION.md"
+          if [[ ! -s "$NOTES" ]] || ! grep -Eq '^[*-] [^[:space:]]' "$NOTES"; then
+            echo "error: add user-facing release notes to $NOTES before publishing" >&2
+            exit 1
+          fi
+          ./scripts/appcast.sh "$NOTES"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release view "$GITHUB_REF_NAME" --json body --jq .body > "$NOTES"
-            ./scripts/appcast.sh "$NOTES"
+            gh release edit "$GITHUB_REF_NAME" --notes-file "$NOTES"
             gh release upload "$GITHUB_REF_NAME" build/*.zip build/*.dmg build/appcast.xml --clobber
           else
-            gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$GITHUB_REF_NAME" --jq .body > "$NOTES"
-            ./scripts/appcast.sh "$NOTES"
             gh release create "$GITHUB_REF_NAME" build/*.zip build/*.dmg build/appcast.xml \
               --title "$APP_NAME $GITHUB_REF_NAME" --notes-file "$NOTES" --latest
           fi

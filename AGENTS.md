@@ -33,6 +33,8 @@ Howler is a macOS 14+ menu bar app (Swift 5.10, SwiftPM). `HowlerCore` holds the
 
 ## Releasing
 
+Write user-facing bullets in `docs/releases/<VERSION>.md` before tagging. CI uses that file for both the GitHub Release and the embedded notes in the update panel; PR titles are not release notes.
+
 1. Merge the pull request. Use rebase and merge when it has several commits.
 2. Push an annotated tag `vX.Y.Z` on the merge commit. It must match `VERSION`.
 3. CI tests, builds, signs and notarizes. It then creates the GitHub Release with `Howler.zip`, `Howler.dmg` and `appcast.xml` in one step.
