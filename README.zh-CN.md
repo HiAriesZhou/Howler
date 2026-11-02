@@ -56,6 +56,14 @@
 
 ## 安装
 
+使用 [Homebrew](https://brew.sh)：
+
+```sh
+brew install --cask hiarieszhou/tap/howler
+```
+
+也可以手动安装：
+
 1. [下载 **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg)，打开后把 Howler 拖到 Applications。旧版本与 `Howler.zip`（同一个应用）在 [Releases](https://github.com/HiAriesZhou/Howler/releases)。
 2. 打开 Howler。应用使用 Developer ID 签名并经过 Apple 公证，可以像其他应用一样直接打开。更新后，钥匙串和录屏权限都会保留。
 3. 菜单栏会出现一支小羽毛笔。Howler 没有 Dock 图标。
