@@ -41,6 +41,10 @@ Write user-facing bullets in `docs/releases/<VERSION>.md` before tagging. CI use
 
 Don't create the GitHub Release yourself before CI finishes. It would become "latest" without `appcast.xml`, and installed copies would get a 404 from `SUFeedURL` until CI catches up. The secrets CI needs, and the Sparkle update key, are described in `docs/release-signing.md`. Keys never go into the repo or a chat.
 
+After verifying a release, update `Casks/howler.rb` in `HiAriesZhou/homebrew-tap` with
+the version and published DMG SHA-256 through a PR. The README install command is
+`brew install --cask hiarieszhou/tap/howler`; in-app updates remain with Sparkle.
+
 ## Checks before a pull request
 
 - `make test`, then a signed `make app`. For user-visible changes, try the installed app.

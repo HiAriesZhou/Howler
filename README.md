@@ -56,6 +56,14 @@ Reduce Motion turns off the falling paper, the stamping, the ink shimmer and the
 
 ## Install
 
+With [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask hiarieszhou/tap/howler
+```
+
+Or install manually:
+
 1. [Download **Howler.dmg**](https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg), open it, and drag Howler onto Applications. Older versions and `Howler.zip` (the same app) are on [Releases](https://github.com/HiAriesZhou/Howler/releases).
 2. Open Howler. It is signed with a Developer ID and notarized by Apple, so it opens like any other app. Updates keep your Keychain and screen-recording permissions.
 3. A small quill appears in the menu bar. Howler has no Dock icon.
