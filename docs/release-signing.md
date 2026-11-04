@@ -39,6 +39,73 @@ These steps need the Apple Developer Program **Account Holder** role. Only the A
 
 Sparkle verifies every update against `SPARKLE_PUBLIC_KEY` in `app.config`, the public half of an EdDSA key. The private half lives in the login keychain (account `howler`, made with Sparkle's `generate_keys --account howler`), in a backup outside the repo, and in the `SPARKLE_ED_PRIVATE_KEY` secret. If it is lost, installed copies can't verify new updates and need one manual download. Never put it in the repo or a chat.
 
+## Homebrew upgrade PRs
+
+After a tagged Build succeeds, the Homebrew workflow downloads that release's
+`Howler.dmg`, calculates SHA-256 and compares it with GitHub's published digest.
+It requires a complete stable release (`Howler.dmg`, `Howler.zip`, `appcast.xml`),
+checks the mounted app's version and bundle ID, and validates the universal binary,
+signature, notarization tickets and Gatekeeper acceptance. Verification mounts the
+DMG read-only and never installs or launches the app.
+
+Only then does it create `automation/howler-X.Y.Z` in
+[`HiAriesZhou/homebrew-tap`](https://github.com/HiAriesZhou/homebrew-tap), changing
+only `Casks/howler.rb`'s version and SHA-256. The existing tap CI runs style, strict
+online audit and download verification. A maintainer reviews and merges the PR;
+the automation does not merge it.
+
+### One-time token setup
+
+The default `GITHUB_TOKEN` is limited to Howler. Use a dedicated
+[fine-grained PAT](https://github.com/settings/personal-access-tokens/new) so the
+workflow can write to the tap and its PR can trigger CI automatically:
+
+1. Sign in as `HiAriesZhou`, the owner of `homebrew-tap`. Give the
+   token a descriptive name such as `Howler Homebrew updates` and an expiration
+   date you can renew before it expires.
+2. Set **Resource owner** to `HiAriesZhou`. Under **Repository access**, choose
+   **Only select repositories** and select **homebrew-tap**.
+3. Grant these **Repository permissions**: **Contents — Read and write** and
+   **Pull requests — Read and write**. Metadata read access is included. No
+   account permissions, Actions write or Workflows write permission is needed.
+4. Generate the token and store it directly in
+   [Howler → Settings → Secrets and variables → Actions](https://github.com/HiAriesZhou/Howler/settings/secrets/actions)
+   as a **New repository secret** named **`HOMEBREW_TAP_TOKEN`**. Store it in
+   Howler, not the tap. Do not paste it into an issue, chat, shell command or file.
+5. Renew the token before expiration and replace that secret. If it is revoked or
+   expires, the PR step fails visibly; the existing app release remains published.
+
+The token is available only to the PR step, after verification; normal builds and
+fork PRs do not receive it. Its write permissions cover only the selected tap.
+See GitHub's [token permissions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+and [workflow-trigger rules](https://docs.github.com/en/actions/concepts/security/github_token).
+
+### Retry and acceptance
+
+To retry a failed Homebrew job, use **Re-run failed jobs** on the tagged Build.
+For an already published release, open
+[Actions → Homebrew](https://github.com/HiAriesZhou/Howler/actions/workflows/homebrew.yml),
+choose **Run workflow** on **main**, and enter the stable tag, for example
+`v0.1.13`. This runs only verification and tap delivery, without rebuilding or
+republishing the app. The workflow must be merged into main before this entry appears.
+
+Runs are serialized. Repeating a version reuses its branch and open PR; a cask
+already at that version and checksum is a no-op. Older releases cannot downgrade
+the cask. A different checksum for the same version, a modified automation branch,
+or a closed version PR needs maintainer review rather than an automatic overwrite.
+
+Acceptance: the Homebrew run succeeds, its PR changes exactly the two cask stanzas,
+and the tap's **check** CI passes. Repeating the run must not create another PR.
+Running against an already synchronized release verifies the no-op path only; it
+does not prove the token's write permissions or PR-triggered CI. Exercise those on
+the next real release. No new application release is needed to enable this workflow.
+
+Local fixture checks run with `swift test --filter HomebrewTests` (included in
+`make test`). They exercise the actual shell script with local API and macOS tool
+substitutes, including validation failures and interrupted retries; they do not
+prove real signing, GitHub permissions or remote CI. To disable delivery, remove
+the Homebrew caller job from `build.yml` through a PR and revoke the dedicated token.
+
 ## Local builds
 
 With the certificate in the login keychain, a local build can use the same signature:
