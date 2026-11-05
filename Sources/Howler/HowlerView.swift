@@ -27,45 +27,34 @@ struct HowlerView: View {
     @State private var unfolded = true
     @State private var showingContext = false
     @State private var hoveringBurn = false
-    @State private var sheetSize: CGSize = .zero
-    @State private var burnField: BurnField?
 
     var body: some View {
         let parchment = Parchment.forScheme(viewModel.candlelit ? .dark : .light)
-        TimelineView(.animation(paused: viewModel.burnStartedAt == nil)) { timeline in
-            let progress = burnProgress(at: timeline.date)
+        ZStack(alignment: .top) {
+            shadow
             ZStack(alignment: .top) {
-                // The shadow goes with the first flames, so no outline of the sheet lingers.
-                shadow.opacity(1 - min(max((progress ?? 0) * 3, 0), 1))
-                ZStack(alignment: .top) {
-                    sheet(parchment)
-                    if settings.isConfigured {
-                        letter(parchment)
-                    } else {
-                        SetupPage(pressKey: viewModel.openCount, openSettings: openSettings)
-                    }
+                sheet(parchment)
+                if settings.isConfigured {
+                    letter(parchment)
+                } else {
+                    SetupPage(pressKey: viewModel.openCount, openSettings: openSettings)
                 }
-                .overlay(alignment: .topTrailing) {
-                    Button(action: burnLetter) {
-                        Image(systemName: "flame")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(parchment.seal)
-                            .frame(width: 40, height: 40)
-                            .background(parchment.seal.opacity(hoveringBurn ? 0.10 : 0), in: Circle())
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { hoveringBurn = $0 }
-                    .help("Burn this letter · Esc")
-                    .accessibilityLabel("Close and clear conversation")
-                    .padding(.top, 8).padding(.trailing, 8)
-                }
-                .modifier(BurningLetter(field: burnField, progress: progress))
             }
-        }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { sheetSize = $0 }
-        .onChange(of: viewModel.burnStartedAt) { _, start in
-            burnField = start == nil ? nil : BurnField(size: sheetSize)
+            .overlay(alignment: .topTrailing) {
+                Button(action: burnLetter) {
+                    Image(systemName: "flame")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(parchment.seal)
+                        .frame(width: 40, height: 40)
+                        .background(parchment.seal.opacity(hoveringBurn ? 0.10 : 0), in: Circle())
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { hoveringBurn = $0 }
+                .help("Burn this letter · Esc")
+                .accessibilityLabel("Close and clear conversation")
+                .padding(.top, 8).padding(.trailing, 8)
+            }
         }
         .scaleEffect(unfolded ? 1 : 0.97, anchor: .top)
         .rotation3DEffect(.degrees(unfolded ? 0 : 10), axis: (x: 1, y: 0, z: 0), anchor: .top, perspective: 0.5)
@@ -100,11 +89,6 @@ struct HowlerView: View {
 
     private var desiredHeight: CGFloat {
         headerHeight + (hasTranscript ? transcriptHeight + footerHeight : 0)
-    }
-
-    private func burnProgress(at date: Date) -> Double? {
-        guard let start = viewModel.burnStartedAt, burnField != nil else { return nil }
-        return BurnField.progress(elapsed: date.timeIntervalSince(start))
     }
 
     // MARK: Sheet
