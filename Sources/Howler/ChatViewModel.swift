@@ -139,7 +139,7 @@ final class ChatViewModel: ObservableObject {
     func introduceScreenshot(_ picture: ImageData) {
         let context = ContextAttachment(source: .screenshot, image: picture)
         let id = registerImage(context)
-        if input.isEmpty { draftImageID = id }
+        if input.isEmpty && attachment == nil { draftImageID = id }
         attachmentStamp += 1
         queue.enqueue(ConversationTask(kind: .screenshotIntroduction, question: "Image introduction",
                                         attachment: context, imageID: id,

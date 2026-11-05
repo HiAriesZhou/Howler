@@ -164,6 +164,21 @@ final class ConversationExecutionTests: XCTestCase {
         model.reset()
     }
 
+    func testNewCapturePreservesAnUnsentPastedImageEvenWithEmptyText() async {
+        let model = model()
+        model.pasteImage(picture)
+        let pastedID = model.draftImageID
+        let other = ImageData(data: Data([4, 5, 6]), mediaType: "image/png", width: 2, height: 1)
+        model.introduceScreenshot(other)
+        XCTAssertEqual(model.draftImageID, pastedID)
+        XCTAssertEqual(model.previewAttachment?.image, picture)
+        model.send()
+        let followup = model.queue.tasks.last!
+        XCTAssertEqual(followup.imageID, pastedID)
+        XCTAssertEqual(model.requestHistory(for: followup).last?.image, picture)
+        model.reset()
+    }
+
     func testDeferredLongPasteCannotRestoreContentAfterBurn() async {
         let model = model()
         model.input = "Old draft"
