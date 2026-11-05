@@ -27,7 +27,6 @@ final class ChatViewModel: ObservableObject {
     @Published private(set) var attachmentStamp = 0
     @Published private(set) var writingID: UUID?
     @Published private(set) var copiedID: UUID?
-    @Published private(set) var burnStartedAt: Date?
     @Published private(set) var candlelit = false
 
     let settings: AppSettings
@@ -96,10 +95,7 @@ final class ChatViewModel: ObservableObject {
     }
 
     /// The controller retains only a rendered snapshot while the business state is cleared.
-    func burn() {
-        reset()
-        burnStartedAt = Date()
-    }
+    func burn() { reset() }
 
     func reset() {
         conversationID = UUID()
@@ -114,7 +110,6 @@ final class ChatViewModel: ObservableObject {
         errorText = nil
         attachment = nil
         copiedID = nil
-        burnStartedAt = nil
         isAbsorbingPaste = false
         InkAttributed.clear()
     }
