@@ -134,6 +134,36 @@ final class ConversationExecutionTests: XCTestCase {
         model.reset()
     }
 
+    func testExplicitImageSelectionSurvivesStartingANewDraft() async {
+        let model = model()
+        model.introduceScreenshot(picture)
+        let first = model.latestImageID
+        model.introduceScreenshot(picture)
+        model.selectDraftImage(first)
+        model.input = "About the older image"
+        XCTAssertEqual(model.draftImageID, first)
+        model.send()
+        XCTAssertEqual(model.queue.tasks.last?.imageID, first)
+        model.selectDraftImage(nil)
+        model.input = "A plain question"
+        XCTAssertNil(model.draftImageID)
+        model.send()
+        XCTAssertNil(model.queue.tasks.last?.imageID)
+        model.reset()
+    }
+
+    func testNoImageSelectionRemovesAPastedPictureFromTheRequest() async {
+        let model = model()
+        model.pasteImage(picture)
+        model.input = "Plain question"
+        model.selectDraftImage(nil)
+        model.send()
+        XCTAssertNil(model.queue.tasks[0].imageID)
+        XCTAssertNil(requests[0].last?.image)
+        XCTAssertNil(model.queue.tasks[0].attachment?.image)
+        model.reset()
+    }
+
     func testCancelledOrStaleScreenshotDoesNotSendAndPlainDraftSurvives() async {
         let model = model()
         var captured: ((Result<ImageData, Error>?) -> Void)?

@@ -13,8 +13,6 @@ final class ChatViewModel: ObservableObject {
 
     @Published var input = "" {
         didSet {
-            if oldValue.isEmpty && !input.isEmpty && !restoringDraft { draftImageID = latestImageID }
-            if input.isEmpty { draftImageID = latestImageID }
             absorbLongPaste(previous: oldValue)
         }
     }
@@ -71,7 +69,11 @@ final class ChatViewModel: ObservableObject {
     var lastAnswer: ChatMessage? { messages.last { $0.role == .assistant && !$0.content.isEmpty } }
 
     func image(_ id: UUID?) -> LetterImage? { images.first { $0.id == id } }
-    func selectDraftImage(_ id: UUID?) { draftImageID = id }
+    func selectDraftImage(_ id: UUID?) {
+        guard id == nil || image(id) != nil else { return }
+        if attachment?.image != nil { attachment = nil }
+        draftImageID = id
+    }
 
     func panelDidOpen(reduceMotion: Bool, candlelit: Bool) {
         openCount += 1
@@ -302,7 +304,7 @@ final class ChatViewModel: ObservableObject {
         if let context = current.attachment, context.text != nil { question = context.prompt(for: question) }
         var instructions = ReplyLanguage.instruction(current.language)
         if current.kind == .screenshotIntroduction { instructions += "\n" + ReplyLanguage.screenshotIntroduction }
-        let picture = image(current.imageID)?.attachment ?? current.attachment.flatMap { $0.image == nil ? nil : $0 }
+        let picture = image(current.imageID)?.attachment
         history.append(ChatMessage(id: current.id, role: .user, content: question,
                                    attachment: picture, taskInstructions: instructions))
         return history
