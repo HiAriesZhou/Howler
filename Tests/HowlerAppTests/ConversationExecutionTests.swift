@@ -1,4 +1,6 @@
 import XCTest
+import AppKit
+import SwiftUI
 import HowlerCore
 @testable import Howler
 
@@ -210,5 +212,46 @@ final class ConversationExecutionTests: XCTestCase {
         XCTAssertNil(model.draftImageID)
         XCTAssertEqual(model.input, "Still plain")
         model.reset()
+    }
+
+    func testSkippedRepliesHaveAVisibleStatusEvenWhenEmpty() async throws {
+        _ = NSApplication.shared
+        func render(_ model: ChatViewModel) async throws -> Data {
+            let host = NSHostingView(rootView:
+                Transcript(viewModel: model, contentHeight: .constant(0))
+                    .frame(width: 500, height: 300).background(.white))
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 300),
+                                  styleMask: [.borderless], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.contentView = host
+            window.orderFront(nil)
+            defer { window.close() }
+            host.layoutSubtreeIfNeeded()
+            let layout = expectation(description: "native transcript rendered")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { layout.fulfill() }
+            await fulfillment(of: [layout], timeout: 2)
+            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            let bytes = try XCTUnwrap(bitmap.bitmapData)
+            let data = Data(bytes: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh)
+            XCTAssertGreaterThan(Set(data).count, 8, "The snapshot must contain rendered text, not a blank surface")
+            return data
+        }
+        for partial in ["", "Partial answer"] {
+            let model = model()
+            model.input = "Question"
+            model.send()
+            if !partial.isEmpty {
+                streams.last?.yield(partial)
+                await waitUntil { model.queue.active?.answer == partial }
+            }
+            model.stop()
+            let before = try await render(model)
+            model.skipAndContinue()
+            let after = try await render(model)
+            XCTAssertNotEqual(before, after, "Skipping must add a visible incomplete status, even without text")
+            XCTAssertEqual(model.queue.tasks.first?.state, .skipped)
+            model.reset()
+        }
     }
 }
