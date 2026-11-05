@@ -16,7 +16,9 @@ final class ReleaseNotesTests: XCTestCase {
         let workflow = try String(contentsOf: root.appendingPathComponent(".github/workflows/build.yml"))
         let step = try XCTUnwrap(workflow.components(separatedBy: "      - name: Publish release").last)
         let body = try XCTUnwrap(step.components(separatedBy: "        run: |\n").last)
-            .components(separatedBy: "\n").map { String($0.dropFirst(10)) }.joined(separator: "\n")
+            .components(separatedBy: "\n")
+            .prefix { $0.isEmpty || $0.hasPrefix("          ") }
+            .map { String($0.dropFirst(10)) }.joined(separator: "\n")
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         for path in ["scripts", "build", "bin", "docs/releases"] {

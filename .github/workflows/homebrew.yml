@@ -1,0 +1,44 @@
+name: Homebrew
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published stable release tag (vX.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Serialize automatic delivery and manual retries without cancelling a verified run.
+concurrency:
+  group: howler-homebrew
+  cancel-in-progress: false
+
+jobs:
+  upgrade:
+    if: github.repository == 'HiAriesZhou/Howler'
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: bash scripts/homebrew.sh verify "$RELEASE_TAG" "$RUNNER_TEMP/howler-release.json"
+      - name: Create or reuse tap upgrade PR
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: bash scripts/homebrew.sh pr "$RUNNER_TEMP/howler-release.json"
