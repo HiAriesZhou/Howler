@@ -1,125 +1,159 @@
 import Foundation
+import Combine
 import HowlerCore
 
-/// One in-memory conversation. Cleared whenever the panel closes; never written anywhere.
+/// A single in-memory letter. Visibility and input do not control its lifetime.
 @MainActor
 final class ChatViewModel: ObservableObject {
-    @Published var input = "" {
-        didSet { absorbLongPaste(previous: oldValue) }
+    struct LetterImage: Identifiable {
+        let id: UUID
+        let number: Int
+        let attachment: ContextAttachment
     }
-    @Published private(set) var messages: [ChatMessage] = []
-    @Published private(set) var isStreaming = false
+
+    @Published var input = "" {
+        didSet {
+            if oldValue.isEmpty && !input.isEmpty && !restoringDraft { draftImageID = latestImageID }
+            if input.isEmpty { draftImageID = latestImageID }
+            absorbLongPaste(previous: oldValue)
+        }
+    }
+    @Published private(set) var queue = ConversationQueue()
+    @Published private(set) var images: [LetterImage] = []
+    @Published private(set) var draftImageID: UUID?
     @Published private(set) var errorText: String?
-    /// Incremented each time the panel opens: focuses the input and re-presses the stamp.
     @Published private(set) var openCount = 0
-    /// Incremented when the letter comes back from a screen capture: focuses the input.
     @Published private(set) var focusTick = 0
-    /// Context waiting to travel with the next question.
     @Published private(set) var attachment: ContextAttachment?
-    /// Bumped whenever a new attachment is sealed, so its sigil burns in.
     @Published private(set) var attachmentStamp = 0
-    /// The reply the quill is still writing; nil once the ink has caught up.
     @Published private(set) var writingID: UUID?
     @Published private(set) var copiedID: UUID?
-    /// When the letter caught fire on its way out; nil while it is whole.
     @Published private(set) var burnStartedAt: Date?
-    /// The desktop is in Dark Mode: the letter is lit by candle rather than daylight.
     @Published private(set) var candlelit = false
 
     let settings: AppSettings
     let quill = QuillPacer()
     private var streamTask: Task<Void, Never>?
-    /// Bumped on reset so a cancelled stream can't write into the next conversation.
-    private var generation = 0
+    private var connectionObserver: AnyCancellable?
     private var isAbsorbingPaste = false
+    private var restoringDraft = false
+    private(set) var conversationID = UUID()
+    private var visible = true
+    private var reduceMotion = false
+    private var isPumping = false
 
-    /// Set by the panel: runs work that may raise a system alert without the letter
-    /// treating the lost focus as "clicked elsewhere".
     var keepingOpen: (() -> Void) -> Void = { $0() }
-    /// Set by the panel: steps aside while the user drags out a screen region, then
-    /// reports the picture (nil if they cancelled).
     var captureScreenRegion: (@escaping (Result<ImageData, Error>?) -> Void) -> Void = { $0(nil) }
-
+    /// Injected transports operate on synthetic content in tests, never real credentials.
+    var streamFactory: (([ChatMessage], RequestOptions) -> AsyncThrowingStream<String, Error>)?
     #if DEBUG
-    /// Demo mode replaces the network with a scripted stream.
     var demoStream: (() -> AsyncThrowingStream<String, Error>)?
     #endif
 
     init(settings: AppSettings) {
         self.settings = settings
-        quill.onCaughtUp = { [weak self] in self?.writingID = nil }
+        quill.onCaughtUp = { [weak self] in self?.finishPresentation() }
+        connectionObserver = settings.$connectionVersion.dropFirst().sink { [weak self] _ in
+            guard let self, self.queue.active != nil || !self.queue.waiting.isEmpty else { return }
+            self.pause("The model setup changed. Retry or continue with the new setup.")
+        }
     }
 
-    // MARK: Panel lifecycle
+    var messages: [ChatMessage] {
+        queue.tasks.filter { $0.state != .queued }.flatMap { task in
+            [ChatMessage(id: task.id, role: .user, content: displayQuestion(task), attachment: task.attachment),
+             ChatMessage(id: task.replyID, role: .assistant, content: task.answer)]
+        }
+    }
+    var isStreaming: Bool { queue.active?.state == .generating }
+    var latestImageID: UUID? { images.last?.id }
+    var previewAttachment: ContextAttachment? { attachment ?? image(draftImageID)?.attachment }
+    var lastAnswer: ChatMessage? { messages.last { $0.role == .assistant && !$0.content.isEmpty } }
+
+    func image(_ id: UUID?) -> LetterImage? { images.first { $0.id == id } }
+    func selectDraftImage(_ id: UUID?) { draftImageID = id }
 
     func panelDidOpen(reduceMotion: Bool, candlelit: Bool) {
         openCount += 1
         self.candlelit = candlelit
-        quill.instant = reduceMotion
+        self.reduceMotion = reduceMotion
+        setVisible(true)
     }
 
-    /// Sets the letter alight. The panel hides it and calls `reset()` once it has burned.
+    func setVisible(_ value: Bool) {
+        visible = value
+        quill.instant = reduceMotion || !value
+        if !value, queue.active?.state == .revealing { quill.snapToEnd() }
+    }
+
+    /// The controller retains only a rendered snapshot while the business state is cleared.
     func burn() {
-        stop()
+        reset()
         burnStartedAt = Date()
     }
 
     func reset() {
-        burnStartedAt = nil
-        stop()
+        conversationID = UUID()
+        streamTask?.cancel()
+        streamTask = nil
+        queue.clear()
         quill.reset()
         writingID = nil
-        messages.removeAll()
-        InkAttributed.clear()
+        images.removeAll()
         input = ""
+        draftImageID = nil
         errorText = nil
         attachment = nil
         copiedID = nil
+        burnStartedAt = nil
+        InkAttributed.clear()
     }
 
-    // MARK: Attachments
-
-    /// "Paste from Clipboard": seals in whatever is there, text of any length or a picture.
-    /// The clipboard is only ever read on such an explicit request.
     func pasteFromClipboard() {
         var pasted: ContextAttachment?
         keepingOpen { pasted = Clipboard.attachment() }
-        if let pasted {
-            attach(pasted)
-        } else {
-            errorText = "There's no text or picture on the clipboard."
-        }
+        if let pasted { attach(pasted) }
+        else { errorText = "There's no text or picture on the clipboard." }
     }
 
-    /// ⌘V with a picture on the clipboard, which the text field can't take.
-    func pasteImage(_ image: ImageData) {
-        attach(ContextAttachment(source: .pasted, image: image))
-    }
+    func pasteImage(_ image: ImageData) { attach(ContextAttachment(source: .pasted, image: image)) }
 
     func captureScreen() {
+        let session = conversationID
         captureScreenRegion { [weak self] result in
-            guard let self else { return }
+            guard let self, self.conversationID == session else { return }
             switch result {
-            case .success(let image): self.attach(ContextAttachment(source: .screenshot, image: image))
+            case .success(let picture): self.introduceScreenshot(picture)
             case .failure(let error): self.errorText = error.localizedDescription
-            case nil: break // cancelled with Esc
+            case nil: return
             }
             self.focusTick += 1
         }
     }
 
-    /// Copies text the letter wrote (an answer, a code block).
-    func copyText(_ text: String) {
-        Clipboard.copy(text)
+    func introduceScreenshot(_ picture: ImageData) {
+        let context = ContextAttachment(source: .screenshot, image: picture)
+        let id = registerImage(context)
+        if input.isEmpty { draftImageID = id }
+        attachmentStamp += 1
+        queue.enqueue(ConversationTask(kind: .screenshotIntroduction, question: "Image introduction",
+                                        attachment: context, imageID: id,
+                                        language: settings.resolvedReplyLanguage, systemPrompt: settings.systemPrompt))
+        pump()
     }
 
-    func removeAttachment() {
-        attachment = nil
+    private func registerImage(_ context: ContextAttachment) -> UUID {
+        let id = UUID()
+        images.append(LetterImage(id: id, number: images.count + 1, attachment: context))
+        return id
     }
 
-    /// Seals context into the next question; its seal is pressed in.
+    func copyText(_ text: String) { Clipboard.copy(text) }
+    func removeAttachment() { attachment = nil; draftImageID = nil }
+
     func attach(_ newAttachment: ContextAttachment) {
         attachment = newAttachment
+        if newAttachment.image != nil { draftImageID = registerImage(newAttachment) }
         attachmentStamp += 1
     }
 
@@ -147,93 +181,148 @@ final class ChatViewModel: ObservableObject {
         }
     }
 
-    // MARK: Sending
+    // MARK: Submitted tasks
 
-    /// Sent when the user presses ↩ with context sealed in but nothing written.
     static let attachmentOnlyQuestion = "Explain this."
 
     func send() {
         var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty, attachment != nil { text = Self.attachmentOnlyQuestion }
-        guard !text.isEmpty, !isStreaming else { return }
-        guard let service = settings.service else {
-            errorText = "No model set up. Open Settings to set one up."
-            return
-        }
-        guard let stream = makeStream(service: service, history: messages + [userTurn(text)]) else {
-            errorText = "No API key found. Open Settings to finish the setup."
-            return
-        }
-
-        if writingID != nil { quill.snapToEnd() } // finish the previous reply's ink at once
-        messages.append(userTurn(text))
-        attachment = nil
+        if text.isEmpty, previewAttachment != nil { text = Self.attachmentOnlyQuestion }
+        guard !text.isEmpty else { return }
+        let target = draftImageID
+        queue.enqueue(ConversationTask(question: text, attachment: attachment, imageID: target,
+                                        language: settings.resolvedReplyLanguage, systemPrompt: settings.systemPrompt))
         input = ""
+        attachment = nil
+        draftImageID = latestImageID
         errorText = nil
-        let reply = ChatMessage(role: .assistant, content: "")
-        messages.append(reply)
-        isStreaming = true
-        writingID = reply.id
-        quill.begin()
+        pump()
+    }
 
-        let currentGeneration = generation
+    func withdraw(_ id: UUID) {
+        guard input.isEmpty, attachment == nil, let task = queue.withdraw(id) else { return }
+        restoringDraft = true
+        input = task.question
+        attachment = task.attachment
+        draftImageID = task.imageID
+        restoringDraft = false
+        focusTick += 1
+    }
+
+    func stop() { pause("Stopped. Retry this reply, or skip it and continue.") }
+
+    private func pause(_ reason: String) {
+        streamTask?.cancel()
+        streamTask = nil
+        queue.pause(reason: reason)
+        writingID = nil
+        quill.reset()
+    }
+
+    func retry() {
+        settings.reload()
+        queue.retry()
+        errorText = nil
+        pump()
+    }
+
+    func skipAndContinue() {
+        settings.reload()
+        queue.skip()
+        errorText = nil
+        pump()
+    }
+
+    private func pump() {
+        guard !isPumping else { return }
+        isPumping = true
+        defer { isPumping = false }
+        settings.reload()
+        guard let token = queue.startNext(), let task = queue.active else { return }
+        let options = RequestOptions(appName: AppInfo.name, systemPrompt: task.systemPrompt)
+        guard let stream = makeStream(history: requestHistory(for: task), options: options) else {
+            pause(settings.service == nil ? "No model set up. Open Settings to set one up."
+                  : "No API key found. Open Settings to finish the setup.")
+            return
+        }
+        writingID = task.replyID
+        quill.instant = reduceMotion || !visible
+        quill.begin()
         streamTask = Task { [weak self] in
             do {
                 for try await delta in stream {
-                    guard let self, self.generation == currentGeneration else { return }
-                    self.append(delta, to: reply.id)
+                    guard let self, self.queue.runID == token, !Task.isCancelled else { return }
+                    self.queue.append(delta, for: token)
+                    self.quill.update(target: self.queue.active?.answer.count ?? 0)
+                }
+                guard let self, self.queue.runID == token, !Task.isCancelled else { return }
+                self.streamTask = nil
+                self.queue.generated(for: token)
+                if self.queue.isPaused {
+                    self.writingID = nil
+                    self.quill.reset()
+                } else {
+                    self.quill.endStream()
                 }
             } catch {
-                guard let self, self.generation == currentGeneration, !Task.isCancelled else { return }
-                self.errorText = error.localizedDescription
+                guard let self, self.queue.runID == token, !Task.isCancelled else { return }
+                self.pause(error.localizedDescription)
             }
-            guard let self, self.generation == currentGeneration else { return }
-            self.isStreaming = false
-            self.streamTask = nil
-            self.quill.endStream()
         }
     }
 
-    func stop() {
-        generation += 1 // the stopped task must not touch the state of a later send
-        streamTask?.cancel()
-        streamTask = nil
-        isStreaming = false
-        quill.snapToEnd()
+    private func finishPresentation() {
+        guard let token = queue.runID, queue.active?.state == .revealing else { return }
+        queue.presented(for: token)
+        writingID = nil
+        pump()
+    }
+
+    /// A request carries its target image once. Earlier image turns keep their labels and
+    /// answers as text; an old-image follow-up explicitly reattaches its own image.
+    func requestHistory(for current: ConversationTask) -> [ChatMessage] {
+        var history: [ChatMessage] = []
+        for task in queue.tasks {
+            if task.id == current.id { break }
+            guard task.state == .completed || task.state == .skipped else { continue }
+            let text = task.attachment?.text.map { ContextAttachment(source: .pasted, text: $0) } ?? nil
+            history.append(ChatMessage(role: .user, content: displayQuestion(task), attachment: text))
+            if !task.answer.isEmpty {
+                let suffix = task.state == .skipped ? "\n[Incomplete reply]" : ""
+                history.append(ChatMessage(role: .assistant, content: task.answer + suffix))
+            }
+        }
+        var question = displayQuestion(current)
+        if let context = current.attachment, context.text != nil { question = context.prompt(for: question) }
+        var instructions = ReplyLanguage.instruction(current.language)
+        if current.kind == .screenshotIntroduction { instructions += "\n" + ReplyLanguage.screenshotIntroduction }
+        let picture = image(current.imageID)?.attachment ?? current.attachment.flatMap { $0.image == nil ? nil : $0 }
+        history.append(ChatMessage(id: current.id, role: .user, content: question,
+                                   attachment: picture, taskInstructions: instructions))
+        return history
+    }
+
+    func displayQuestion(_ task: ConversationTask) -> String {
+        guard let image = image(task.imageID) else { return task.question }
+        return "Screenshot \(image.number) · \(task.question)"
+    }
+
+    private func makeStream(history: [ChatMessage], options: RequestOptions) -> AsyncThrowingStream<String, Error>? {
+        if let streamFactory { return streamFactory(history, options) }
+        #if DEBUG
+        if let demoStream { return demoStream() }
+        #endif
+        guard let service = settings.service, let key = settings.apiKey(), !key.isEmpty else { return nil }
+        return settings.client.stream(service: service, apiKey: key, messages: history, options: options)
     }
 
     func copy(_ message: ChatMessage) {
         copyText(message.content)
         copiedID = message.id
+        let session = conversationID
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in
-            if self?.copiedID == message.id { self?.copiedID = nil }
+            guard let self, self.conversationID == session else { return }
+            if self.copiedID == message.id { self.copiedID = nil }
         }
-    }
-
-    var lastAnswer: ChatMessage? {
-        messages.last { $0.role == .assistant && !$0.content.isEmpty }
-    }
-
-    private func userTurn(_ text: String) -> ChatMessage {
-        ChatMessage(role: .user, content: text, attachment: attachment)
-    }
-
-    private func makeStream(service: ModelService, history: [ChatMessage]) -> AsyncThrowingStream<String, Error>? {
-        #if DEBUG
-        if let demoStream { return demoStream() }
-        #endif
-        guard let apiKey = settings.apiKey(), !apiKey.isEmpty else { return nil }
-        return settings.client.stream(
-            service: service,
-            apiKey: apiKey,
-            messages: history,
-            options: RequestOptions(appName: AppInfo.name, systemPrompt: settings.systemPrompt)
-        )
-    }
-
-    private func append(_ delta: String, to id: UUID) {
-        guard let index = messages.lastIndex(where: { $0.id == id }) else { return }
-        messages[index].content += delta
-        quill.update(target: messages[index].content.count)
     }
 }
