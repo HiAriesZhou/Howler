@@ -8,7 +8,7 @@ import SwiftUI
 final class FloatingPanel: NSPanel {
     var onDismiss: (() -> Void)?
     /// Demo mode keeps the letter up while automation tools take focus.
-    var dismissesOnResignKey = true
+    var dismissesOnResignKey = false
 
     init(contentRect: NSRect) {
         super.init(
@@ -39,10 +39,10 @@ final class FloatingPanel: NSPanel {
         onDismiss?()
     }
 
-    /// Clicking anywhere else closes the panel, like Spotlight.
+    /// Losing focus never ends a letter.
     override func resignKey() {
         super.resignKey()
-        if dismissesOnResignKey { onDismiss?() }
+
     }
 }
 
@@ -66,8 +66,11 @@ final class PanelController {
     private var maxPaperHeight = a4Height
     private var keyMonitor: Any?
     private var mouseMonitor: Any?
+    var dismissLocalInteraction: (() -> Bool)?
     private var isHiding = false
     private var burnCompletion: DispatchWorkItem?
+    private var letterContent: NSView?
+    private var captureInProgress = false
     private var cancellables: Set<AnyCancellable> = []
 
     init(settings: AppSettings, openSettings: @escaping () -> Void) {
@@ -85,10 +88,13 @@ final class PanelController {
                 openSettings: openSettings,
                 showProviderMenu: { [weak self] in self?.showServiceMenu() },
                 showAttachMenu: { [weak self] in self?.showAttachMenu() },
+                burnLetter: { [weak self] in self?.hide() },
+                registerDismiss: { [weak self] dismiss in self?.dismissLocalInteraction = dismiss },
                 onDesiredHeight: { [weak self] height in self?.setDesiredPaperHeight(height) }
             )
         )
         hosting.sizingOptions = []
+        letterContent = hosting
         panel.contentView = hosting
         viewModel.captureScreenRegion = { [weak self] completion in
             guard let self else { return completion(nil) }
@@ -115,13 +121,13 @@ final class PanelController {
     var isVisible: Bool { panel.isVisible }
 
     func toggle() {
-        if panel.isVisible && !isHiding { hide() } else { show() }
+        if panel.isVisible && panel.isKeyWindow && !isHiding { conceal() } else { show() }
     }
 
     func show() {
         if isHiding { finishHiding() } // summoned again mid-burn: a fresh letter
         settings.reload()
-        positionOnActiveScreen()
+        if !panel.isVisible { positionOnActiveScreen() }
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
         viewModel.panelDidOpen(
@@ -135,18 +141,33 @@ final class PanelController {
         installMonitors()
     }
 
-    /// Closing the panel ends the conversation: history is discarded. Like a Howler, the
-    /// letter goes up in flames on the way out, unless `burning` is false (opening
-    /// Settings) or Reduce Motion is on.
+    /// Temporarily put the letter aside without changing its conversation or queue.
+    func conceal() {
+        guard !isHiding else { return }
+        removeMonitors()
+        panel.orderOut(nil)
+        viewModel.setVisible(false)
+    }
+
+    /// Compatibility entry for existing settings, feedback and updater callers.
     func hide(burning: Bool = true) {
+        if !burning { conceal(); return }
         guard panel.isVisible, !isHiding else { return }
         isHiding = true
         removeMonitors()
-        guard burning, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            finishHiding()
-            return
+        let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        var snapshot: NSImage?
+        if !reduced, let content = panel.contentView,
+           let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+            content.cacheDisplay(in: content.bounds, to: bitmap)
+            let image = NSImage(size: content.bounds.size)
+            image.addRepresentation(bitmap)
+            snapshot = image
         }
-        viewModel.burn()
+        viewModel.burn() // invalidate requests and clear content before the animation
+        viewModel.setVisible(false)
+        guard let snapshot else { finishHiding(); return }
+        panel.contentView = NSHostingView(rootView: BurningSnapshot(image: snapshot, start: Date()))
         let completion = DispatchWorkItem { [weak self] in self?.finishHiding() }
         burnCompletion = completion
         DispatchQueue.main.asyncAfter(deadline: .now() + BurnField.duration, execute: completion)
@@ -156,7 +177,7 @@ final class PanelController {
         burnCompletion?.cancel()
         burnCompletion = nil
         panel.orderOut(nil)
-        viewModel.reset()
+        panel.contentView = letterContent
         isHiding = false
     }
 
@@ -246,28 +267,37 @@ final class PanelController {
         paste.keyEquivalent = "v"
         paste.keyEquivalentModifierMask = .command
         menu.addItem(paste)
-        menu.addItem(ClosureMenuItem(title: "Capture Screen Region…") { [weak self] in self?.viewModel.captureScreen() })
+        menu.addItem(ClosureMenuItem(title: "Capture and Explain…") { [weak self] in self?.viewModel.captureScreen() })
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 
     /// The letter gets out of the way while the user drags out a region, then comes back
     /// exactly as it was — conversation, size and all.
     private func stepAsideForCapture(_ completion: @escaping (Result<ImageData, Error>?) -> Void) {
+        guard !captureInProgress else { return completion(nil) }
         guard ScreenCapture.isAllowed else {
             viewModel.keepingOpen { ScreenCapture.requestPermission() }
             completion(.failure(ScreenCaptureError.permissionNeeded))
             return
         }
-        guard panel.isVisible, !isHiding else { return completion(nil) }
-        let dismisses = panel.dismissesOnResignKey
-        panel.dismissesOnResignKey = false // ordering out resigns key; that isn't "clicked elsewhere"
-        removeMonitors()
-        panel.orderOut(nil)
+        if isHiding { finishHiding() }
+        captureInProgress = true
+        let wasVisible = panel.isVisible
+        let wasKey = panel.isKeyWindow
+        let session = viewModel.conversationID
+        conceal()
         ScreenCapture.captureRegion { [weak self] result in
             guard let self else { return }
-            self.panel.dismissesOnResignKey = dismisses
-            self.panel.makeKeyAndOrderFront(nil)
-            self.installMonitors()
+            self.captureInProgress = false
+            guard self.viewModel.conversationID == session else { return }
+            if result != nil {
+                self.show()
+            } else if wasVisible {
+                self.panel.orderFront(nil)
+                self.viewModel.setVisible(true)
+                self.installMonitors()
+                if wasKey { self.panel.makeKey() }
+            }
             completion(result)
         }
     }
@@ -288,18 +318,6 @@ final class PanelController {
                 return consumed ? nil : event
             }
         }
-        if mouseMonitor == nil {
-            // The margin around the sheet is part of the window but not of the letter.
-            mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-                let outside: Bool = MainActor.assumeIsolated {
-                    guard let self, event.window === self.panel else { return false }
-                    return !self.paperRect.contains(event.locationInWindow)
-                }
-                guard outside else { return event }
-                MainActor.assumeIsolated { self?.hide() }
-                return nil
-            }
-        }
     }
 
     /// The focused text view swallows `cancelOperation:`, so catch Esc before it does.
@@ -314,6 +332,7 @@ final class PanelController {
         if let editor = panel.fieldEditor(false, for: nil) as? NSTextView, editor.hasMarkedText() {
             return false
         }
+        if dismissLocalInteraction?() == true { return true }
         hide()
         return true
     }
@@ -374,4 +393,20 @@ final class ClosureMenuItem: NSMenuItem {
     required init(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     @objc private func fire() { handler() }
+}
+
+/// A short-lived rendered image, never a live conversation model or a file on disk.
+private struct BurningSnapshot: View {
+    let image: NSImage
+    let start: Date
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Image(nsImage: image)
+                .resizable()
+                .modifier(BurningLetter(field: BurnField(size: image.size),
+                                        progress: BurnField.progress(elapsed: timeline.date.timeIntervalSince(start))))
+        }
+        .frame(width: image.size.width, height: image.size.height)
+        .accessibilityHidden(true)
+    }
 }

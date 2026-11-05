@@ -55,10 +55,7 @@ struct Transcript: View {
             .scrollIndicators(.never)
             .mask(PageFade())
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
-            .onChange(of: viewModel.messages.count) { _, _ in
-                // A new question always brings the page back to the bottom.
-                DispatchQueue.main.async { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
-            }
+
         }
     }
 

@@ -29,6 +29,13 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
     /// default before v0.1.5, collides with other assistants' launchers.)
     public static let standard = HotKeyCombo(keyCode: 4, modifiers: .option, keyLabel: "H")
 
+    /// Capture a region and immediately ask for its introduction.
+    public static let screenshot = HotKeyCombo(keyCode: 4, modifiers: [.option, .shift], keyLabel: "H")
+
+    public func matches(_ other: HotKeyCombo) -> Bool {
+        keyCode == other.keyCode && modifiers == other.modifiers
+    }
+
     /// Opens Settings from any app. Fixed, so it can't be recorded for the letter; a stored
     /// copy (the letter's default in 0.1.8 and 0.1.9, by mistake) falls back to `standard`.
     public static let settings = HotKeyCombo(keyCode: 43, modifiers: .option, keyLabel: ",")

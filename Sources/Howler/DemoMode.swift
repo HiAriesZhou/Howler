@@ -7,13 +7,24 @@ import SwiftUI
 /// scripted answer, without any network or API key. Used to check the look and motion.
 ///
 /// Variants: `HOWLER_DEMO=setup` (no model yet), `long` (overflows an A4 page),
-/// `multi` (a follow-up question), `burn` (dismissed once written), `image` (a captured screen region),
-/// `settings` (the Settings window with the real setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one,
+/// `multi` (a follow-up question), `queue` (screenshot with two waiting questions), `burn` (dismissed once written), `image` (a captured screen region),
+/// `settings` (the Settings window with a synthetic setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one,
 /// `HOWLER_DEMO_TAB=general|prompt` opens that tab, `cycle` switches tabs every 1.5 s; without a
 /// model Settings always opens on General; `HOWLER_DEMO_UPDATE=1` shows the update row, `=0.1.9` a
 /// waiting update, `HOWLER_DEMO_SNAPSHOT=out.png` saves the window as a PNG and quits),
 /// `appicon` (renders the app icon into the folder `HOWLER_DEMO_OUT`; see scripts/icon.sh);
 /// `HOWLER_DEMO_DARK=1` forces Dark Mode.
+/// A demo never reads the installed app's preferences or writes a synthetic setup to disk.
+final class DemoDefaults: UserDefaults {
+    private var values: [String: Any] = [:]
+    override func object(forKey key: String) -> Any? { values[key] }
+    override func string(forKey key: String) -> String? { values[key] as? String }
+    override func data(forKey key: String) -> Data? { values[key] as? Data }
+    override func bool(forKey key: String) -> Bool { values[key] as? Bool ?? false }
+    override func set(_ value: Any?, forKey key: String) { values[key] = value }
+    override func removeObject(forKey key: String) { values.removeValue(forKey: key) }
+}
+
 extension PanelController {
     func runDemo() {
         let variant = ProcessInfo.processInfo.environment["HOWLER_DEMO"] ?? "1"
@@ -28,6 +39,30 @@ extension PanelController {
             return
         }
         settings.useDemoService(.anthropic)
+        if variant == "queue" {
+            settings.setReplyLanguage("zh-Hans")
+            var turn = 0
+            let replies = [
+                "这张截图展示了一行 Swift 代码：`items.reduce(0, +)`。它从 0 开始，把数组中的元素依次相加，得到总和。",
+                "例如，`items` 是 `[2, 3, 5]` 时，结果是 **10**。这里的 `+` 就是每一步使用的合并操作。",
+                "空数组没有元素需要合并，因此返回初始值 **0**。"
+            ]
+            viewModel.demoStream = {
+                let answer = replies[min(turn, replies.count - 1)]
+                turn += 1
+                return Self.demoStream(repeats: 1, text: answer)
+            }
+            show()
+            if let picture = Self.demoImage() { viewModel.introduceScreenshot(picture) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.viewModel.input = "这段代码会产生什么结果？"
+                self?.viewModel.send()
+                self?.viewModel.input = "空数组时会怎样？"
+                self?.viewModel.send()
+            }
+            scheduleLetterSnapshot()
+            return
+        }
         let repeats = variant == "long" ? 4 : 1
         viewModel.demoStream = { Self.demoStream(repeats: repeats) }
         show()
@@ -49,6 +84,7 @@ extension PanelController {
         if variant == "burn" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 8.5) { [weak self] in self?.hide() }
         }
+        scheduleLetterSnapshot()
         if variant == "multi" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 9) { [weak self] in
                 self?.viewModel.input = "再用一句话总结"
@@ -57,7 +93,22 @@ extension PanelController {
         }
     }
 
-    private static func demoStream(repeats: Int) -> AsyncThrowingStream<String, Error> {
+    private func scheduleLetterSnapshot() {
+        guard let path = ProcessInfo.processInfo.environment["HOWLER_DEMO_SNAPSHOT"] else { return }
+        let delay = Double(ProcessInfo.processInfo.environment["HOWLER_DEMO_DELAY"] ?? "2.5") ?? 2.5
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            if let view = self?.panel.contentView,
+               let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                view.cacheDisplay(in: view.bounds, to: bitmap)
+                if let png = bitmap.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: path))
+                }
+            }
+            NSApp.terminate(nil)
+        }
+    }
+
+    private static func demoStream(repeats: Int, text: String? = nil) -> AsyncThrowingStream<String, Error> {
         let section = """
         This computes the **n-th Fibonacci number** recursively: each call branches into two more, so the work grows roughly as *φⁿ* — about 1.6× per step.
 
@@ -76,7 +127,7 @@ extension PanelController {
 
         斐波那契数列的迭代写法只需常数空间，适合较大的 `n`。
         """
-        let answer = Array(repeating: section, count: repeats).joined(separator: "\n\n")
+        let answer = Array(repeating: text ?? section, count: repeats).joined(separator: "\n\n")
         return AsyncThrowingStream { continuation in
             let task = Task {
                 try? await Task.sleep(nanoseconds: 1_600_000_000) // let the quill think a moment
