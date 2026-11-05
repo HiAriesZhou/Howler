@@ -4,7 +4,17 @@ import HowlerCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let settings = AppSettings()
+    private let settings: AppSettings = {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["HOWLER_DEMO"] != nil {
+            let defaults = DemoDefaults(suiteName: "HowlerDemo")!
+            let keys = ServiceStore.KeyAccess(exists: { _ in false }, get: { _ in nil },
+                                             set: { _, _ in }, delete: { _ in })
+            return AppSettings(defaults: defaults, keys: keys)
+        }
+        #endif
+        return AppSettings()
+    }()
     private let updater = Updater()
     private var statusItem: NSStatusItem?
     private var hotKeyWarningItem: NSMenuItem?
@@ -13,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsController: SettingsWindowController?
     private var hotKey: HotKey?
     private var settingsHotKey: HotKey?
+    private var screenshotHotKey: HotKey?
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -26,9 +37,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Re-register whenever the shortcut changes; stand aside while Settings records one.
         settings.$hotKey.removeDuplicates()
-            .combineLatest(settings.$isRecordingHotKey.removeDuplicates())
-            .sink { [weak self] combo, recording in
-                MainActor.assumeIsolated { self?.registerHotKey(combo, suspended: recording) }
+            .combineLatest(settings.$screenshotHotKey.removeDuplicates(), settings.$isRecordingHotKey.removeDuplicates())
+            .sink { [weak self] combo, capture, recording in
+                MainActor.assumeIsolated { self?.registerHotKey(combo, capture: capture, suspended: recording) }
             }
             .store(in: &cancellables)
 
@@ -38,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.appearance = NSAppearance(named: .darkAqua)
             }
             if demo == "settings" {
+                settings.useDemoService(.anthropic)
                 if let raw = ProcessInfo.processInfo.environment["HOWLER_DEMO_PROVIDER"], let provider = Provider(rawValue: raw) {
                     settings.useDemoService(provider)
                 }
@@ -61,18 +73,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func registerHotKey(_ combo: HotKeyCombo, suspended: Bool) {
+    private func registerHotKey(_ combo: HotKeyCombo, capture: HotKeyCombo, suspended: Bool) {
         hotKey = nil // unregister first: re-registering our own combo would fail
         settingsHotKey = nil
+        screenshotHotKey = nil
         guard !suspended else { return }
         hotKey = HotKey(keyCode: combo.keyCode, modifiers: combo.modifiers.rawValue) { [weak self] in
-            MainActor.assumeIsolated { self?.togglePanel() }
+            MainActor.assumeIsolated { self?.panelController?.toggle() }
         }
         // ⌥, opens Settings from any app; if another app holds it, the menu still does.
         let settingsCombo = HotKeyCombo.settings
         settingsHotKey = HotKey(keyCode: settingsCombo.keyCode, modifiers: settingsCombo.modifiers.rawValue) { [weak self] in
             MainActor.assumeIsolated { self?.openSettings() }
         }
+        if !capture.matches(combo) {
+            screenshotHotKey = HotKey(keyCode: capture.keyCode, modifiers: capture.modifiers.rawValue) { [weak self] in
+                MainActor.assumeIsolated { self?.panelController?.viewModel.captureScreen() }
+            }
+        }
+        settings.screenshotHotKeyRegistered = screenshotHotKey != nil
         settings.hotKeyRegistered = hotKey != nil
         updateMenu(for: combo)
     }
@@ -95,6 +114,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")
         open.target = self
         menu.addItem(open)
+        let capture = ClosureMenuItem(title: "Capture and Explain…") { [weak self] in
+            self?.panelController?.viewModel.captureScreen()
+        }
+        menu.addItem(capture)
         let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         warning.isEnabled = false
         warning.isHidden = true
@@ -183,7 +206,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func togglePanel() {
-        panelController?.toggle()
+        panelController?.show()
     }
 
     @objc private func sendFeedback() {

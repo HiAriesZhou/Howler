@@ -22,6 +22,9 @@ final class AppSettings: ObservableObject {
     @Published private(set) var replyLanguage: String
     @Published private(set) var connectionVersion = UUID()
     @Published private(set) var hotKey: HotKeyCombo
+    @Published private(set) var screenshotHotKey: HotKeyCombo
+    @Published var screenshotHotKeyRegistered = true
+    @Published var recordingScreenshot = false
     /// Set by the app delegate after trying to register `hotKey`.
     @Published var hotKeyRegistered = true
     /// While Settings records a new shortcut, the global one is suspended.
@@ -66,6 +69,9 @@ final class AppSettings: ObservableObject {
         }
         hotKey = HotKeyCombo.effective(stored: stored)
         replyLanguage = store.replyLanguage
+        screenshotHotKey = defaults.data(forKey: "screenshotHotKey")
+            .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
+            .flatMap { $0.isValid ? $0 : nil } ?? .screenshot
         instructions = store.instructions
         instructionsAreSuggested = store.instructionsAreSuggested
         store.migrateLegacySetup()
@@ -201,7 +207,7 @@ final class AppSettings: ObservableObject {
     // MARK: Hotkey
 
     func setHotKey(_ combo: HotKeyCombo) {
-        guard combo.isValid else { return }
+        guard combo.isValid, !combo.matches(screenshotHotKey) else { return }
         hotKey = combo
         if let data = try? JSONEncoder().encode(combo) {
             defaults.set(data, forKey: DefaultsKey.hotKey)
@@ -212,6 +218,17 @@ final class AppSettings: ObservableObject {
     func resetHotKey() {
         hotKey = .standard
         defaults.removeObject(forKey: DefaultsKey.hotKey)
+    }
+
+    func setScreenshotHotKey(_ combo: HotKeyCombo) {
+        guard combo.isValid, !combo.matches(hotKey) else { return }
+        screenshotHotKey = combo
+        if let data = try? JSONEncoder().encode(combo) { defaults.set(data, forKey: "screenshotHotKey") }
+    }
+
+    func resetScreenshotHotKey() {
+        screenshotHotKey = .screenshot
+        defaults.removeObject(forKey: "screenshotHotKey")
     }
 
     // MARK: Launch at login

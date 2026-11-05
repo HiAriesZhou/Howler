@@ -9,6 +9,11 @@ import SwiftUI
 struct HotKeyRecorder: View {
     @ObservedObject var settings: AppSettings
 
+    var screenshot = false
+    private var combo: HotKeyCombo { screenshot ? settings.screenshotHotKey : settings.hotKey }
+    private var standard: HotKeyCombo { screenshot ? .screenshot : .standard }
+    private var recording: Bool { settings.isRecordingHotKey && settings.recordingScreenshot == screenshot }
+
     @State private var monitor: Any?
     @State private var observers: [NSObjectProtocol] = []
     @State private var hint: String?
@@ -21,25 +26,25 @@ struct HotKeyRecorder: View {
                     .foregroundStyle(.secondary)
             }
             // Reset sits to the left so the shortcut button keeps to the row's trailing edge.
-            if settings.hotKey != .standard && !settings.isRecordingHotKey {
+            if combo != standard && !recording {
                 Button {
-                    settings.resetHotKey()
+                    if screenshot { settings.resetScreenshotHotKey() } else { settings.resetHotKey() }
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                 }
                 .buttonStyle(.borderless)
-                .help("Reset to \(HotKeyCombo.standard.display)")
+                .help("Reset to \(standard.display)")
             }
             Button {
-                settings.isRecordingHotKey ? stopRecording() : startRecording()
+                recording ? stopRecording() : startRecording()
             } label: {
-                Text(settings.isRecordingHotKey ? "Type a shortcut…" : settings.hotKey.display)
+                Text(recording ? "Type a shortcut…" : combo.display)
                     .frame(minWidth: 64)
             }
         }
         .onDisappear(perform: stopRecording)
         // Settings ends recording when its page is switched away (the page stays mounted).
-        .onChange(of: settings.isRecordingHotKey) { _, recording in
+        .onChange(of: recording) { _, recording in
             if !recording { stopRecording() }
         }
     }
@@ -47,9 +52,10 @@ struct HotKeyRecorder: View {
     private func startRecording() {
         guard let window = NSApp.keyWindow else { return }
         hint = nil
+        settings.recordingScreenshot = screenshot
         settings.isRecordingHotKey = true
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            guard event.window === window else { return event }
+            guard event.window === window, recording else { return event }
             MainActor.assumeIsolated { record(event) }
             return nil
         }
@@ -83,7 +89,12 @@ struct HotKeyRecorder: View {
                 : "\(combo.display) belongs to the system"
             return
         }
-        settings.setHotKey(combo)
+        let other = screenshot ? settings.hotKey : settings.screenshotHotKey
+        guard !combo.matches(other) else {
+            hint = "That shortcut is used by the other Howler action"
+            return
+        }
+        if screenshot { settings.setScreenshotHotKey(combo) } else { settings.setHotKey(combo) }
         stopRecording()
     }
 
@@ -92,7 +103,7 @@ struct HotKeyRecorder: View {
         monitor = nil
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
-        if settings.isRecordingHotKey { settings.isRecordingHotKey = false }
+        if recording { settings.isRecordingHotKey = false }
     }
 
     private static func modifiers(_ flags: NSEvent.ModifierFlags) -> HotKeyCombo.Modifiers {

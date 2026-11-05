@@ -76,6 +76,30 @@ struct GeneralPane: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Divider()
+                    SettingsRow("Capture and explain", detail: "Selecting a region sends it to your model immediately.") {
+                        HotKeyRecorder(settings: settings, screenshot: true)
+                    }
+                    if !settings.screenshotHotKeyRegistered {
+                        Text("\(settings.screenshotHotKey.display) is unavailable. Choose another capture shortcut.")
+                            .font(.caption).foregroundStyle(.red)
+                    }
+                    Divider()
+                    SettingsRow("Reply language", detail: "Used for explanations, regardless of the screenshot language.") {
+                        Picker("Reply language", selection: Binding(get: { settings.replyLanguage },
+                                                                     set: { settings.setReplyLanguage($0) })) {
+                            Text("Follow System").tag("system")
+                            Text("简体中文").tag("zh-Hans")
+                            Text("繁體中文").tag("zh-Hant")
+                            Text("English").tag("en")
+                            Text("日本語").tag("ja")
+                            Text("한국어").tag("ko")
+                            Text("Français").tag("fr")
+                            Text("Deutsch").tag("de")
+                            Text("Español").tag("es")
+                        }
+                        .labelsHidden().frame(maxWidth: 150)
+                    }
+                    Divider()
                     SettingsRow("Launch at login", detail: nil) {
                         Toggle("Launch at login", isOn: Binding(
                             get: { settings.launchAtLogin == .on || settings.launchAtLogin == .needsApproval },
@@ -97,7 +121,7 @@ struct GeneralPane: View {
                     }
                 }
             }
-            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, with your next question — leave out passwords and other secrets.")
+            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, when you send. Capture and Explain sends the selected region immediately. Concealing the letter keeps it in memory; burning it clears it. Leave out passwords and other secrets.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

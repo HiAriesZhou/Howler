@@ -80,6 +80,12 @@ final class ChatViewModel: ObservableObject {
         setVisible(true)
     }
 
+    func updateReduceMotion(_ value: Bool) {
+        reduceMotion = value
+        quill.instant = value || !visible
+        if value, queue.active?.state == .revealing { quill.snapToEnd() }
+    }
+
     func setVisible(_ value: Bool) {
         visible = value
         quill.instant = reduceMotion || !value
