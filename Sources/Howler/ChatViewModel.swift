@@ -13,6 +13,7 @@ final class ChatViewModel: ObservableObject {
 
     @Published var input = "" {
         didSet {
+            inputRevision &+= 1
             absorbLongPaste(previous: oldValue)
         }
     }
@@ -34,7 +35,7 @@ final class ChatViewModel: ObservableObject {
     private var streamTask: Task<Void, Never>?
     private var connectionObserver: AnyCancellable?
     private var isAbsorbingPaste = false
-    private var restoringDraft = false
+    private var inputRevision: UInt64 = 0
     private(set) var conversationID = UUID()
     private var visible = true
     private var reduceMotion = false
@@ -114,6 +115,7 @@ final class ChatViewModel: ObservableObject {
         attachment = nil
         copiedID = nil
         burnStartedAt = nil
+        isAbsorbingPaste = false
         InkAttributed.clear()
     }
 
@@ -181,10 +183,18 @@ final class ChatViewModel: ObservableObject {
         else { return }
 
         isAbsorbingPaste = true
+        let session = conversationID
+        let revision = inputRevision
+        let targetImage = draftImageID
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
+            guard let self, self.conversationID == session else { return }
+            guard self.inputRevision == revision else {
+                self.isAbsorbingPaste = false
+                return
+            }
             self.input = previous
             self.isAbsorbingPaste = false
+            self.draftImageID = targetImage
             self.attach(pasted)
         }
     }
@@ -209,11 +219,9 @@ final class ChatViewModel: ObservableObject {
 
     func withdraw(_ id: UUID) {
         guard input.isEmpty, attachment == nil, let task = queue.withdraw(id) else { return }
-        restoringDraft = true
         input = task.question
         attachment = task.attachment
         draftImageID = task.imageID
-        restoringDraft = false
         focusTick += 1
     }
 
