@@ -164,12 +164,12 @@ enum CLI {
             printError("The setup changed. Run check again for the current setup.")
             return 1
         }
-        if verbose { describeRequest(service: service, apiKey: key, systemPrompt: store.systemPrompt) }
+        if verbose { describeRequest(service: service, apiKey: key, systemPrompt: store.systemPrompt, replyLanguage: store.resolvedReplyLanguage) }
         print("Checking \(service.summary) …")
 
         let result = wait {
             try await ConnectionTester.test(
-                client: ChatClient(), service: service, apiKey: key, appName: name, systemPrompt: store.systemPrompt
+                client: ChatClient(), service: service, apiKey: key, appName: name, systemPrompt: store.systemPrompt, replyLanguage: store.resolvedReplyLanguage
             )
         }
         switch result {
@@ -195,11 +195,12 @@ enum CLI {
     }
 
     /// Prints the probe request as it will be sent, with the key masked.
-    private static func describeRequest(service: ModelService, apiKey: String, systemPrompt: String?) {
+    private static func describeRequest(service: ModelService, apiKey: String, systemPrompt: String?, replyLanguage: String) {
         do {
             let request = try RequestBuilder.streamingRequest(
                 service: service, apiKey: apiKey,
-                messages: ConnectionTester.probeMessages,
+                messages: [ChatMessage(role: .user, content: ConnectionTester.probePrompt,
+                                       taskInstructions: ReplyLanguage.instruction(replyLanguage))],
                 options: ConnectionTester.probeOptions(appName: name, systemPrompt: systemPrompt)
             )
             print("\(request.httpMethod ?? "POST") \(request.url?.absoluteString ?? "?")")

@@ -19,6 +19,8 @@ final class AppSettings: ObservableObject {
     @Published private(set) var service: ModelService?
     @Published private(set) var hasKey = false
     @Published private(set) var checkState: CheckState = .unchecked
+    @Published private(set) var replyLanguage: String
+    @Published private(set) var connectionVersion = UUID()
     @Published private(set) var hotKey: HotKeyCombo
     /// Set by the app delegate after trying to register `hotKey`.
     @Published var hotKeyRegistered = true
@@ -63,6 +65,7 @@ final class AppSettings: ObservableObject {
             defaults.set(true, forKey: DefaultsKey.hotKeyDefaultChecked)
         }
         hotKey = HotKeyCombo.effective(stored: stored)
+        replyLanguage = store.replyLanguage
         instructions = store.instructions
         instructionsAreSuggested = store.instructionsAreSuggested
         store.migrateLegacySetup()
@@ -72,7 +75,6 @@ final class AppSettings: ObservableObject {
             forName: ServiceStore.changed, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.keyCache = nil
                 self?.reload()
             }
         }
@@ -85,7 +87,17 @@ final class AppSettings: ObservableObject {
         if demoMode { return }
         #endif
         let stored = store.service
+        var connectionChanged = stored != service
+        if let cached = keyCache, cached.revision != store.revision {
+            let currentKey = stored.flatMap { store.apiKey(for: $0) }
+            connectionChanged = connectionChanged || currentKey != cached.key
+            keyCache = currentKey.flatMap { key in
+                stored.map { (revision: store.revision, service: $0, key: key) }
+            }
+        }
         if stored != service { service = stored }
+        if connectionChanged { connectionVersion = UUID() }
+        if replyLanguage != store.replyLanguage { replyLanguage = store.replyLanguage }
         let present = store.hasKey
         if !present { keyCache = nil }
         if present != hasKey { hasKey = present }
@@ -149,7 +161,7 @@ final class AppSettings: ObservableObject {
         checkState = .checking
         do {
             try await ConnectionTester.test(
-                client: client, service: service, apiKey: key, appName: AppInfo.name, systemPrompt: systemPrompt
+                client: client, service: service, apiKey: key, appName: AppInfo.name, systemPrompt: systemPrompt, replyLanguage: resolvedReplyLanguage
             )
             store.recordCheck(passed: true, message: nil, for: revision)
         } catch {
@@ -176,6 +188,13 @@ final class AppSettings: ObservableObject {
     /// Back to the suggestion by forgetting the edit, so a future suggestion applies too.
     func resetInstructions() {
         store.resetInstructions()
+        reload()
+    }
+
+    var resolvedReplyLanguage: String { store.resolvedReplyLanguage }
+
+    func setReplyLanguage(_ language: String) {
+        store.setReplyLanguage(language)
         reload()
     }
 
