@@ -164,6 +164,18 @@ final class ConversationExecutionTests: XCTestCase {
         model.reset()
     }
 
+    func testDeferredLongPasteCannotRestoreContentAfterBurn() async {
+        let model = model()
+        model.input = "Old draft"
+        model.input += String(repeating: " paste", count: 100)
+        model.burn()
+        model.input = "New letter"
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(model.input, "New letter")
+        XCTAssertNil(model.attachment)
+        model.reset()
+    }
+
     func testCancelledOrStaleScreenshotDoesNotSendAndPlainDraftSurvives() async {
         let model = model()
         var captured: ((Result<ImageData, Error>?) -> Void)?
