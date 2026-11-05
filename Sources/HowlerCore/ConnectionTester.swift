@@ -29,12 +29,15 @@ public enum ConnectionTester {
         service: ModelService,
         apiKey: String,
         appName: String = "Howler",
-        systemPrompt: String? = nil
+        systemPrompt: String? = nil,
+        replyLanguage: String? = nil
     ) async throws {
         let stream = client.stream(
             service: service,
             apiKey: apiKey,
-            messages: probeMessages,
+            messages: replyLanguage.map {
+                [ChatMessage(role: .user, content: probePrompt, taskInstructions: ReplyLanguage.instruction($0))]
+            } ?? probeMessages,
             options: probeOptions(appName: appName, systemPrompt: systemPrompt)
         )
         for try await _ in stream {

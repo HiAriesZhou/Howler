@@ -111,6 +111,19 @@ struct ServiceStore {
         removeLegacyKey(for: service)
     }
 
+    var replyLanguage: String { defaults.string(forKey: "replyLanguage") ?? "system" }
+
+    var resolvedReplyLanguage: String {
+        ReplyLanguage.resolve(preference: replyLanguage, preferredLanguages: Locale.preferredLanguages)
+    }
+
+    func setReplyLanguage(_ language: String) {
+        guard language != replyLanguage else { return }
+        invalidateCheck()
+        defaults.set(language, forKey: "replyLanguage")
+        finishChange()
+    }
+
     /// What follows the date in the system prompt. Edited in Settings; empty sends no prompt.
     var instructions: String {
         defaults.string(forKey: DefaultsKey.instructions) ?? SystemPrompt.suggested
