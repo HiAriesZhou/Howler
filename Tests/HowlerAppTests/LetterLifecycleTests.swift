@@ -50,6 +50,38 @@ final class LetterLifecycleTests: XCTestCase {
         controller.conceal()
     }
 
+    func testConcealingACompletedLongLetterPreservesItsHeight() async throws {
+        _ = NSApplication.shared
+        let defaults = DemoDefaults(suiteName: "HowlerTests.LongLetter")!
+        let settings = AppSettings(defaults: defaults, keys: MemoryKeys().access)
+        settings.useDemoService(.anthropic)
+        let controller = PanelController(settings: settings, openSettings: {})
+        let model = controller.viewModel
+        model.streamFactory = { _, _ in
+            AsyncThrowingStream { stream in
+                stream.yield(Array(repeating: "A synthetic paragraph about a chart.\n\n", count: 40).joined())
+                stream.finish()
+            }
+        }
+        controller.show()
+        model.panelDidOpen(reduceMotion: true, candlelit: false)
+        model.input = "Explain the chart"
+        model.send()
+        let laidOut = expectation(description: "long letter finishes layout")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { laidOut.fulfill() }
+        await fulfillment(of: [laidOut], timeout: 2)
+        let height = controller.panel.frame.height
+        XCTAssertGreaterThan(height, 400, "Must exercise a configured, expanded transcript")
+        controller.conceal()
+        controller.show()
+        let restored = expectation(description: "restored letter layout settles")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { restored.fulfill() }
+        await fulfillment(of: [restored], timeout: 2)
+        XCTAssertEqual(controller.panel.frame.height, height, accuracy: 1)
+        model.reset()
+        controller.conceal()
+    }
+
     func testCaptureShortcutAndLanguagePersistWithoutReplacingTheOrdinaryShortcut() async throws {
         let name = "HowlerTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
