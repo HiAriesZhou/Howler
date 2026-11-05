@@ -1,7 +1,7 @@
 import Foundation
 
 /// What Howler tells the model before the conversation: today's date, then instructions the
-/// person can edit in Settings. Nothing about the person goes in it.
+/// person can edit in Settings. Reply language is supplied separately for each task.
 public enum SystemPrompt {
     /// Fits the letter: short answers, and no tables, the one Markdown block the parchment
     /// shows as raw symbols (see `MarkdownBlocks.proseLine`).

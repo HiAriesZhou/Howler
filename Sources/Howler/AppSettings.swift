@@ -3,7 +3,7 @@ import HowlerCore
 import ServiceManagement
 
 /// The only persisted state: the model service, its last check, the system prompt's
-/// instructions and the hotkey (UserDefaults) plus the API key (Keychain). Conversations
+/// instructions, reply language and shortcuts (UserDefaults), plus the API key (Keychain). Conversations
 /// are never stored.
 /// The model service is set up from the command line (see `CLI`); this object mirrors it
 /// and reloads whenever the command line changes it.
