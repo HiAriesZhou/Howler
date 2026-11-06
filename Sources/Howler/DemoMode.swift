@@ -6,10 +6,10 @@ import SwiftUI
 /// `HOWLER_DEMO=1 swift run Howler` opens the letter with an attachment and writes a
 /// scripted answer, without any network or API key. Used to check the look and motion.
 ///
-/// Variants: `HOWLER_DEMO=setup` (no model yet), `long` (overflows an A4 page),
+/// Variants: `HOWLER_DEMO=setup` (no model yet), `empty` (configured blank letter), `long` (overflows an A4 page),
 /// `multi` (a follow-up question), `queue` (screenshot with two waiting questions), `burn` (dismissed once written), `image` (a captured screen region),
 /// `settings` (the Settings window with a synthetic setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one,
-/// `HOWLER_DEMO_TAB=general|prompt` opens that tab, `cycle` switches tabs every 1.5 s; without a
+/// `HOWLER_DEMO_TAB=general|prompt|shortcut` opens that tab, `cycle` switches tabs every 1.5 s; without a
 /// model Settings always opens on General; `HOWLER_DEMO_UPDATE=1` shows the update row, `=0.1.9` a
 /// waiting update, `HOWLER_DEMO_SNAPSHOT=out.png` saves the window as a PNG and quits),
 /// `appicon` (renders the app icon into the folder `HOWLER_DEMO_OUT`; see scripts/icon.sh);
@@ -39,6 +39,11 @@ extension PanelController {
             return
         }
         settings.useDemoService(.anthropic)
+        if variant == "empty" {
+            show()
+            scheduleLetterSnapshot()
+            return
+        }
         if variant == "queue" {
             settings.setReplyLanguage("zh-Hans")
             var turn = 0

@@ -37,9 +37,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Re-register whenever the shortcut changes; stand aside while Settings records one.
         settings.$hotKey.removeDuplicates()
-            .combineLatest(settings.$screenshotHotKey.removeDuplicates(), settings.$isRecordingHotKey.removeDuplicates())
-            .sink { [weak self] combo, capture, recording in
-                MainActor.assumeIsolated { self?.registerHotKey(combo, capture: capture, suspended: recording) }
+            .combineLatest(settings.$screenshotHotKey.removeDuplicates(),
+                           settings.$captureAndExplainEnabled.removeDuplicates(),
+                           settings.$isRecordingHotKey.removeDuplicates())
+            .sink { [weak self] combo, capture, enabled, recording in
+                MainActor.assumeIsolated {
+                    self?.registerHotKey(combo, capture: capture, captureEnabled: enabled, suspended: recording)
+                }
             }
             .store(in: &cancellables)
 
@@ -50,6 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             if demo == "settings" {
                 settings.useDemoService(.anthropic)
+                if ProcessInfo.processInfo.environment["HOWLER_DEMO_CAPTURE"] == "off" {
+                    settings.setCaptureAndExplainEnabled(false)
+                }
                 if let raw = ProcessInfo.processInfo.environment["HOWLER_DEMO_PROVIDER"], let provider = Provider(rawValue: raw) {
                     settings.useDemoService(provider)
                 }
@@ -73,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func registerHotKey(_ combo: HotKeyCombo, capture: HotKeyCombo, suspended: Bool) {
+    private func registerHotKey(_ combo: HotKeyCombo, capture: HotKeyCombo, captureEnabled: Bool, suspended: Bool) {
         hotKey = nil // unregister first: re-registering our own combo would fail
         settingsHotKey = nil
         screenshotHotKey = nil
@@ -86,7 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsHotKey = HotKey(keyCode: settingsCombo.keyCode, modifiers: settingsCombo.modifiers.rawValue) { [weak self] in
             MainActor.assumeIsolated { self?.openSettings() }
         }
-        if !capture.matches(combo) {
+        if captureEnabled, !capture.matches(combo) {
             screenshotHotKey = HotKey(keyCode: capture.keyCode, modifiers: capture.modifiers.rawValue) { [weak self] in
                 MainActor.assumeIsolated { self?.panelController?.viewModel.captureScreen() }
             }
@@ -95,9 +102,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.hotKeyRegistered = hotKey != nil
         updateMenu(for: combo)
     }
-
-    /// The size macOS 26 draws menu item symbols at.
-    private static let menuIconSide: CGFloat = 16
 
     private static func menuSymbol(_ name: String) -> NSImage? {
         NSImage(systemSymbolName: name, accessibilityDescription: nil)
@@ -114,10 +118,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")
         open.target = self
         menu.addItem(open)
-        let capture = ClosureMenuItem(title: "Capture and Explain…") { [weak self] in
-            self?.panelController?.viewModel.captureScreen()
-        }
-        menu.addItem(capture)
         let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         warning.isEnabled = false
         warning.isHidden = true
@@ -138,15 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         menu.addItem(quit)
-        if #available(macOS 26, *) {
-            // macOS 26 draws icons beside menu items; give every row one, in one style,
-            // instead of the system's defaults for Settings… and Quit.
-            open.image = MenuBarMark.image(side: Self.menuIconSide)
-            settingsItem.image = Self.menuSymbol("gearshape")
-            updateItem?.image = Self.menuSymbol("arrow.triangle.2.circlepath")
-            feedback.image = Self.menuSymbol("bubble.left")
-            quit.image = Self.menuSymbol("power")
-        }
+        quit.image = Self.menuSymbol("power")
         item.menu = menu
         statusItem = item
         hotKeyWarningItem = warning
@@ -167,11 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static func updateUpdateItem(_ updateItem: NSMenuItem, statusItem: NSStatusItem, available: String?, canCheck: Bool) {
         updateItem.title = available.map { "Update to \(AppInfo.name) \($0)…" } ?? "Check for Updates…"
         updateItem.isEnabled = canCheck
-        if #available(macOS 26, *) {
-            updateItem.image = Self.menuSymbol(available == nil ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
-        } else {
-            updateItem.image = available == nil ? nil : Self.menuSymbol("arrow.down.circle")
-        }
+        updateItem.image = nil
         let description = available.map { "\(AppInfo.name) \(AppInfo.version), version \($0) is available" }
             ?? "\(AppInfo.name) \(AppInfo.version)"
         statusItem.button?.image = MenuBarMark.image(updateAvailable: available != nil)

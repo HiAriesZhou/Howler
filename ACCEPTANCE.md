@@ -12,7 +12,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
 - [ ] 首次启动（未配置）自动弹出 Settings 窗口
 - [ ] Finder、DMG 中的 Howler.app 显示羽毛笔火漆图标（不是空白应用图标）
-- [ ] 菜单栏图标为羽毛笔，随浅色 / 深色菜单栏变色；菜单包含：Open Howler、Settings…、Check for Updates…、Quit Howler，均不显示快捷键；macOS 26 上每项都有同一风格的图标（羽毛笔、齿轮、循环箭头、电源）；Quit 可正常退出
+- [ ] 菜单栏图标为羽毛笔，随浅色 / 深色菜单栏变色；菜单包含 Open Howler、Settings…、Check for Updates…、Send Feedback…、Quit Howler，均不显示快捷键；仅 Quit 左侧有电源图标，其他项无图标；菜单不含 Capture and Explain；Quit 可正常退出
 
 ## 2. 全局快捷键与面板 / Hotkey & panel
 
@@ -22,7 +22,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 信纸出现时输入框自动获得焦点，可直接输入；前台应用不会被切走（菜单栏仍显示原应用名）
 - [ ] 中文输入法：可正常输入拼音选词；选词过程中按 Esc 只取消组字，不关闭信纸
 - [ ] ⌘V / ⌘C / ⌘A / ⌘Z 在输入框中可用
-- [ ] Esc 或右上角火焰烧掉信纸并立即清空；点击纸外或阴影只交出焦点，回答继续；其他应用中的 Esc 不影响信纸
+- [ ] Esc 或右下角火焰烧掉信纸并立即清空；火焰不遮挡页脚或正文；点击纸外或阴影只交出焦点，回答继续；其他应用中的 Esc 不影响信纸
 - [ ] 燃烧中再按 ⌥H：立即出现一张新的空白信纸
 - [ ] 从菜单或火漆印打开 Settings：信纸直接收起并保留会话；从菜单打开信纸只唤回，不反向收起
 - [ ] 多显示器：在鼠标所在屏幕上弹出
@@ -79,8 +79,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 ## 3. 设置 / Settings
 
 - [ ] 设置窗口左上角有关闭和最小化按钮（没有缩放按钮），最小化可用；按 Esc 关闭设置窗口，录制快捷键或输入法组字时 Esc 只取消录制 / 组字
-- [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt 分段控件（图标 + 文字）在同一行；General 页依次是模型卡片、快捷键与开机启动、隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
-- [ ] 切换标签：两页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
+- [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt / Shortcut 分段控件（图标 + 文字）在同一行且不截断；General 页保留模型、回答语言、开机启动、更新、反馈、隐私说明；设置页任何地方都不要求输入 API Key
+- [ ] 切换标签：三页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
 - [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动
 - [ ] Check 失败使 General 变高：窗口平滑变高、上边缘不动，Prompt 页编辑框随之变高
 - [ ] 未配置：Model 显示问号火漆印、“No model yet”，下方 “Set up a model” 与 Copy Setup Prompt；没有 Check 按钮
@@ -117,7 +117,9 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ### 3b. 通用 / General
 
-- [ ] General → Keyboard shortcut：点按钮后按 ⌃⌥K，⌃⌥K 可呼出、⌥H 不再响应；录制中按 Esc 取消
+- [ ] Shortcut → Open Howler：点按钮后按 ⌃⌥K，⌃⌥K 可呼出、⌥H 不再响应；录制中按 Esc 取消
+- [ ] Shortcut → Capture and Explain 常驻显示，默认开启、快捷键 ⌥⇧H；关闭后快捷键不再截图，Attach 中截图项不可用，已有回答继续；重新开启恢复原快捷键，退出再启动仍保留开关和快捷键
+- [ ] 截图快捷键录制中关闭 Capture and Explain：录制立即取消，普通快捷键恢复可用；关闭时不显示“快捷键不可用”的冲突警告
 - [ ] Keyboard shortcut：只含 ⇧ 的组合提示需加 ⌘/⌥/⌃；⌘V、⌘C、⌘Space 等系统快捷键被拒绝；被其他应用占用时显示红色提示；点 ↺ 恢复 ⌥H
 - [ ] Keyboard shortcut：开始录制后切到其他窗口或关闭设置窗口，录制自动结束，原快捷键恢复可用
 - [ ] General → Launch at login：打开后注销重新登录，Howler 自动启动（若提示需批准，按提示到“登录项”中允许）
@@ -134,7 +136,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ### 3e. 反馈 / Feedback
 
-- [ ] 菜单 “Send Feedback…”（macOS 26 上有对话气泡图标）、设置页 General 卡片里的 “Feedback” 一行（Send Feedback… 按钮）：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
+- [ ] 菜单 “Send Feedback…”（无图标）、设置页 General 卡片里的 “Feedback” 一行（Send Feedback… 按钮）：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
 - [ ] 不点击时不访问任何网址
 
 ### 3d. 更新 / Updates

@@ -124,9 +124,10 @@ final class ChatViewModel: ObservableObject {
     func pasteImage(_ image: ImageData) { attach(ContextAttachment(source: .pasted, image: image)) }
 
     func captureScreen() {
+        guard settings.captureAndExplainEnabled else { return }
         let session = conversationID
         captureScreenRegion { [weak self] result in
-            guard let self, self.conversationID == session else { return }
+            guard let self, self.conversationID == session, self.settings.captureAndExplainEnabled else { return }
             switch result {
             case .success(let picture): self.introduceScreenshot(picture)
             case .failure(let error): self.errorText = error.localizedDescription

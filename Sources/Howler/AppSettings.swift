@@ -23,6 +23,7 @@ final class AppSettings: ObservableObject {
     @Published private(set) var connectionVersion = UUID()
     @Published private(set) var hotKey: HotKeyCombo
     @Published private(set) var screenshotHotKey: HotKeyCombo
+    @Published private(set) var captureAndExplainEnabled: Bool
     @Published var screenshotHotKeyRegistered = true
     @Published var recordingScreenshot = false
     /// Set by the app delegate after trying to register `hotKey`.
@@ -72,6 +73,7 @@ final class AppSettings: ObservableObject {
         screenshotHotKey = defaults.data(forKey: "screenshotHotKey")
             .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
             .flatMap { $0.isValid ? $0 : nil } ?? .screenshot
+        captureAndExplainEnabled = defaults.object(forKey: "captureAndExplainEnabled") as? Bool ?? true
         instructions = store.instructions
         instructionsAreSuggested = store.instructionsAreSuggested
         store.migrateLegacySetup()
@@ -229,6 +231,12 @@ final class AppSettings: ObservableObject {
     func resetScreenshotHotKey() {
         screenshotHotKey = .screenshot
         defaults.removeObject(forKey: "screenshotHotKey")
+    }
+
+    func setCaptureAndExplainEnabled(_ enabled: Bool) {
+        if !enabled, recordingScreenshot { isRecordingHotKey = false }
+        captureAndExplainEnabled = enabled
+        defaults.set(enabled, forKey: "captureAndExplainEnabled")
     }
 
     // MARK: Launch at login

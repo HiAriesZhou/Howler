@@ -39,7 +39,7 @@ Press **⌥H** anywhere. A letter settles at the top of the screen, already seal
 - **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. Your question sits on a ruled line, and the answer is set in a book face below it. The sheet grows with the answer up to an A4 page, then follows the quill.
 - **A quill that writes.** Answers stream in at a hand's pace. Fresh ink glows gold before it settles to sepia, and the quill rests after the last word. While the model thinks, the quill hovers and counts the seconds.
 - **Wax seals.** The crimson seal names the model writing to you. Paste a long text or a picture, or capture a region of the screen, and it is sealed into an amber seal cut with runes instead of filling your question.
-- **Burn after reading.** Press Esc or click the flame in the top-right corner, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is saved.
+- **Burn after reading.** Press Esc or click the flame in the bottom-right corner, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is saved.
 
 <table>
   <tr>
@@ -76,7 +76,7 @@ Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, rig
 Howler writes with one model service. The setup is short enough to hand to an AI assistant.
 
 <p align="center">
-  <img src="docs/images/settings.png" width="460" alt="Howler Settings, General tab: the model with its host, status, Check and Copy Setup Prompt, then the shortcut and Launch at login">
+  <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General contains model setup, reply language, login and update preferences">
 </p>
 
 Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It asks which service and model you want, checks the official docs, writes the setup and runs a check until it passes. It never asks for your API key in the chat. When it needs the key, it asks you to copy it, then runs `pbpaste | Howler config set api-key --stdin`, which sends the key straight into the Keychain.
@@ -120,19 +120,21 @@ The model can't search the web: it answers from what it was trained on, and the 
 
 | | |
 | --- | --- |
-| **⌥H** | Show or focus the letter. Press again while focused to conceal it, keeping the conversation. Configurable in Settings. |
-| **⌥⇧H** | Capture a region, send it immediately and introduce it automatically. Independently configurable. |
+| **⌥H** | Show or focus the letter. Press again while focused to conceal it, keeping the conversation. Configurable in Settings › Shortcut. |
+| **⌥⇧H** | Capture a region, send it immediately and introduce it automatically. Enable, disable or change this shortcut in Settings › Shortcut. |
 | **⌥,** | Open Settings from any app |
 | **↩** / **⌥↩** | Send / new line |
 | **⌘C** | Copy the latest answer (or click ❧ Copy). With text selected, it copies the selection. |
 | **+ Attach** | Paste from the clipboard, or capture a screen region |
 | **⌘V** | Short text goes into the question. Text of 280+ characters or 3+ lines, or a picture, is sealed as an attachment, including an image copied in a browser or an image file copied in Finder. |
-| **Esc** / top-right flame | Burn and clear the letter. Esc first cancels composition, capture or an open preview. |
+| **Esc** / bottom-right flame | Burn and clear the letter. Esc first cancels composition, capture or an open preview. |
 | **Click outside** | Return focus to the other app; keep the letter and replies. |
 
 Capture and Explain sends your selected region to the configured model immediately and starts an introduction. Pasted text and pictures still wait for you to send. While the model thinks or writes, type follow-ups and press Return to queue them: the introduction appears first, then each answer in order. Use Edit on a waiting question when the input is empty to restore it; sending it again places it at the end. ⏹ stops the current reply and pauses the queue, keeping partial text. Retry reply replaces that attempt; Skip and continue keeps it as incomplete context. Network errors pause the queue too.
 
 Further screenshots add introductions to the same queue. The input shows which screenshot a question refers to and lets you change it. A new capture does not silently change existing drafts or queued questions. Click the amber seal to preview the selected image.
+
+Settings has three tabs: General, Prompt and Shortcut. Capture and Explain stays in Shortcut, with a switch and its shortcut recorder. Turning it off disables capture from the shortcut and Attach; existing replies continue. The menu bar menu keeps only Quit's power icon.
 
 Settings › General › Reply language follows your macOS preferred language by default, regardless of the screenshot language, or lets you choose a language. An explicit language request in a question overrides the default for that turn. Custom system instructions may affect how well the model follows it.
 
@@ -141,7 +143,7 @@ Concealing the letter, clicking outside or opening Settings keeps the conversati
 ## Privacy
 
 - No chat history, ever. Messages and parsed-answer caches are cleared when the letter burns or the app quits. A concealed letter stays in memory. A screen capture uses a temporary PNG that Howler attempts to delete after reading it.
-- Stored: the model setup, its last check, your system prompt instructions, both shortcuts and reply language preference (UserDefaults), plus the API key (Keychain).
+- Stored: the model setup, its last check, your system prompt instructions, both shortcuts, the capture switch and reply language preference (UserDefaults), plus the API key (Keychain).
 - The system prompt carries the date in UTC; tasks add the necessary reply language instruction. They send no full system language list, name, region, time zone or location.
 - The clipboard and the screen are read only when you paste or capture. Capture and Explain sends the selected region immediately. Burning local content does not delete data retained by your model service.
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.
