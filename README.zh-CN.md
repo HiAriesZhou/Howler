@@ -76,7 +76,7 @@ v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以�
 Howler 只连接一个模型服务。配置步骤很少，可以直接交给 AI 助手完成。
 
 <p align="center">
-  <img src="docs/images/settings.png" width="560" alt="Howler 设置分为 General、Prompt、Shortcut 三个标签页。三个动作的快捷键都可修改或清空：点击清空按钮，或在录制时按 Delete，即可停用该全局快捷键；空值在重启后保留。点恢复按钮可恢复默认按键，录制和恢复默认时都会检查是否被其他动作占用。菜单中的打开入口和 Attach 中的手动截图仍可使用，已有回答继续完成。菜单栏菜单全部使用无图标、左对齐的完整文字标签。
+  <img src="docs/images/settings.png" width="560" alt="Howler 设置分为 General、Prompt、Shortcut 三页；General 包含模型设置、回复语言、开机启动和更新选项">
 </p>
 
 打开 **Settings › General › Copy Setup Prompt**，把复制的提示词粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪家服务、哪个模型，查官方文档，写入配置，然后检查直到通过。它不会让你把 API Key 发到聊天里：需要 Key 时，它请你先复制，再运行 `pbpaste | Howler config set api-key --stdin`，Key 直接存进钥匙串。
@@ -136,7 +136,7 @@ $H config show
 
 在 Settings › General › Reply language 中选择跟随系统或指定语言；默认取 macOS 首选语言，不受截图语言影响。问题里明确要求另一种语言只影响当前轮。自定义系统指令可能影响模型遵循效果。
 
-设置分为 General、Prompt、Shortcut 三个标签页。Capture and Explain 常驻 Shortcut，快捷键右侧配有小尺寸原生开关；关闭后快捷键覆盖轻雾，仍能看清已保存的按键，但无法继续录制。关闭后，快捷键和 Attach 中的截图操作均不可用，已有回答继续完成。三个动作的快捷键都可修改，重启后保留；录制或恢复默认时，会检查是否已被 Howler 的其他动作占用。菜单栏菜单全部使用无图标、左对齐的完整文字标签。
+设置分为 General、Prompt、Shortcut 三个标签页。三个动作的快捷键都可修改或清空：点击清空按钮，或在录制时按 Delete，即可停用该全局快捷键；空值在重启后保留。点恢复按钮可恢复默认按键，录制和恢复默认时都会检查是否被其他动作占用。菜单中的打开入口和 Attach 中的手动截图仍可使用，已有回答继续完成。菜单栏菜单全部使用无图标、左对齐的完整文字标签。
 
 暂时收起、点击纸外或打开设置都保留内存会话；烧掉或退出应用才清空，重启不恢复。模型配置或 Key 改动会暂停已有队列，需手动继续。请不要粘贴或截取密码、密钥等敏感信息。首次截屏需要授予“录屏与系统录音”权限。Howler 只截取你框选区域的一张静态图片，从不录音；只是 macOS 把录屏和录音放在同一个权限里一起授予。
 
