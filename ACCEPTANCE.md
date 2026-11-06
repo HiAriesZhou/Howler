@@ -86,10 +86,14 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] Check 失败使 General 变高：窗口平滑变高、上边缘不动，Prompt 页编辑框随之变高
 - [ ] 未配置：Model 显示问号火漆印、“No model yet”，下方 “Set up a model” 与 Copy Setup Prompt；没有 Check 按钮
 - [ ] 已配置：深红火漆印（DeepSeek 为 “D”、Gemini 为 ✦，其他服务为域名首字母）、模型名、“主机 · 格式”，状态为 Ready / Not checked yet / Failed / No API key
-- [ ] Copy Setup Prompt：按钮短暂显示 ✓ Copied；粘贴出的提示词包含本机可执行文件路径与当前配置（未配置时为 “not set up yet”），要求助手用 `pbpaste | Howler config set api-key --stdin` 写入 Key
-- [ ] 把提示词交给 Claude Code（或 Codex）：助手询问服务与模型，运行 `config schema` → `config set` → 请你复制 Key 后运行 `pbpaste | … --stdin` → `check` → `config show`；全程 Key 不出现在聊天与输出中
+- [ ] Copy Setup Prompt：按钮短暂显示 ✓ Copied；提示词包含可执行文件路径与当前配置，要求助手仅配置非敏感参数，然后引导用户回到 General › API Key › Save & Check；不得自动读取剪贴板里的 Key
+- [ ] 把提示词交给 Claude Code（或 Codex）：先检查已有配置，保留可用密钥；钥匙串权限错误立即停止，其他错误最多一次有明确原因的修正与重试；不得无限重配或删除密钥
+- [ ] Add Key / Replace Key 打开原生密码输入窗口，显示服务主机，不回显旧 Key；取消或关闭后清空输入，保存时禁用重复提交
+- [ ] Save & Check 保存到钥匙串后只发一次检查请求；空值或含空白的 Key 不写入，保存失败显示错误并保留旧 Key；编辑期间服务被 CLI 更改时拒绝给新服务保存旧输入
+- [ ] 拒绝或取消钥匙串授权：显示操作和错误码，不误报“没有保存”；CLI 检查也保存失败结果，覆盖旧的通过状态，且没有发起模型请求
+- [ ] 连接检查超过 30 秒仍无可见文本时结束；普通信纸的请求超时不受影响
 - [ ] 应用运行时在终端执行 `config set model=…`：设置页与信纸页脚立即显示新模型，状态变为 Not checked yet
-- [ ] 同一来源只改模型或 API 路径：Key 保留；更改主机、协议、端口或认证格式：显示 No API key，保存新 Key 前不能检查或发送，不会把旧 Key 发给新服务
+- [ ] 同一来源只改模型或 API 路径：Key 保留；更改主机、协议、端口或认证格式：显示 No API key，保存新 Key 前检查只提示添加密钥，不发送请求，也不会把旧 Key 发给新服务
 - [ ] 替换 Key 失败且旧钥匙串条目仍在时：旧 Key 仍可用，重启后亦可，检查状态回到 Not checked yet；重试成功后使用新 Key
 - [ ] Check 尚未完成时通过 CLI 修改配置或 Key：旧请求完成后不把新配置标为 Ready / Failed；编辑系统指令同样使旧检查失效
 - [ ] 服务错误回显提交的 Key（使用合成凭据和测试服务）：界面、CLI 和持久化检查结果中均不出现该 Key，仍保留可读错误原因
@@ -113,7 +117,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] `$H config set api-key=sk-…`：拒绝，提示用 `--stdin` / `--env` / `--file`
 - [ ] `$H config set api-key --stdin` 直接在终端运行（无管道）：拒绝并给出 `pbpaste | …` 用法
 - [ ] `$H config set 'body={"messages":[]}'`、`'headers={"Authorization":"x"}'`、`base-url=http://example.com`：均被拒绝并说明原因
-- [ ] `$H config set preset=deepseek 'body={"thinking":{"type":"disabled"}}'` 后 `$H config show`：显示 endpoint、body；api-key 只显示 saved in Keychain / not set
+- [ ] `$H config set preset=deepseek 'body={"thinking":{"type":"disabled"}}'` 后 `$H config show`：显示 endpoint、body；api-key 显示 record present; access not verified / no record detected，不把记录存在当作连接成功
 - [ ] `$H check --verbose`：打印请求 URL、请求头（认证头为 `••••`）与请求体，失败时显示 HTTP 状态与错误
 - [ ] 本机 Ollama 等：`$H config set format=chat-completions base-url=http://localhost:11434/v1 model=<本地模型>` 后 `check` 通过，信纸可正常流式回答
 - [ ] `$H config reset`：配置与 Key 被删除，设置页回到 “No model yet”

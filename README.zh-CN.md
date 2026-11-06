@@ -79,7 +79,9 @@ Howler 只连接一个模型服务。配置步骤很少，可以直接交给 AI 
   <img src="docs/images/settings.png" width="560" alt="Howler 设置分为 General、Prompt、Shortcut 三页；General 包含模型设置、回复语言、开机启动和更新选项">
 </p>
 
-打开 **Settings › General › Copy Setup Prompt**，把复制的提示词粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪家服务、哪个模型，查官方文档，写入配置，然后检查直到通过。它不会让你把 API Key 发到聊天里：需要 Key 时，它请你先复制，再运行 `pbpaste | Howler config set api-key --stdin`，Key 直接存进钥匙串。
+打开 **Settings › General › Copy Setup Prompt**，把复制的提示词粘贴给 Claude Code、Codex 等能运行命令的 AI 助手，由它配置服务、模型和请求参数。然后回到 **General › API Key**，选择 **Add Key** 或 **Replace Key**，在密码输入框中粘贴密钥，点击 **Save & Check**。密钥直接存入 macOS 钥匙串，不要发到助手的聊天里。
+
+Save & Check 只发送一次测试请求，连接检查最多等待 30 秒。有密钥记录不代表密钥可读取或服务可用。钥匙串访问失败会显示诊断错误码并停止流程，不会自动删除旧密钥再重建；其他错误最多进行一次有明确原因的修正和重试，仍失败就报告阻塞原因。
 
 同样的命令你也可以自己运行，它们就在应用本身的可执行文件里：
 
