@@ -1,4 +1,5 @@
 import SwiftUI
+import Security
 import HowlerCore
 
 /// A new secret is held only while this editor's save operation is active.
@@ -11,6 +12,36 @@ struct APIKeyEditor: View {
     @State private var saving = false
     @State private var error: String?
     @FocusState private var keyFocused: Bool
+
+    init(settings: AppSettings, service: ModelService) {
+        self.settings = settings
+        self.service = service
+    }
+
+    #if DEBUG
+    init(settings: AppSettings, service: ModelService, previewError: Error) {
+        self.init(settings: settings, service: service)
+        _error = State(initialValue: Self.saveErrorMessage(for: previewError))
+    }
+    #endif
+
+    static func saveErrorMessage(for error: Error) -> String {
+        // The CLI retains the diagnostic status; the editor only needs the outcome.
+        if let error = error as? KeychainError {
+            switch error.status {
+            case errSecAuthFailed, errSecInteractionNotAllowed:
+                return "Keychain denied access. The key wasn’t saved."
+            case errSecUserCanceled:
+                return "Saving was cancelled."
+            default:
+                return "Couldn’t save the key to Keychain."
+            }
+        }
+        if let error = error as? ConfigurationFailure {
+            return error.localizedDescription
+        }
+        return "Couldn’t save the API key."
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -72,7 +103,7 @@ struct APIKeyEditor: View {
                 dismiss()
                 await settings.check(for: service)
             } catch {
-                self.error = error.localizedDescription
+                self.error = Self.saveErrorMessage(for: error)
                 saving = false
                 keyFocused = true
             }

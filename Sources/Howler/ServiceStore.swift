@@ -114,9 +114,7 @@ struct ServiceStore {
         // The credential changed even if a concurrent configuration write rejects its binding.
         defaults.set(UUID().uuidString, forKey: DefaultsKey.keyRevision)
         guard self.revision == revision, self.service == service else {
-            throw NSError(domain: "Howler.Configuration", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "The setup changed while saving the API key. Save it again for the current service."
-            ])
+            throw ConfigurationFailure.changed
         }
         defaults.set(Self.keyScope(for: service), forKey: DefaultsKey.keyScope)
         removeLegacyKey(for: service)

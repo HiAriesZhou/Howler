@@ -26,6 +26,52 @@ final class NativeKeySetupTests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(started), 3)
     }
 
+    func testSaveErrorsStayBriefWithoutLosingDiagnosticDetails() {
+        let denied = KeychainError(status: errSecAuthFailed, operation: "save")
+        XCTAssertEqual(APIKeyEditor.saveErrorMessage(for: denied),
+                       "Keychain denied access. The key wasn’t saved.")
+        XCTAssertTrue(denied.localizedDescription.contains("OSStatus -25293"))
+        XCTAssertFalse(APIKeyEditor.saveErrorMessage(for: denied).contains("OSStatus"))
+        XCTAssertFalse(APIKeyEditor.saveErrorMessage(for: denied).contains("Settings"))
+        XCTAssertEqual(APIKeyEditor.saveErrorMessage(for:
+            KeychainError(status: errSecUserCanceled, operation: "save")), "Saving was cancelled.")
+        XCTAssertEqual(APIKeyEditor.saveErrorMessage(for: ConfigurationFailure.emptyKey),
+                       "Paste an API key before saving.")
+        let unexpected = NSError(domain: "Fixture", code: 1, userInfo: [
+            NSLocalizedDescriptionKey: "Internal diagnostic details"
+        ])
+        XCTAssertEqual(APIKeyEditor.saveErrorMessage(for: unexpected), "Couldn’t save the API key.")
+    }
+
+    func testDeniedSaveEditorRendersWithoutReadingTheStoredKey() async throws {
+        _ = NSApplication.shared
+        let defaults = DemoDefaults(suiteName: "HowlerTests.KeyEditorDenied")!
+        var reads = 0
+        var access = MemoryKeys().access
+        access.get = { _ in reads += 1; return "never-display-existing-synthetic" }
+        let settings = AppSettings(defaults: defaults, keys: access)
+        let host = NSHostingView(rootView: APIKeyEditor(
+            settings: settings, service: service(),
+            previewError: KeychainError(status: errSecAuthFailed, operation: "save")
+        ))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 270),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(200))
+        host.layoutSubtreeIfNeeded()
+        XCTAssertEqual(reads, 0)
+        XCTAssertLessThanOrEqual(host.fittingSize.height, 300)
+        if let folder = ProcessInfo.processInfo.environment["HOWLER_TEST_SNAPSHOTS"] {
+            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                .write(to: URL(fileURLWithPath: "\(folder)/key-editor-denied.png"))
+        }
+    }
+
     func testNativeSaveValidatesAndRejectsChangedDestination() async throws {
         let defaults = DemoDefaults(suiteName: "HowlerTests.NativeSave")!
         let keys = MemoryKeys()

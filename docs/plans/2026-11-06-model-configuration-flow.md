@@ -12,6 +12,8 @@ CLI key input remains available for deliberate terminal use.
 - A Keychain record's presence does not establish readability or connectivity.
 - Preserve Keychain operation and status errors. Missing keys, denied access and
   service failures have different messages. Failed reads replace stale check results.
+- Keep native key-save errors brief. Retain operation/status details for CLI
+  diagnostics, without displaying them or redundant Settings instructions in the editor.
 - An update denied by Keychain must never automatically delete the old item.
 - The native key editor uses a secure field, never loads the existing secret,
   identifies the destination, clears its draft on dismissal and after saving,
