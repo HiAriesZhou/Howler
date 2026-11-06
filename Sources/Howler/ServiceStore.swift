@@ -8,12 +8,12 @@ struct ServiceStore {
     /// Injectable so app-state tests never touch the login Keychain.
     struct KeyAccess {
         var exists: (String) -> Bool
-        var get: (String) -> String?
+        var get: (String) throws -> String?
         var set: (String, String) throws -> Void
         var delete: (String) -> Void
 
         static let keychain = KeyAccess(
-            exists: Keychain.exists, get: Keychain.get,
+            exists: Keychain.exists, get: { try Keychain.get(account: $0) },
             set: { try Keychain.set($0, account: $1) }, delete: Keychain.delete
         )
     }
@@ -85,17 +85,25 @@ struct ServiceStore {
     }
 
     func apiKey(for expected: ModelService? = nil) -> String? {
+        try? readAPIKey(for: expected)
+    }
+
+    /// A missing record is nil; an unreadable record retains its Keychain error.
+    func readAPIKey(for expected: ModelService? = nil) throws -> String? {
         let revision = self.revision
-        guard let service, expected == nil || expected == service, hasKey else { return nil }
-        let key = keys.get(Self.keyAccount(for: service))
+        guard let service, expected == nil || expected == service,
+              defaults.string(forKey: DefaultsKey.keyScope) == Self.keyScope(for: service) else { return nil }
+        let key = try keys.get(Self.keyAccount(for: service))
             ?? (hasLegacyKey(for: service) ? keys.get(Self.legacyKeyAccount) : nil)
         // A concurrent config/key write must not pair a new key with an old destination.
-        guard self.revision == revision, self.service == service, hasKey else { return nil }
+        guard self.revision == revision, self.service == service else { return nil }
         return key
     }
 
-    func setAPIKey(_ key: String) throws {
+    func setAPIKey(_ raw: String, for expected: ModelService? = nil) throws {
         guard let service else { throw ServiceConfigError.missing(["format", "base-url", "model"]) }
+        guard expected == nil || expected == service else { throw ConfigurationFailure.changed }
+        let key = try Self.validatedAPIKey(raw)
         invalidateCheck()
         let revision = self.revision
         defer { finishChange() }
@@ -202,7 +210,7 @@ struct ServiceStore {
             if keys.exists(sourceAccount) {
                 // A key that exists but can't be read yet (e.g. access was denied) is retried
                 // on the next launch rather than left behind.
-                guard let key = keys.get(sourceAccount) else { return }
+                guard let key = try keys.get(sourceAccount) else { return }
                 try keys.set(key, Self.keyAccount(for: service))
             }
             try save(service)
@@ -228,6 +236,13 @@ struct ServiceStore {
 
     private static func keyAccount(for service: ModelService) -> String {
         "api-key:" + keyScope(for: service)
+    }
+
+    static func validatedAPIKey(_ raw: String) throws -> String {
+        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { throw ConfigurationFailure.emptyKey }
+        guard !key.contains(where: \.isWhitespace) else { throw ConfigurationFailure.invalidKey }
+        return key
     }
 
     private func hasLegacyKey(for service: ModelService) -> Bool {
