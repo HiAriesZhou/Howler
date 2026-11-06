@@ -27,7 +27,23 @@ jobs:
           swift --version
 
       - name: Test
-        run: swift test
+        run: |
+          python3 - <<'PY'
+          import os, signal, subprocess, sys
+          process = subprocess.Popen(["swift", "test"], start_new_session=True)
+          try:
+              result = process.wait(timeout=180)
+          except subprocess.TimeoutExpired:
+              print("Test exceeded three minutes; collecting native stacks.", flush=True)
+              listing = subprocess.run(["ps", "-axo", "pid=,comm="], capture_output=True, text=True, check=True)
+              for line in listing.stdout.splitlines():
+                  fields = line.strip().split(None, 1)
+                  if len(fields) == 2 and fields[1].endswith("/xctest"):
+                      subprocess.run(["sample", fields[0], "3"], timeout=15)
+              os.killpg(process.pid, signal.SIGTERM)
+              result = 124
+          sys.exit(result)
+          PY
 
       # With the Developer ID secrets set, builds are signed (and tagged releases notarized);
       # without them, as on forks, everything below falls back to an ad-hoc signature.
