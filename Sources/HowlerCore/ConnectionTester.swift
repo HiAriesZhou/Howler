@@ -2,18 +2,20 @@ import Foundation
 
 public enum ConnectionTesterError: Error, Equatable, LocalizedError {
     case noText
+    case timedOut
 
     public var errorDescription: String? {
         switch self {
         case .noText: return "The service answered without any text. Check the model name."
+        case .timedOut: return "The connection check timed out. Verify the service and network, then retry once."
         }
     }
 }
 
 public enum ConnectionTester {
     public static let probePrompt = "Reply with the single word: OK"
-    /// Idle timeout for the probe; reasoning models can think for a while before the first token.
-    public static let timeout: TimeInterval = 120
+    /// A setup probe is bounded independently of normal conversation timeouts.
+    public static let timeout: TimeInterval = 30
     public static let probeMessages = [ChatMessage(role: .user, content: probePrompt)]
 
     /// Carries the system prompt too, so a service that rejects one fails the check
@@ -30,7 +32,8 @@ public enum ConnectionTester {
         apiKey: String,
         appName: String = "Howler",
         systemPrompt: String? = nil,
-        replyLanguage: String? = nil
+        replyLanguage: String? = nil,
+        deadline: Duration = .seconds(30)
     ) async throws {
         let stream = client.stream(
             service: service,
@@ -40,9 +43,17 @@ public enum ConnectionTester {
             } ?? probeMessages,
             options: probeOptions(appName: appName, systemPrompt: systemPrompt)
         )
-        for try await _ in stream {
-            return // first text delta is enough; leaving the loop cancels the request
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for try await _ in stream { return }
+                throw ConnectionTesterError.noText
+            }
+            group.addTask {
+                try await Task.sleep(for: deadline)
+                throw ConnectionTesterError.timedOut
+            }
+            defer { group.cancelAll() }
+            try await group.next()
         }
-        throw ConnectionTesterError.noText
     }
 }

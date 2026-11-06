@@ -9,7 +9,7 @@ struct KeychainError: LocalizedError {
         let context = "Keychain \(operation) (OSStatus \(status))"
         switch status {
         case errSecAuthFailed, errSecInteractionNotAllowed:
-            return "\(context): access was denied or requires authorization. Open Howler Settings and retry there. Do not reset your configuration."
+            return "\(context): access was denied or requires authorization. Open \(AppInfo.name) Settings and retry there. Do not reset your configuration."
         case errSecUserCanceled:
             return "\(context): authorization was cancelled."
         default: break

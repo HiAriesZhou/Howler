@@ -46,6 +46,8 @@ final class AppSettings: ObservableObject {
 
     @Published private(set) var service: ModelService?
     @Published private(set) var hasKey = false
+    @Published private(set) var keyAccessError: String?
+    @Published private(set) var isSavingAPIKey = false
     @Published private(set) var checkState: CheckState = .unchecked
     @Published private(set) var replyLanguage: String
     @Published private(set) var connectionVersion = UUID()
@@ -138,12 +140,10 @@ final class AppSettings: ObservableObject {
         #endif
         let stored = store.service
         var connectionChanged = stored != service
-        if let cached = keyCache, cached.revision != store.revision {
-            let currentKey = stored.flatMap { store.apiKey(for: $0) }
-            connectionChanged = connectionChanged || currentKey != cached.key
-            keyCache = currentKey.flatMap { key in
-                stored.map { (revision: store.revision, service: $0, key: key) }
-            }
+        if let cached = keyCache, cached.revision != store.keyRevision || cached.service != stored {
+            // Reloading preferences must not cause a blocking Keychain prompt.
+            connectionChanged = true
+            keyCache = nil
         }
         if stored != service { service = stored }
         if connectionChanged { connectionVersion = UUID() }
@@ -186,41 +186,71 @@ final class AppSettings: ObservableObject {
 
     func apiKey() -> String? {
         guard let service, service == store.service else { return nil }
-        let revision = store.revision
+        let revision = store.keyRevision
         if let keyCache, keyCache.revision == revision, keyCache.service == service { return keyCache.key }
-        guard let key = store.apiKey(for: service), store.revision == revision else {
+        do {
+            guard let key = try store.readAPIKey(for: service), store.keyRevision == revision else {
+                throw ConfigurationFailure.missingKey
+            }
+            keyAccessError = nil
+            keyCache = (revision, service, key)
+            return key
+        } catch {
+            keyAccessError = error.localizedDescription
             keyCache = nil
             return nil
         }
-        keyCache = (revision, service, key)
-        return key
+    }
+
+    func saveAPIKey(_ raw: String, for expected: ModelService) async throws {
+        guard !isSavingAPIKey, checkState != .checking else { throw ConfigurationFailure.busy }
+        guard service == expected else { throw ConfigurationFailure.changed }
+        let key = try ServiceStore.validatedAPIKey(raw)
+        let store = self.store
+        isSavingAPIKey = true
+        defer { isSavingAPIKey = false; reload() }
+        try await Task.detached { try store.setAPIKey(key, for: expected) }.value
+        keyCache = nil
+        keyAccessError = nil
+        connectionVersion = UUID()
     }
 
     /// Sends a tiny real request with the current setup and records the outcome, which the
     /// command line's `config show` reports too.
-    func check() async {
-        guard checkState != .checking else { return }
-        guard let service else { return }
+    func check(for expected: ModelService? = nil) async {
+        guard checkState != .checking, !isSavingAPIKey else { return }
+        guard let service, expected == nil || expected == service else { return }
         let revision = store.revision
-        guard let key = apiKey(), !key.isEmpty else {
-            checkState = .failed("No API key saved.")
-            return
-        }
-        guard revision == store.revision else { return }
+        let store = self.store
         checkingRevision = revision
         checkState = .checking
+        defer {
+            if checkingRevision == revision {
+                checkingRevision = nil
+                checkState = .unchecked
+                reload()
+            }
+        }
         do {
+            // Explicit checks read afresh, even if a previous conversation cached a key.
+            guard let key = try await Task.detached(operation: {
+                try store.readAPIKey(for: service)
+            }).value, !key.isEmpty else { throw ConfigurationFailure.missingKey }
+            guard revision == store.revision else { return }
+            keyCache = (store.keyRevision, service, key)
+            keyAccessError = nil
             try await ConnectionTester.test(
                 client: client, service: service, apiKey: key, appName: AppInfo.name, systemPrompt: systemPrompt, replyLanguage: resolvedReplyLanguage
             )
             store.recordCheck(passed: true, message: nil, for: revision)
         } catch {
+            guard revision == store.revision else { return }
+            if error is KeychainError || error is ConfigurationFailure {
+                keyCache = nil
+                keyAccessError = error.localizedDescription
+            }
             store.recordCheck(passed: false, message: error.localizedDescription, for: revision)
         }
-        guard checkingRevision == revision else { return }
-        checkingRevision = nil
-        checkState = .unchecked
-        reload()
     }
 
     // MARK: System prompt

@@ -253,7 +253,7 @@ final class ChatViewModel: ObservableObject {
         let options = RequestOptions(appName: AppInfo.name, systemPrompt: task.systemPrompt)
         guard let stream = makeStream(history: requestHistory(for: task), options: options) else {
             pause(settings.service == nil ? "No model set up. Open Settings to set one up."
-                  : "No API key found. Open Settings to finish the setup.")
+                  : settings.keyAccessError ?? "No API key found. Open Settings to finish the setup.")
             return
         }
         writingID = task.replyID

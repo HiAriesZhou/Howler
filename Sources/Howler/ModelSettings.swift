@@ -3,12 +3,18 @@ import HowlerCore
 import SwiftUI
 
 /// The model section of Settings: what writes the letters and whether it works, plus the
-/// setup prompt. The setup itself happens on the command line, usually through an AI
-/// assistant, so this page never asks for an API key.
+/// setup prompt. Service fields can be configured by an assistant; credentials are
+/// entered directly into a native secure sheet.
 struct ModelSettings: View {
     @ObservedObject var settings: AppSettings
 
     @State private var copied = false
+    @State private var keyEditorTarget: KeyEditorTarget?
+
+    private struct KeyEditorTarget: Identifiable {
+        let id = UUID()
+        let service: ModelService
+    }
 
     var body: some View {
         Group {
@@ -19,6 +25,9 @@ struct ModelSettings: View {
             }
         }
         .onAppear { settings.reload() }
+        .sheet(item: $keyEditorTarget) { target in
+            APIKeyEditor(settings: settings, service: target.service)
+        }
     }
 
     // MARK: Set up
@@ -32,14 +41,14 @@ struct ModelSettings: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Set up a model")
                         .font(.title3.weight(.semibold))
-                    Text("An AI assistant does it for you in a minute.")
+                    Text("Let an AI assistant configure the service.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 7) {
                     step(1, "Copy the setup prompt.")
                     step(2, "Paste it into Claude Code, Codex or another AI assistant that can run commands.")
-                    step(3, "Pick a model, and copy your API key when it asks. It never needs the key in the chat.")
+                    step(3, "Return here to add your API key and check the connection.")
                 }
                 HStack(spacing: 10) {
                     copyButton
@@ -95,7 +104,7 @@ struct ModelSettings: View {
                 Button(settings.checkState == .checking ? "Checking…" : "Check") {
                     Task { await settings.check() }
                 }
-                .disabled(settings.checkState == .checking || !settings.hasKey)
+                .disabled(settings.checkState == .checking || settings.isSavingAPIKey)
                 .help("Send a tiny real request to make sure it answers")
             }
 
@@ -111,10 +120,25 @@ struct ModelSettings: View {
 
             Divider()
 
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("API Key")
+                    Text(settings.hasKey ? "Saved in Keychain. Check to verify access." : "Add a key to connect.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 12)
+                Button(settings.hasKey ? "Replace Key…" : "Add Key…") {
+                    keyEditorTarget = KeyEditorTarget(service: service)
+                }
+                .disabled(settings.checkState == .checking || settings.isSavingAPIKey)
+            }
+            Divider()
+
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Change the setup")
-                    Text("Hand the prompt to your AI assistant.")
+                    Text("Setup help")
+                    Text("Configure the model with your AI assistant.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -146,9 +170,8 @@ struct ModelSettings: View {
     }
 
     private var statusText: String {
-        guard settings.hasKey else { return "No API key" }
         switch settings.checkState {
-        case .unchecked: return "Not checked yet"
+        case .unchecked: return settings.hasKey ? "Not checked yet" : "No API key"
         case .checking: return "Checking…"
         case .passed: return "Ready"
         case .failed: return "Failed"
@@ -156,9 +179,9 @@ struct ModelSettings: View {
     }
 
     private var statusColor: Color {
-        guard settings.hasKey else { return .orange }
         switch settings.checkState {
-        case .unchecked, .checking: return .secondary
+        case .unchecked: return settings.hasKey ? .secondary : .orange
+        case .checking: return .secondary
         case .passed: return .green
         case .failed: return .red
         }
