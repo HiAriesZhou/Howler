@@ -12,7 +12,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
 - [ ] 首次启动（未配置）自动弹出 Settings 窗口
 - [ ] Finder、DMG 中的 Howler.app 显示羽毛笔火漆图标（不是空白应用图标）
-- [ ] 菜单栏图标为羽毛笔，随浅色 / 深色菜单栏变色；菜单包含 Open Howler、Settings…、Check for Updates…、Send Feedback…、Quit Howler，均不显示快捷键；仅 Quit 左侧有电源图标，其他项无图标；菜单不含 Capture and Explain；Quit 可正常退出
+- [ ] 菜单栏图标为羽毛笔，随浅色 / 深色菜单栏变色；菜单包含 Open Howler、Settings、Check for Updates、Send Feedback、Quit Howler，均无图标、无快捷键，文字共用左侧起点且完整显示，无尾部省略号；菜单不含 Capture and Explain；Quit 可正常退出
 
 ## 2. 全局快捷键与面板 / Hotkey & panel
 
@@ -136,7 +136,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ### 3e. 反馈 / Feedback
 
-- [ ] 菜单 “Send Feedback…”（无图标）、设置页 General 卡片里的 “Feedback” 一行（Send Feedback… 按钮）：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
+- [ ] 菜单 “Send Feedback”（无图标）、设置页 General 卡片里的 “Feedback” 一行（Send Feedback… 按钮）：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
 - [ ] 不点击时不访问任何网址
 
 ### 3d. 更新 / Updates
