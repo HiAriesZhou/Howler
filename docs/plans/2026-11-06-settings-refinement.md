@@ -4,11 +4,12 @@ This revision updates the screenshot-conversation design following acceptance fe
 
 ## Interaction
 
-- The menu bar menu contains Open Howler, Settings, the existing update and feedback actions, and Quit Howler. All rows are text-only, share one leading edge, and use full labels without trailing ellipses. An available update changes the action label and menu bar indicator, without adding a menu-row icon. Use neutral menu actions so system-provided action images cannot reappear.
-- Capture and Explain is a permanent setting in Settings > Shortcut, enabled by default. Its default shortcut is Option-Shift-H; an existing custom shortcut is retained.
-- The capture shortcut and a small native switch share one row, with the switch on the right. Turning it off places a faint static haze over the disabled shortcut; the saved key remains readable. Use the native switch for keyboard, accessibility and system appearance behavior.
-- Switching capture off unregisters its global shortcut and disables the capture action in Attach. The setting and selected shortcut survive restart. Switching it back on restores the saved shortcut. Normal text and pasted-image questions remain available.
-- A capture result delivered while capture is off is discarded. Turning capture off does not clear the letter, cancel an existing model request or pause its queue.
+- The menu bar menu contains Open Howler, Settings, the existing update and feedback actions, and Quit Howler. All rows are text-only, share one leading edge, and use full labels without trailing ellipses. An available update changes the action label and menu bar indicator, without adding a menu-row icon. Neutral actions prevent system-provided action images from reappearing.
+- Settings > Shortcut contains Open Howler, Open Settings and Capture and Explain. Their defaults are Option-H, Option-Comma and Option-Shift-H.
+- Each shortcut can be recorded, cleared or restored to its default. An empty shortcut means that global keyboard action is disabled. It remains empty after restart. No separate switch, mechanical control or cloud overlay is shown.
+- Click the clear button next to a recorded shortcut, or press unmodified Delete while recording, to clear it. Escape cancels recording. An empty field shows a quiet Not set placeholder and remains available for recording.
+- Clearing a shortcut unregisters it and releases its combination for another action. Recording and restoring defaults check conflicts against the other configured shortcuts. A failed reset preserves the current value and explains the conflict. Registration failures are shown only for configured shortcuts, never for intentional empty fields.
+- The menu bar remains available to open Howler or Settings. Attach retains its manual capture action even when the capture shortcut is empty. Clearing a shortcut does not cancel an in-progress capture, a model response or the reply queue.
 - The flame stays fixed at the bottom-right corner of the paper, matching the bottom-to-top burn animation. Its hit area remains 40 points; footer content leaves space for it. Escape retains the existing composition, preview and burn ordering.
 
 ## Settings layout
@@ -19,31 +20,22 @@ The tabs are General, Prompt, Shortcut, in that order.
 | --- | --- |
 | General | Model setup, reply language, launch at login, automatic updates, feedback, privacy notice and version/update footer |
 | Prompt | Existing system-prompt editor and reset action |
-| Shortcut | Open Howler shortcut, configurable Open Settings shortcut, Capture and Explain switch and its shortcut recorder |
+| Shortcut | Three configurable shortcut recorders, including clear and reset controls |
 
 Reuse the existing native cards, typography, segmented toolbar and focus handling. The fixed window width accommodates three labels and icons alongside the title. General and Shortcut contribute their natural height; all three pages share the larger height, and Prompt fills it. Hidden pages remain excluded from interaction and accessibility.
 
+## Persistence and migration
+
+Missing preferences mean the factory default; an explicitly saved empty value means disabled. Use the existing preference keys with nullable shortcut data so these states cannot be confused. Corrupt or invalid data falls back to the corresponding default. Reset removes the stored override only after conflict checking.
+
+Retain the one-time historical Option-Space and mistaken Option-Comma letter-default migrations. Explicitly empty values must survive those migrations. Convert a previously disabled capture switch to an empty capture shortcut, then retire that switch preference so recording a new shortcut cannot be disabled again on restart. Existing enabled custom shortcuts remain unchanged.
+
 ## Implementation and verification
 
-1. Persist the capture switch in AppSettings; connect it to hotkey registration, capture entry and completion guards.
-2. Split the settings panes and their shared height calculation. Retain shortcut editing, conflict warnings and stopping recording on tab changes.
-3. Remove all menu-row images, remove the menu capture action, and move the flame with footer clearance.
-4. Cover capture persistence, disabled entry, delayed capture completion, re-enabling and update-menu states with focused tests.
-5. Render General, Prompt, Shortcut on/off, and empty/long letters in the existing visual style. Check toolbar fit, footer clearance and tab-switch size stability.
-6. Run the complete tests and signed app build. Install the candidate under the existing installation authorization; distinguish synthetic renders and tests from actual installed-app interaction acceptance.
+1. Make each shortcut optional and persist explicit empty values. Update migration, conflict checks, reset behavior and global registration.
+2. Remove the standalone capture switch and overlay. Add shared clear controls, empty placeholders and Delete-to-clear handling to the recorder. Keep manual capture available and preserve in-progress work.
+3. Test default versus explicit-empty persistence, reset conflicts, released combinations, old-switch migration, historical migrations and manual capture with an empty shortcut.
+4. Render configured and empty shortcut fields in light and dark appearances. Check layout, clear/reset controls and absence of false conflict warnings.
+5. Run the complete test suite and obtain a fresh review of this user-requested behavior revision. Verify and install the signed candidate with a rollback backup. Distinguish native renders and startup checks from installed-app interaction acceptance.
 
-This revision does not authorize publication. Final release confirmation remains required.
-
-## Approved native-switch and Settings-shortcut follow-up
-
-Use the native small switch (comparison option A), matching the surrounding quiet settings controls. Keep the faint disabled haze, with no continuous animation or custom mechanical parts.
-
-All three shortcut rows use the same recorder. Open Settings defaults to Option-Comma, saves immediately and survives restart. Global registrations update when any shortcut changes and are suspended while recording. Report a failed registration in the affected row. The menu remains an alternative way to open Settings.
-
-Check conflicts against the other two actions, including a disabled capture action, both on recording and reset. Never overwrite another action to restore a default. Once Settings moves to another shortcut, Option-Comma becomes available to the other actions. Keep the one-time migration of the historical mistaken Option-Comma letter default and the earlier Option-Space migration; do not migrate a newly chosen shortcut on later launches.
-
-Implementation sequence:
-1. Replace the custom breaker with a small native switch and lighten the static haze. Verify light/dark and on/off renders, then commit the visual change.
-2. Add an explicit shortcut action to the shared recorder and persisted Settings shortcut. Update registration, failure reporting, conflict-safe resets and one-time migration.
-3. Test persistence, all action-pair conflicts, reset conflicts, reuse of Option-Comma, migration and recording cancellation; run the full test suite and render the editable Settings row.
-4. Obtain a fresh review for this follow-up, build and verify the exact signed candidate, back up and install it, and distinguish installation checks from live interaction acceptance. Release remains subject to final confirmation.
+This revision supersedes the earlier standalone switch designs. It does not authorize publication. Final release confirmation remains required.
