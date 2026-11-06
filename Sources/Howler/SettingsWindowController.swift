@@ -92,6 +92,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     /// method's composition.
     private func closeOnEscape(_ event: NSEvent) -> Bool {
         guard let window, event.window === window, window.isKeyWindow,
+              window.attachedSheet == nil,
               event.keyCode == 53, // kVK_Escape
               event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
               !settings.isRecordingHotKey

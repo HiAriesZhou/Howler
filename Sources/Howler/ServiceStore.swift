@@ -35,6 +35,7 @@ struct ServiceStore {
         /// Absent until the instructions are edited, so a better suggestion reaches everyone else.
         static let instructions = "systemPromptInstructions"
         static let revision = "serviceRevision"
+        static let keyRevision = "apiKeyRevision"
         static let keyScope = "apiKeyScope"
         static let keyScopeMigrated = "apiKeyScopeMigrated"
         static let legacyKeyScope = "legacyAPIKeyScope"
@@ -116,6 +117,7 @@ struct ServiceStore {
             ])
         }
         defaults.set(Self.keyScope(for: service), forKey: DefaultsKey.keyScope)
+        defaults.set(UUID().uuidString, forKey: DefaultsKey.keyRevision)
         removeLegacyKey(for: service)
     }
 
@@ -172,6 +174,7 @@ struct ServiceStore {
     }
 
     var revision: String { defaults.string(forKey: DefaultsKey.revision) ?? "unversioned" }
+    var keyRevision: String { defaults.string(forKey: DefaultsKey.keyRevision) ?? "unversioned" }
 
     @discardableResult
     func recordCheck(passed: Bool, message: String?, for revision: String) -> Bool {
