@@ -111,13 +111,14 @@ struct ServiceStore {
         // Keep the current binding if the Keychain write fails without changing its item.
         // Separate Keychain items prevent a late writer for A from overwriting B's key.
         try keys.set(key, Self.keyAccount(for: service))
+        // The credential changed even if a concurrent configuration write rejects its binding.
+        defaults.set(UUID().uuidString, forKey: DefaultsKey.keyRevision)
         guard self.revision == revision, self.service == service else {
             throw NSError(domain: "Howler.Configuration", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "The setup changed while saving the API key. Save it again for the current service."
             ])
         }
         defaults.set(Self.keyScope(for: service), forKey: DefaultsKey.keyScope)
-        defaults.set(UUID().uuidString, forKey: DefaultsKey.keyRevision)
         removeLegacyKey(for: service)
     }
 

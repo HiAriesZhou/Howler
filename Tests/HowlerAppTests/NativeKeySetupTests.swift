@@ -83,6 +83,34 @@ final class NativeKeySetupTests: XCTestCase {
         XCTAssertTrue(settings.keyAccessError?.contains("-25293") == true)
     }
 
+    func testSuccessfulKeyWriteInvalidatesCacheWhenConcurrentConfigSaveRejectsBinding() async throws {
+        let defaults = DemoDefaults(suiteName: "HowlerTests.KeyWriteRace")!
+        let keys = MemoryKeys()
+        let store = ServiceStore(defaults: defaults, keys: keys.access)
+        let original = service()
+        try store.save(original)
+        try store.setAPIKey("old-synthetic")
+        var access = keys.access
+        access.set = { key, account in
+            keys.values[account] = key
+            // Another writer re-saves the same destination while Keychain is working.
+            try store.save(original)
+        }
+        let settings = AppSettings(defaults: defaults, keys: access)
+        XCTAssertEqual(settings.apiKey(), "old-synthetic")
+        let before = settings.connectionVersion
+        do {
+            try await settings.saveAPIKey("new-synthetic", for: original)
+            XCTFail("The concurrent configuration write must reject the binding")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("setup changed"))
+        }
+        XCTAssertEqual(try store.readAPIKey(), "new-synthetic")
+        XCTAssertEqual(settings.apiKey(), "new-synthetic")
+        XCTAssertNotEqual(settings.connectionVersion, before)
+        XCTAssertFalse(settings.isSavingAPIKey)
+    }
+
     func testDeniedNativeSaveKeepsOldKeyAndEndsBusyState() async throws {
         let defaults = DemoDefaults(suiteName: "HowlerTests.DeniedNativeSave")!
         let keys = MemoryKeys()
