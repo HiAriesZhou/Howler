@@ -52,6 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if ProcessInfo.processInfo.environment["HOWLER_DEMO_DARK"] != nil {
                 NSApp.appearance = NSAppearance(named: .darkAqua)
             }
+            if demo == "menu", let menu = statusItem?.menu {
+                MenuDemo.present(menu)
+                return
+            }
             if demo == "settings" {
                 settings.useDemoService(.anthropic)
                 if ProcessInfo.processInfo.environment["HOWLER_DEMO_CAPTURE"] == "off" {
@@ -103,45 +107,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateMenu(for: combo)
     }
 
-    private static func menuSymbol(_ name: String) -> NSImage? {
-        NSImage(systemSymbolName: name, accessibilityDescription: nil)
-    }
-
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = MenuBarMark.image()
 
-        let menu = NSMenu()
-        menu.autoenablesItems = false // the update item follows Sparkle's canCheckForUpdates
-        // No key equivalents: the global shortcut opens the letter, and a menu shortcut is one
-        // more thing to press by accident.
-        let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")
-        open.target = self
-        menu.addItem(open)
-        let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        warning.isEnabled = false
-        warning.isHidden = true
-        menu.addItem(warning)
-        menu.addItem(.separator())
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
-        settingsItem.target = self
-        menu.addItem(settingsItem)
-        if updater.isEnabled {
-            let update = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
-            update.target = self
-            menu.addItem(update)
-            updateItem = update
-        }
-        let feedback = NSMenuItem(title: "Send Feedback…", action: #selector(sendFeedback), keyEquivalent: "")
-        feedback.target = self
-        menu.addItem(feedback)
-        menu.addItem(.separator())
-        let quit = NSMenuItem(title: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
-        menu.addItem(quit)
-        quit.image = Self.menuSymbol("power")
+        let parts = Self.makeStatusMenu(showsUpdate: updater.isEnabled, target: self)
+        let menu = parts.menu
+        updateItem = parts.update
         item.menu = menu
         statusItem = item
-        hotKeyWarningItem = warning
+        hotKeyWarningItem = parts.warning
         if let updateItem {
             // Subscribe after the controls exist: @Published emits its current value immediately.
             updater.$available.combineLatest(updater.$canCheck)
@@ -155,9 +130,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// "Check for Updates…", or the gentle reminder when a scheduled check found one.
+    static func makeStatusMenu(showsUpdate: Bool, target: AnyObject) -> (menu: NSMenu, warning: NSMenuItem, update: NSMenuItem?) {
+        let menu = NSMenu()
+        var updateItem: NSMenuItem?
+        menu.autoenablesItems = false // the update item follows Sparkle's canCheckForUpdates
+        menu.showsStateColumn = false
+        // AppKit adds images for recognized actions such as openSettings even after
+        // image is cleared. A neutral menu action keeps this menu entirely text-only.
+        func item(_ title: String, action: Selector) -> NSMenuItem {
+            ClosureMenuItem(title: title) { [weak target] in
+                guard let target else { return }
+                NSApp.sendAction(action, to: target, from: nil)
+            }
+        }
+        // No key equivalents: the global shortcut opens the letter, and a menu shortcut is one
+        // more thing to press by accident.
+        let open = item("Open \(AppInfo.name)", action: #selector(togglePanel))
+        menu.addItem(open)
+        let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        warning.isEnabled = false
+        warning.isHidden = true
+        menu.addItem(warning)
+        menu.addItem(.separator())
+        let settingsItem = item("Settings", action: #selector(openSettings))
+        menu.addItem(settingsItem)
+        if showsUpdate {
+            let update = item("Check for Updates", action: #selector(checkForUpdates))
+            menu.addItem(update)
+            updateItem = update
+        }
+        let feedback = item("Send Feedback", action: #selector(sendFeedback))
+        menu.addItem(feedback)
+        menu.addItem(.separator())
+        let quit = ClosureMenuItem(title: "Quit \(AppInfo.name)") { NSApp.terminate(nil) }
+        menu.addItem(quit)
+        return (menu, warning, updateItem)
+    }
+
+    /// "Check for Updates", or the gentle reminder when a scheduled check found one.
     static func updateUpdateItem(_ updateItem: NSMenuItem, statusItem: NSStatusItem, available: String?, canCheck: Bool) {
-        updateItem.title = available.map { "Update to \(AppInfo.name) \($0)…" } ?? "Check for Updates…"
+        updateItem.title = available.map { "Update to \(AppInfo.name) \($0)" } ?? "Check for Updates"
         updateItem.isEnabled = canCheck
         updateItem.image = nil
         let description = available.map { "\(AppInfo.name) \(AppInfo.version), version \($0) is available" }

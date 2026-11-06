@@ -13,6 +13,7 @@ import SwiftUI
 /// model Settings always opens on General; `HOWLER_DEMO_UPDATE=1` shows the update row, `=0.1.9` a
 /// waiting update, `HOWLER_DEMO_SNAPSHOT=out.png` saves the window as a PNG and quits),
 /// `appicon` (renders the app icon into the folder `HOWLER_DEMO_OUT`; see scripts/icon.sh);
+/// `menu` opens the status menu, captures only its window to `HOWLER_DEMO_SNAPSHOT`, then quits;
 /// `HOWLER_DEMO_DARK=1` forces Dark Mode.
 /// A demo never reads the installed app's preferences or writes a synthetic setup to disk.
 final class DemoDefaults: UserDefaults {
@@ -23,6 +24,31 @@ final class DemoDefaults: UserDefaults {
     override func bool(forKey key: String) -> Bool { values[key] as? Bool ?? false }
     override func set(_ value: Any?, forKey key: String) { values[key] = value }
     override func removeObject(forKey key: String) { values.removeValue(forKey: key) }
+}
+
+@MainActor
+enum MenuDemo {
+    static func present(_ menu: NSMenu) {
+        let timer = Timer(timeInterval: 0.5, repeats: false) { _ in
+            if let path = ProcessInfo.processInfo.environment["HOWLER_DEMO_SNAPSHOT"] {
+                let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] ?? []
+                if let own = windows.first(where: {
+                    ($0[kCGWindowOwnerPID as String] as? Int32) == getpid()
+                    && ($0[kCGWindowLayer as String] as? Int ?? 0) > 0
+                }), let number = own[kCGWindowNumber as String] as? Int {
+                    let capture = Process()
+                    capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+                    capture.arguments = ["-x", "-o", "-l", String(number), path]
+                    try? capture.run()
+                    capture.waitUntilExit()
+                }
+            }
+            menu.cancelTracking()
+        }
+        RunLoop.main.add(timer, forMode: .eventTracking)
+        menu.popUp(positioning: nil, at: NSPoint(x: 400, y: 400), in: nil)
+        NSApp.terminate(nil)
+    }
 }
 
 extension PanelController {
