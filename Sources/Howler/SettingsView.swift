@@ -107,7 +107,7 @@ struct GeneralPane: View {
                     }
                 }
             }
-            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, when you send. Capture and Explain sends the selected region immediately. Concealing the letter keeps it in memory; burning it clears it. Leave out passwords and other secrets.")
+            Text("Chats aren't saved. Sent content goes only to your model service. Avoid sharing secrets.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
