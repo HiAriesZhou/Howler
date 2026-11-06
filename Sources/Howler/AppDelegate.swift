@@ -37,12 +37,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Re-register whenever the shortcut changes; stand aside while Settings records one.
         settings.$hotKey.removeDuplicates()
-            .combineLatest(settings.$screenshotHotKey.removeDuplicates(),
-                           settings.$captureAndExplainEnabled.removeDuplicates(),
+            .combineLatest(settings.$settingsHotKey.removeDuplicates(),
+                           settings.$screenshotHotKey.removeDuplicates())
+            .combineLatest(settings.$captureAndExplainEnabled.removeDuplicates(),
                            settings.$isRecordingHotKey.removeDuplicates())
-            .sink { [weak self] combo, capture, enabled, recording in
+            .sink { [weak self] combos, enabled, recording in
                 MainActor.assumeIsolated {
-                    self?.registerHotKey(combo, capture: capture, captureEnabled: enabled, suspended: recording)
+                    self?.registerHotKey(combos.0, settingsCombo: combos.1, capture: combos.2,
+                                         captureEnabled: enabled, suspended: recording)
                 }
             }
             .store(in: &cancellables)
@@ -84,7 +86,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func registerHotKey(_ combo: HotKeyCombo, capture: HotKeyCombo, captureEnabled: Bool, suspended: Bool) {
+    private func registerHotKey(_ combo: HotKeyCombo, settingsCombo: HotKeyCombo,
+                                capture: HotKeyCombo, captureEnabled: Bool, suspended: Bool) {
         hotKey = nil // unregister first: re-registering our own combo would fail
         settingsHotKey = nil
         screenshotHotKey = nil
@@ -92,17 +95,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKey = HotKey(keyCode: combo.keyCode, modifiers: combo.modifiers.rawValue) { [weak self] in
             MainActor.assumeIsolated { self?.panelController?.toggle() }
         }
-        // ⌥, opens Settings from any app; if another app holds it, the menu still does.
-        let settingsCombo = HotKeyCombo.settings
-        settingsHotKey = HotKey(keyCode: settingsCombo.keyCode, modifiers: settingsCombo.modifiers.rawValue) { [weak self] in
-            MainActor.assumeIsolated { self?.openSettings() }
+        if !settingsCombo.matches(combo) {
+            settingsHotKey = HotKey(keyCode: settingsCombo.keyCode, modifiers: settingsCombo.modifiers.rawValue) { [weak self] in
+                MainActor.assumeIsolated { self?.openSettings() }
+            }
         }
-        if captureEnabled, !capture.matches(combo) {
+        if captureEnabled, !capture.matches(combo), !capture.matches(settingsCombo) {
             screenshotHotKey = HotKey(keyCode: capture.keyCode, modifiers: capture.modifiers.rawValue) { [weak self] in
                 MainActor.assumeIsolated { self?.panelController?.viewModel.captureScreen() }
             }
         }
         settings.screenshotHotKeyRegistered = screenshotHotKey != nil
+        settings.settingsHotKeyRegistered = settingsHotKey != nil
         settings.hotKeyRegistered = hotKey != nil
         updateMenu(for: combo)
     }

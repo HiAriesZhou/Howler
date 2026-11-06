@@ -36,8 +36,7 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
         keyCode == other.keyCode && modifiers == other.modifiers
     }
 
-    /// Opens Settings from any app. Fixed, so it can't be recorded for the letter; a stored
-    /// copy (the letter's default in 0.1.8 and 0.1.9, by mistake) falls back to `standard`.
+    /// The default for opening Settings from any app. Action conflicts are checked separately.
     public static let settings = HotKeyCombo(keyCode: 43, modifiers: .option, keyLabel: ",")
 
     /// ⌥Space, the default until v0.1.5. Only the old Reset button stored it, so a stored
@@ -73,7 +72,7 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
     /// Standard editing and system shortcuts stay with the system; a global hotkey would
     /// steal them from every app.
     public var isValid: Bool {
-        guard keyCode != Self.escapeKeyCode, !isReserved, !isSettings else { return false }
+        guard keyCode != Self.escapeKeyCode, !isReserved else { return false }
         if Self.functionKeys[keyCode] != nil { return true }
         return !modifiers.isDisjoint(with: [.command, .control, .option])
     }
@@ -83,7 +82,7 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
     /// ⌘A ⌘C ⌘V ⌘X ⌘Z ⌘Q ⌘W ⌘H ⌘M, ⌘Space (Spotlight) and ⌘Tab (app switcher).
     private static let reservedWithCommand: Set<UInt32> = [0, 8, 9, 7, 6, 12, 13, 4, 46, 49, 48]
 
-    /// Taken by `settings`; compared by key, since a recorded label follows the layout.
+    /// Matches the historical Settings default, independent of the recorded keyboard label.
     public var isSettings: Bool {
         keyCode == Self.settings.keyCode && modifiers == Self.settings.modifiers
     }

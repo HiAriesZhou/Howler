@@ -14,7 +14,7 @@ final class CaptureSettingsTests: XCTestCase {
         XCTAssertEqual(settings.screenshotHotKey, .screenshot)
         let custom = HotKeyCombo(keyCode: 40, modifiers: [.control, .option], keyLabel: "K")
         settings.setScreenshotHotKey(custom)
-        settings.recordingScreenshot = true
+        settings.recordingAction = .capture
         settings.isRecordingHotKey = true
         settings.setCaptureAndExplainEnabled(false)
         XCTAssertFalse(settings.isRecordingHotKey)

@@ -31,7 +31,7 @@ final class SettingsLayoutTests: XCTestCase {
             }
         }
         settings.isRecordingHotKey = true
-        settings.recordingScreenshot = true
+        settings.recordingAction = .capture
         controller.show(tab: .prompt)
         XCTAssertFalse(settings.isRecordingHotKey)
         settings.setCaptureAndExplainEnabled(false)
