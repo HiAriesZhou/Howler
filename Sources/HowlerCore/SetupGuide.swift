@@ -13,12 +13,13 @@ public enum SetupGuide {
         Current setup: \(setup)
 
         Please:
-        1. Ask me which model service and model I want. If I haven't decided, recommend two or three and explain how they differ.
+        1. Run `\(appName) config show` first. Preserve an existing working setup. Ask which service and model I want only when missing or when I want a change.
         2. Run `\(appName) config schema` to learn every field, and check the service's official docs for the endpoint, request format and any parameters it needs. \(appName) is for quick everyday questions, so the answer should start fast: if the model can turn thinking off or down, set the lowest level in `body`, unless I ask for deeper reasoning.
-        3. Write everything at once with `\(appName) config set field=value …`.
-        4. Never ask me to send you the API key, and never print it or write it to a file: ask me to copy the key first, then run `pbpaste | \(appName) config set api-key --stdin`. If the key is already in an environment variable or a file, use `--env` or `--file`.
-        5. Run `\(appName) check`. If it fails, find the cause with `\(appName) check --verbose`, fix the setup, and repeat until it passes.
-        6. Finish by showing me the result of `\(appName) config show`.
+        3. Apply only the required non-secret changes together with `\(appName) config set field=value …`. Use the installed executable above for every command.
+        4. Never ask me to send you the API key, read it from my clipboard, or print or save it. If a key is needed, direct me to \(appName) Settings > General > API Key > Add Key (or Replace Key), where I paste it and choose Save & Check. Wait for me to finish. Reuse an existing working key.
+        5. Read `\(appName) config show` again. Key record presence is not proof of readable credentials or a working connection; only a passed check for the current setup confirms success. Save & Check already sends one test request, so do not duplicate a successful check.
+        6. On Keychain, authorization or permission errors, stop immediately and explain the error and the next user action in the app. Never repeatedly import keys, reset the configuration, delete Keychain items or weaken permissions to work around a failure.
+        7. For a network, HTTP or model error, use the existing diagnostic first. Make at most one cause-based correction and one retry with `\(appName) check --verbose`; then stop and report any remaining blocker. Finish with `\(appName) config show`, distinguishing saved configuration from a passed connection.
 
         If you can't run commands, write out each one for me; I'll paste them into Terminal and send you the output.
         """
@@ -51,12 +52,15 @@ public enum SetupGuide {
           headers    JSON object of extra HTTP headers (string values). Empty clears it.
                      Authorization, x-api-key and x-goog-api-key are not allowed: they carry the key.
 
-        API KEY (stored in the macOS Keychain, never printed)
+        API KEY (prefer Settings > General > API Key > Save & Check)
+          Enter the key directly in the app. It is stored in macOS Keychain and never shown.
+          For deliberate terminal use only:
           pbpaste | \(appName) config set api-key --stdin
           \(appName) config set api-key --env NAME
           \(appName) config set api-key --file PATH
           The key is sent as Authorization: Bearer (chat-completions), x-api-key (anthropic-messages)
           or x-goog-api-key (gemini-generate-content).
+          On Keychain access errors, stop and retry in the app. Do not reset or delete the old key.
 
         OTHER COMMANDS
           \(appName) config show        Current setup and whether it passed a check

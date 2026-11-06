@@ -79,7 +79,9 @@ Howler writes with one model service. The setup is short enough to hand to an AI
   <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General contains model setup, reply language, login and update preferences">
 </p>
 
-Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It asks which service and model you want, checks the official docs, writes the setup and runs a check until it passes. It never asks for your API key in the chat. When it needs the key, it asks you to copy it, then runs `pbpaste | Howler config set api-key --stdin`, which sends the key straight into the Keychain.
+Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It configures the service, model and request parameters. Then return to **General › API Key**, choose **Add Key** or **Replace Key**, paste the key into the secure field, and click **Save & Check**. The key goes directly into macOS Keychain; never send it in the assistant's chat.
+
+Save & Check sends one test request with a 30-second connection deadline. A saved key record does not prove the key is readable or the service works. Keychain access failures keep their diagnostic code and stop the flow; they never automatically delete and recreate the old key. For other failures, the setup prompt allows one diagnosed correction and retry before reporting the remaining problem.
 
 You can run the same commands yourself. They live in the app binary:
 
