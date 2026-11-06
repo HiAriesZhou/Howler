@@ -178,6 +178,7 @@ final class PanelController {
         burnCompletion = nil
         panel.orderOut(nil)
         panel.contentView = letterContent
+        desiredPaperHeight = Self.minPaperHeight
         isHiding = false
     }
 
@@ -219,7 +220,6 @@ final class PanelController {
         guard let visible = screen?.visibleFrame else { return }
         let paperTop = visible.maxY - visible.height * 0.16
         maxPaperHeight = max(Self.minPaperHeight, min(Self.a4Height, paperTop - visible.minY - 16))
-        desiredPaperHeight = Self.minPaperHeight
         let size = Self.windowSize(paperHeight: paperHeight)
         panel.setFrame(
             NSRect(
