@@ -134,7 +134,7 @@ Capture and Explain sends your selected region to the configured model immediate
 
 Further screenshots add introductions to the same queue. The input shows which screenshot a question refers to and lets you change it. A new capture does not silently change existing drafts or queued questions. Click the amber seal to preview the selected image.
 
-Settings has three tabs: General, Prompt and Shortcut. Capture and Explain stays in Shortcut, with a switch and its shortcut recorder. Turning it off disables capture from the shortcut and Attach; existing replies continue. The menu bar menu keeps only Quit's power icon.
+Settings has three tabs: General, Prompt and Shortcut. Capture and Explain stays in Shortcut, with a small breaker to the right of its shortcut recorder. Pulling the breaker off covers the disabled shortcut with a static cloud. Turning it off disables capture from the shortcut and Attach; existing replies continue. The menu bar menu uses complete, left-aligned text labels without icons.
 
 Settings › General › Reply language follows your macOS preferred language by default, regardless of the screenshot language, or lets you choose a language. An explicit language request in a question overrides the default for that turn. Custom system instructions may affect how well the model follows it.
 
