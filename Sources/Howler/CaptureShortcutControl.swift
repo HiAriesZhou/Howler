@@ -6,7 +6,7 @@ struct CaptureShortcutControl: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            HotKeyRecorder(settings: settings, screenshot: true)
+            HotKeyRecorder(settings: settings, action: .capture)
                 .disabled(!settings.captureAndExplainEnabled)
                 .overlay {
                     if !settings.captureAndExplainEnabled {

@@ -2,6 +2,34 @@ import Foundation
 import HowlerCore
 import ServiceManagement
 
+enum ShortcutAction: CaseIterable {
+    case letter, settings, capture
+
+    var standard: HotKeyCombo {
+        switch self {
+        case .letter: .standard
+        case .settings: .settings
+        case .capture: .screenshot
+        }
+    }
+
+    var name: String {
+        switch self {
+        case .letter: "Open \(AppInfo.name)"
+        case .settings: "Open Settings"
+        case .capture: "Capture and Explain"
+        }
+    }
+
+    var defaultsKey: String {
+        switch self {
+        case .letter: "hotKey"
+        case .settings: "settingsHotKey"
+        case .capture: "screenshotHotKey"
+        }
+    }
+}
+
 /// The only persisted state: the model service, its last check, the system prompt's
 /// instructions, reply language and shortcuts (UserDefaults), plus the API key (Keychain). Conversations
 /// are never stored.
@@ -22,10 +50,12 @@ final class AppSettings: ObservableObject {
     @Published private(set) var replyLanguage: String
     @Published private(set) var connectionVersion = UUID()
     @Published private(set) var hotKey: HotKeyCombo
+    @Published private(set) var settingsHotKey: HotKeyCombo
     @Published private(set) var screenshotHotKey: HotKeyCombo
     @Published private(set) var captureAndExplainEnabled: Bool
     @Published var screenshotHotKeyRegistered = true
-    @Published var recordingScreenshot = false
+    @Published var settingsHotKeyRegistered = true
+    @Published var recordingAction: ShortcutAction = .letter
     /// Set by the app delegate after trying to register `hotKey`.
     @Published var hotKeyRegistered = true
     /// While Settings records a new shortcut, the global one is suspended.
@@ -47,6 +77,7 @@ final class AppSettings: ObservableObject {
         static let hotKey = "hotKey"
         /// Set once the move of the default off ⌥Space has been applied to stored settings.
         static let hotKeyDefaultChecked = "hotKeyDefaultChecked"
+        static let configurableSettingsShortcutChecked = "configurableSettingsShortcutChecked"
     }
 
     enum LoginItemState: Equatable {
@@ -68,7 +99,19 @@ final class AppSettings: ObservableObject {
             if stored == nil { defaults.removeObject(forKey: DefaultsKey.hotKey) }
             defaults.set(true, forKey: DefaultsKey.hotKeyDefaultChecked)
         }
+        // Before Settings was configurable, stored ⌥, was a mistaken letter default
+        // from 0.1.8/0.1.9. Migrate it once; later deliberate assignments must survive.
+        if !defaults.bool(forKey: DefaultsKey.configurableSettingsShortcutChecked) {
+            if stored?.isSettings == true {
+                stored = nil
+                defaults.removeObject(forKey: DefaultsKey.hotKey)
+            }
+            defaults.set(true, forKey: DefaultsKey.configurableSettingsShortcutChecked)
+        }
         hotKey = HotKeyCombo.effective(stored: stored)
+        settingsHotKey = defaults.data(forKey: ShortcutAction.settings.defaultsKey)
+            .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
+            .flatMap { $0.isValid ? $0 : nil } ?? .settings
         replyLanguage = store.replyLanguage
         screenshotHotKey = defaults.data(forKey: "screenshotHotKey")
             .flatMap { try? JSONDecoder().decode(HotKeyCombo.self, from: $0) }
@@ -208,33 +251,45 @@ final class AppSettings: ObservableObject {
 
     // MARK: Hotkey
 
-    func setHotKey(_ combo: HotKeyCombo) {
-        guard combo.isValid, !combo.matches(screenshotHotKey) else { return }
-        hotKey = combo
-        if let data = try? JSONEncoder().encode(combo) {
-            defaults.set(data, forKey: DefaultsKey.hotKey)
+    func shortcut(for action: ShortcutAction) -> HotKeyCombo {
+        switch action {
+        case .letter: hotKey
+        case .settings: settingsHotKey
+        case .capture: screenshotHotKey
         }
     }
 
-    /// Back to the default by forgetting the recorded shortcut, so a future default applies too.
-    func resetHotKey() {
-        hotKey = .standard
-        defaults.removeObject(forKey: DefaultsKey.hotKey)
+    func shortcutConflict(_ combo: HotKeyCombo, for action: ShortcutAction) -> ShortcutAction? {
+        ShortcutAction.allCases.first { $0 != action && combo.matches(shortcut(for: $0)) }
     }
 
-    func setScreenshotHotKey(_ combo: HotKeyCombo) {
-        guard combo.isValid, !combo.matches(hotKey) else { return }
-        screenshotHotKey = combo
-        if let data = try? JSONEncoder().encode(combo) { defaults.set(data, forKey: "screenshotHotKey") }
+    @discardableResult
+    func setShortcut(_ combo: HotKeyCombo, for action: ShortcutAction) -> Bool {
+        guard combo.isValid, shortcutConflict(combo, for: action) == nil else { return false }
+        switch action {
+        case .letter: hotKey = combo
+        case .settings: settingsHotKey = combo
+        case .capture: screenshotHotKey = combo
+        }
+        if let data = try? JSONEncoder().encode(combo) { defaults.set(data, forKey: action.defaultsKey) }
+        return true
     }
 
-    func resetScreenshotHotKey() {
-        screenshotHotKey = .screenshot
-        defaults.removeObject(forKey: "screenshotHotKey")
+    /// Forget a custom shortcut only when its default is available.
+    @discardableResult
+    func resetShortcut(for action: ShortcutAction) -> Bool {
+        guard setShortcut(action.standard, for: action) else { return false }
+        defaults.removeObject(forKey: action.defaultsKey)
+        return true
     }
+
+    func setHotKey(_ combo: HotKeyCombo) { setShortcut(combo, for: .letter) }
+    func resetHotKey() { resetShortcut(for: .letter) }
+    func setScreenshotHotKey(_ combo: HotKeyCombo) { setShortcut(combo, for: .capture) }
+    func resetScreenshotHotKey() { resetShortcut(for: .capture) }
 
     func setCaptureAndExplainEnabled(_ enabled: Bool) {
-        if !enabled, recordingScreenshot { isRecordingHotKey = false }
+        if !enabled, recordingAction == .capture { isRecordingHotKey = false }
         captureAndExplainEnabled = enabled
         defaults.set(enabled, forKey: "captureAndExplainEnabled")
     }

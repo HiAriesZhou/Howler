@@ -175,9 +175,13 @@ struct ShortcutPane: View {
                     }
                     Divider()
                     SettingsRow("Open Settings", detail: "Available from any app.") {
-                        Text(HotKeyCombo.settings.display)
-                            .foregroundStyle(.secondary)
-                            .frame(minWidth: 64)
+                        HotKeyRecorder(settings: settings, action: .settings)
+                    }
+                    if !settings.settingsHotKeyRegistered {
+                        Text("\(settings.settingsHotKey.display) is unavailable. Choose another shortcut, or open Settings from the menu bar.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
