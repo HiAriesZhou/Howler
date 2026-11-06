@@ -34,7 +34,7 @@ final class SettingsLayoutTests: XCTestCase {
         settings.recordingAction = .capture
         controller.show(tab: .prompt)
         XCTAssertFalse(settings.isRecordingHotKey)
-        settings.setCaptureAndExplainEnabled(false)
+        settings.setScreenshotHotKey(nil)
         settings.screenshotHotKeyRegistered = false
         controller.show(tab: .shortcut)
         try await Task.sleep(nanoseconds: 400_000_000)

@@ -167,8 +167,8 @@ struct ShortcutPane: View {
                     SettingsRow("Open \(AppInfo.name)", detail: "Show or hide the letter from any app.") {
                         HotKeyRecorder(settings: settings)
                     }
-                    if !settings.hotKeyRegistered {
-                        Text("\(settings.hotKey.display) is already used by another app. Choose a different shortcut, or open \(AppInfo.name) from the menu bar.")
+                    if let combo = settings.hotKey, !settings.hotKeyRegistered {
+                        Text("\(combo.display) is already used by another app. Choose a different shortcut, or open \(AppInfo.name) from the menu bar.")
                             .font(.caption)
                             .foregroundStyle(.red)
                             .fixedSize(horizontal: false, vertical: true)
@@ -177,8 +177,8 @@ struct ShortcutPane: View {
                     SettingsRow("Open Settings", detail: "Available from any app.") {
                         HotKeyRecorder(settings: settings, action: .settings)
                     }
-                    if !settings.settingsHotKeyRegistered {
-                        Text("\(settings.settingsHotKey.display) is unavailable. Choose another shortcut, or open Settings from the menu bar.")
+                    if let combo = settings.settingsHotKey, !settings.settingsHotKeyRegistered {
+                        Text("\(combo.display) is unavailable. Choose another shortcut, or open Settings from the menu bar.")
                             .font(.caption)
                             .foregroundStyle(.red)
                             .fixedSize(horizontal: false, vertical: true)
@@ -188,19 +188,21 @@ struct ShortcutPane: View {
             SettingsSection(nil) {
                 VStack(alignment: .leading, spacing: 12) {
                     SettingsRow("Capture and Explain", detail: "Select a region to send it and start an explanation.") {
-                        CaptureShortcutControl(settings: settings)
+                        HotKeyRecorder(settings: settings, action: .capture)
                     }
-                    if settings.captureAndExplainEnabled && !settings.screenshotHotKeyRegistered {
-                        Text("\(settings.screenshotHotKey.display) is unavailable. Choose another capture shortcut.")
+                    if let combo = settings.screenshotHotKey, !settings.screenshotHotKeyRegistered {
+                        Text("\(combo.display) is unavailable. Choose another capture shortcut.")
                             .font(.caption)
                             .foregroundStyle(.red)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            Text(settings.captureAndExplainEnabled
-                 ? "Screenshots are sent to your model immediately. Leave out passwords and other secrets."
-                 : "Capture is off. Its shortcut and the capture action in Attach are disabled. Replies already in progress continue.")
+            Text("Leave a shortcut empty to disable it. Use the clear button, or press Delete while recording. Menu actions remain available.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Screenshots are sent to your model immediately. Leave out passwords and other secrets.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

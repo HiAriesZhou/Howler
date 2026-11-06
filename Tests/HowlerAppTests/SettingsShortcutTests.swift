@@ -27,12 +27,11 @@ final class SettingsShortcutTests: XCTestCase {
         }
     }
 
-    func testAllActionPairsRejectConflictsEvenWhenCaptureIsOff() throws {
+    func testAllConfiguredActionPairsRejectConflicts() throws {
         try withSettings { settings, defaults in
-            settings.setCaptureAndExplainEnabled(false)
             for action in ShortcutAction.allCases {
                 for other in ShortcutAction.allCases where action != other {
-                    var conflict = settings.shortcut(for: other)
+                    var conflict = try XCTUnwrap(settings.shortcut(for: other))
                     conflict.keyLabel = "Different keyboard label"
                     XCTAssertEqual(settings.shortcutConflict(conflict, for: action), other)
                     XCTAssertFalse(settings.setShortcut(conflict, for: action))
@@ -99,15 +98,48 @@ final class SettingsShortcutTests: XCTestCase {
         }
     }
 
-    func testCaptureSwitchOnlyCancelsTheCaptureRecorder() throws {
-        try withSettings { settings, _ in
+    func testEmptyShortcutsPersistAndResetIsDifferentFromClearing() throws {
+        try withSettings { settings, defaults in
             for action in ShortcutAction.allCases {
-                settings.setCaptureAndExplainEnabled(true)
-                settings.recordingAction = action
-                settings.isRecordingHotKey = true
-                settings.setCaptureAndExplainEnabled(false)
-                XCTAssertEqual(settings.isRecordingHotKey, action != .capture)
+                XCTAssertTrue(settings.setShortcut(nil, for: action))
+                XCTAssertNotNil(defaults.data(forKey: action.defaultsKey))
+            }
+            let reopened = AppSettings(defaults: defaults, keys: MemoryKeys().access)
+            for action in ShortcutAction.allCases {
+                XCTAssertNil(reopened.shortcut(for: action))
+                XCTAssertTrue(reopened.resetShortcut(for: action))
+                XCTAssertNil(defaults.data(forKey: action.defaultsKey))
+            }
+            let reset = AppSettings(defaults: defaults, keys: MemoryKeys().access)
+            for action in ShortcutAction.allCases {
+                XCTAssertEqual(reset.shortcut(for: action), action.standard)
             }
         }
+    }
+
+    func testClearingReleasesTheCombinationAndResetStillChecksConflicts() throws {
+        for action in ShortcutAction.allCases {
+            try withSettings { settings, defaults in
+                let other = try XCTUnwrap(ShortcutAction.allCases.first { $0 != action })
+                XCTAssertTrue(settings.setShortcut(nil, for: action))
+                XCTAssertTrue(settings.setShortcut(action.standard, for: other))
+                XCTAssertFalse(settings.resetShortcut(for: action))
+                XCTAssertNil(settings.shortcut(for: action))
+                let reopened = AppSettings(defaults: defaults, keys: MemoryKeys().access)
+                XCTAssertNil(reopened.shortcut(for: action))
+                XCTAssertEqual(reopened.shortcut(for: other), action.standard)
+            }
+        }
+    }
+
+    func testExplicitEmptyValuesSurviveFirstLaunchMigrations() throws {
+        let suite = "HowlerTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for action in ShortcutAction.allCases {
+            try defaults.set(JSONEncoder().encode(Optional<HotKeyCombo>.none), forKey: action.defaultsKey)
+        }
+        let settings = AppSettings(defaults: defaults, keys: MemoryKeys().access)
+        for action in ShortcutAction.allCases { XCTAssertNil(settings.shortcut(for: action)) }
     }
 }

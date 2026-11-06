@@ -76,7 +76,7 @@ v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以�
 Howler 只连接一个模型服务。配置步骤很少，可以直接交给 AI 助手完成。
 
 <p align="center">
-  <img src="docs/images/settings.png" width="560" alt="Howler 设置分为 General、Prompt、Shortcut 三页；General 包含模型设置、回复语言、开机启动和更新选项">
+  <img src="docs/images/settings.png" width="560" alt="Howler 设置分为 General、Prompt、Shortcut 三个标签页。三个动作的快捷键都可修改或清空：点击清空按钮，或在录制时按 Delete，即可停用该全局快捷键；空值在重启后保留。点恢复按钮可恢复默认按键，录制和恢复默认时都会检查是否被其他动作占用。菜单中的打开入口和 Attach 中的手动截图仍可使用，已有回答继续完成。菜单栏菜单全部使用无图标、左对齐的完整文字标签。
 </p>
 
 打开 **Settings › General › Copy Setup Prompt**，把复制的提示词粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪家服务、哪个模型，查官方文档，写入配置，然后检查直到通过。它不会让你把 API Key 发到聊天里：需要 Key 时，它请你先复制，再运行 `pbpaste | Howler config set api-key --stdin`，Key 直接存进钥匙串。
@@ -120,9 +120,9 @@ $H config show
 
 | | |
 | --- | --- |
-| **⌥H** | 呼出或聚焦信纸；已聚焦时再按一次暂时收起，内容保留。可在 Settings › Shortcut 中修改 |
-| **⌥⇧H** | 框选截图，完成后立即发送并自动介绍。可在 Settings › Shortcut 中开启、关闭或修改快捷键 |
-| **⌥,** | 在任何应用里打开设置。可在 Settings › Shortcut 中修改 |
+| **⌥H** | 呼出或聚焦信纸；已聚焦时再按一次暂时收起，内容保留。可在 Settings › Shortcut 中修改或清空 |
+| **⌥⇧H** | 框选截图，完成后立即发送并自动介绍。可在 Settings › Shortcut 中修改或清空快捷键 |
+| **⌥,** | 在任何应用里打开设置。可在 Settings › Shortcut 中修改或清空 |
 | **↩** / **⌥↩** | 发送 / 换行 |
 | **⌘C** | 复制最新一条回答（也可点 ❧ Copy）；选中了文字时只复制选中的部分 |
 | **+ Attach** | 从剪贴板粘贴，或截取屏幕区域 |
@@ -143,7 +143,7 @@ $H config show
 ## 隐私
 
 - 从不保存聊天历史：焚烧信纸或退出应用会清空消息和回答解析缓存；暂时收起仍保留在内存。截屏会使用临时 PNG 文件，Howler 读取后会尝试删除。
-- 只持久化这些：模型配置、最近一次检查结果、系统提示词的指令、两个快捷键、截图开关和回答语言偏好（UserDefaults），以及 API Key（钥匙串）。
+- 只持久化这些：模型配置、最近一次检查结果、系统提示词的指令、三个可留空的快捷键和回答语言偏好（UserDefaults），以及 API Key（钥匙串）。
 - 系统提示词带 UTC 日期；每次任务另带必要的回答语言指令，不发送完整系统语言列表、名字、地区、时区或所在地。
 - 只在你粘贴或截屏时读取剪贴板和屏幕。截图并解释会在框选完成后立即发送到你配置的服务；本地焚烧不代表删除服务端保留的数据。
 - 不记录日志，没有统计或遥测；网络请求使用 ephemeral `URLSession`。
