@@ -174,6 +174,16 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
     /// Demo: draws the window, title bar and toolbar included, into a PNG. Unlike
     /// `screencapture` it needs no screen-recording permission.
     func snapshot(to path: String) {
+        // Optional window-only OS capture includes composited toolbar materials that
+        // cacheDisplay cannot reproduce. It requires screen-recording permission.
+        if ProcessInfo.processInfo.environment["HOWLER_DEMO_NATIVE_SNAPSHOT"] == "1", let window {
+            let capture = Process()
+            capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            capture.arguments = ["-x", "-o", "-l", String(window.windowNumber), path]
+            try? capture.run()
+            capture.waitUntilExit()
+            return
+        }
         guard let frameView = window?.contentView?.superview else { return }
         frameView.layoutSubtreeIfNeeded()
         guard let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) else { return }

@@ -15,6 +15,7 @@ import SwiftUI
 /// `appicon` (renders the app icon into the folder `HOWLER_DEMO_OUT`; see scripts/icon.sh);
 /// `menu` opens the status menu, captures only its window to `HOWLER_DEMO_SNAPSHOT`, then quits;
 /// `HOWLER_DEMO_DARK=1` forces Dark Mode.
+/// `HOWLER_DEMO_NATIVE_SNAPSHOT=1` uses a window-only OS Settings capture (screen permission required).
 /// A demo never reads the installed app's preferences or writes a synthetic setup to disk.
 final class DemoDefaults: UserDefaults {
     private var values: [String: Any] = [:]

@@ -80,6 +80,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 - [ ] 设置窗口左上角有关闭和最小化按钮（没有缩放按钮），最小化可用；按 Esc 关闭设置窗口，录制快捷键或输入法组字时 Esc 只取消录制 / 组字
 - [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt / Shortcut 分段控件（图标 + 文字）在同一行且不截断；General 页保留模型、回答语言、开机启动、更新、反馈、隐私说明；设置页任何地方都不要求输入 API Key
+- [ ] Settings > Shortcut：截图快捷键和小电闸同一行，电闸在右侧；拉闸后静态阴云覆盖快捷键、快捷键不可编辑，电闸仍可通过鼠标、键盘和读屏开启；关闭时正在录制的快捷键立即结束；Reduce Motion 下手柄不动画
 - [ ] 切换标签：三页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
 - [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动
 - [ ] Check 失败使 General 变高：窗口平滑变高、上边缘不动，Prompt 页编辑框随之变高

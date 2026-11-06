@@ -184,18 +184,7 @@ struct ShortcutPane: View {
             SettingsSection(nil) {
                 VStack(alignment: .leading, spacing: 12) {
                     SettingsRow("Capture and Explain", detail: "Select a region to send it and start an explanation.") {
-                        Toggle("Capture and Explain", isOn: Binding(
-                            get: { settings.captureAndExplainEnabled },
-                            set: { settings.setCaptureAndExplainEnabled($0) }
-                        ))
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
-                        .labelsHidden()
-                    }
-                    Divider()
-                    SettingsRow("Keyboard shortcut", detail: nil) {
-                        HotKeyRecorder(settings: settings, screenshot: true)
-                            .disabled(!settings.captureAndExplainEnabled)
+                        CaptureShortcutControl(settings: settings)
                     }
                     if settings.captureAndExplainEnabled && !settings.screenshotHotKeyRegistered {
                         Text("\(settings.screenshotHotKey.display) is unavailable. Choose another capture shortcut.")
