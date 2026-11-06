@@ -31,6 +31,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 ## 2a. 信纸交互 / Letter interactions
 
 - [ ] 空白信纸：毛边、纤维纹理、中间折痕；左上角为当前模型服务的深红火漆印（蜡滴、下陷压印、浮雕字母、高光）；中间有花体提示
+- [ ] 未安装楷体、宋体等可下载字体时：信纸仍正常打开并显示文字，不触发字体下载或授权窗口；离线亦可打开
 - [ ] 系统为深色模式时纸张变暗为“烛光”色，文字与占位符仍为深色墨水
 - [ ] 右上角为淡色虚线圆圈 “+ Attach”；点击弹出菜单：Paste from Clipboard、Capture and Explain…
 - [ ] 复制一段文字后选择 Paste from Clipboard：右上角压上琥珀色火漆印（刻符文、文档图标），下方写 “Pasted text / N chars”；输入框**不**包含这段文字
@@ -79,7 +80,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 ## 3. 设置 / Settings
 
 - [ ] 设置窗口左上角有关闭和最小化按钮（没有缩放按钮），最小化可用；按 Esc 关闭设置窗口，录制快捷键或输入法组字时 Esc 只取消录制 / 组字
-- [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt / Shortcut 分段控件（图标 + 文字）在同一行且不截断；General 页保留模型、回答语言、开机启动、更新、反馈、隐私说明；设置页任何地方都不要求输入 API Key
+- [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt / Shortcut 分段控件（图标 + 文字）在同一行且不截断；General 页保留模型、API Key、回答语言、开机启动、更新、反馈、隐私说明；Key 只在 Add Key / Replace Key 密码输入窗口中输入
 - [ ] Settings > Shortcut：三个动作只显示快捷键录入及清空/恢复按钮，没有独立开关或雾效；空值显示 Not set，仍可点击录入；清空按钮有可读的辅助功能标签
 - [ ] 切换标签：三页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
 - [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动

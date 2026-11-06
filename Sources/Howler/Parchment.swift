@@ -100,15 +100,28 @@ enum Lettering {
     }
 
     private static func makeFont(_ name: String, size: CGFloat, cascade: [String]) -> Font {
-        guard let base = NSFont(name: name, size: size) else {
+        guard let base = installedFont(name, size: size) else {
             return .system(size: size, design: .serif)
         }
         let fallbacks = cascade
-            .filter { NSFont(name: $0, size: size) != nil }
-            .map { NSFontDescriptor(fontAttributes: [.name: $0]) }
-        let descriptor = base.fontDescriptor.addingAttributes([.cascadeList: fallbacks])
-        let font = NSFont(descriptor: descriptor, size: size) ?? base
-        return Font(font as CTFont)
+            .compactMap { installedFont($0, size: size) }
+            .map { CTFontCopyFontDescriptor($0) }
+        let descriptor = CTFontDescriptorCreateCopyWithAttributes(
+            CTFontCopyFontDescriptor(base), [kCTFontCascadeListAttribute: fallbacks] as CFDictionary
+        )
+        return Font(CTFontCreateWithFontDescriptorAndOptions(
+            descriptor, size, nil, [.preventAutoActivation, .preventAutoDownload]
+        ))
+    }
+
+    /// A name lookup must never block the letter on a font download or activation dialog.
+    static func installedFont(_ name: String, size: CGFloat) -> CTFont? {
+        let font = CTFontCreateWithNameAndOptions(
+            name as CFString, size, nil, [.preventAutoActivation, .preventAutoDownload]
+        )
+        // CoreText substitutes a different font for an unavailable name.
+        let names = [CTFontCopyPostScriptName(font), CTFontCopyFamilyName(font), CTFontCopyFullName(font)]
+        return names.contains { ($0 as String) == name } ? font : nil
     }
 }
 
