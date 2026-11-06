@@ -120,9 +120,9 @@ The model can't search the web: it answers from what it was trained on, and the 
 
 | | |
 | --- | --- |
-| **⌥H** | Show or focus the letter. Press again while focused to conceal it, keeping the conversation. Configurable in Settings › Shortcut. |
-| **⌥⇧H** | Capture a region, send it immediately and introduce it automatically. Enable, disable or change this shortcut in Settings › Shortcut. |
-| **⌥,** | Open Settings from any app. Change it in Settings › Shortcut |
+| **⌥H** | Show or focus the letter. Press again while focused to conceal it, keeping the conversation. Change or clear it in Settings › Shortcut. |
+| **⌥⇧H** | Capture a region, send it immediately and introduce it automatically. Change or clear this shortcut in Settings › Shortcut. |
+| **⌥,** | Open Settings from any app. Change or clear it in Settings › Shortcut |
 | **↩** / **⌥↩** | Send / new line |
 | **⌘C** | Copy the latest answer (or click ❧ Copy). With text selected, it copies the selection. |
 | **+ Attach** | Paste from the clipboard, or capture a screen region |
@@ -134,7 +134,7 @@ Capture and Explain sends your selected region to the configured model immediate
 
 Further screenshots add introductions to the same queue. The input shows which screenshot a question refers to and lets you change it. A new capture does not silently change existing drafts or queued questions. Click the amber seal to preview the selected image.
 
-Settings has three tabs: General, Prompt and Shortcut. Capture and Explain stays in Shortcut, with a small native switch to the right of its shortcut recorder. Turning it off adds a faint static haze while keeping the saved shortcut readable. Turning it off disables capture from the shortcut and Attach; existing replies continue. All three shortcuts are configurable and saved across restarts. A shortcut already assigned to another Howler action cannot be recorded or restored as a default. The menu bar menu uses complete, left-aligned text labels without icons.
+Settings has three tabs: General, Prompt and Shortcut. All three shortcuts can be changed or cleared in Shortcut. Click the clear button, or press Delete while recording, to disable that global shortcut; an empty field stays empty after restart. Restore its default with the reset button. Recording and resetting check conflicts against other configured shortcuts. Menu actions and manual capture in Attach remain available, and existing replies continue. The menu bar menu uses complete, left-aligned text labels without icons.
 
 Settings › General › Reply language follows your macOS preferred language by default, regardless of the screenshot language, or lets you choose a language. An explicit language request in a question overrides the default for that turn. Custom system instructions may affect how well the model follows it.
 
@@ -143,7 +143,7 @@ Concealing the letter, clicking outside or opening Settings keeps the conversati
 ## Privacy
 
 - No chat history, ever. Messages and parsed-answer caches are cleared when the letter burns or the app quits. A concealed letter stays in memory. A screen capture uses a temporary PNG that Howler attempts to delete after reading it.
-- Stored: the model setup, its last check, your system prompt instructions, both shortcuts, the capture switch and reply language preference (UserDefaults), plus the API key (Keychain).
+- Stored: the model setup, its last check, your system prompt instructions, three optional shortcuts and reply language preference (UserDefaults), plus the API key (Keychain).
 - The system prompt carries the date in UTC; tasks add the necessary reply language instruction. They send no full system language list, name, region, time zone or location.
 - The clipboard and the screen are read only when you paste or capture. Capture and Explain sends the selected region immediately. Burning local content does not delete data retained by your model service.
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.

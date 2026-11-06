@@ -269,7 +269,6 @@ final class PanelController {
         menu.addItem(paste)
         let capture = ClosureMenuItem(title: "Capture and Explain…") { [weak self] in self?.viewModel.captureScreen() }
         menu.autoenablesItems = false
-        capture.isEnabled = settings.captureAndExplainEnabled
         menu.addItem(capture)
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }

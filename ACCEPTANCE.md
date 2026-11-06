@@ -80,7 +80,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 - [ ] 设置窗口左上角有关闭和最小化按钮（没有缩放按钮），最小化可用；按 Esc 关闭设置窗口，录制快捷键或输入法组字时 Esc 只取消录制 / 组字
 - [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt / Shortcut 分段控件（图标 + 文字）在同一行且不截断；General 页保留模型、回答语言、开机启动、更新、反馈、隐私说明；设置页任何地方都不要求输入 API Key
-- [ ] Settings > Shortcut：截图快捷键和小电闸同一行，电闸在右侧；拉闸后静态阴云覆盖快捷键、快捷键不可编辑，电闸仍可通过鼠标、键盘和读屏开启；关闭时正在录制的快捷键立即结束；Reduce Motion 下手柄不动画
+- [ ] Settings > Shortcut：三个动作只显示快捷键录入及清空/恢复按钮，没有独立开关或雾效；空值显示 Not set，仍可点击录入；清空按钮有可读的辅助功能标签
 - [ ] 切换标签：三页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
 - [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动
 - [ ] Check 失败使 General 变高：窗口平滑变高、上边缘不动，Prompt 页编辑框随之变高
@@ -100,7 +100,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 退出并重启应用：模型服务、Key、快捷键仍然有效
 - [ ] 从 v0.1.8 / v0.1.9 升级：没录制过快捷键的，升级后恢复为 ⌥H；录制过其他快捷键的保持不变
 - [ ] Open Settings 默认 ⌥,，可录制新组合并即时生效，重启后保留；旧组合不再打开设置，菜单仍可打开设置
-- [ ] 三个动作的快捷键互相检查冲突（包括关闭的截图动作）；恢复默认若冲突则提示并保留当前按键；Open Settings 改走后，⌥, 可分配给其他动作
+- [ ] 三个已配置快捷键互相检查冲突；清空后释放原组合供其他动作使用；恢复默认若冲突则提示并保留当前值（包括空值）
 - [ ] 录制任一快捷键期间暂停三个全局快捷键，Esc 取消录制，切换标签页或窗口失焦结束录制；设置快捷键被其他应用占用时显示提示
 - [ ] 从 v0.1.4 升级：没改过快捷键（或曾点过 ↺ 恢复 ⌥Space）的，升级后跟随默认快捷键；录制过其他快捷键的保持不变；升级后再特意录制 ⌥Space，重启后仍是 ⌥Space
 
@@ -121,8 +121,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 ### 3b. 通用 / General
 
 - [ ] Shortcut → Open Howler：点按钮后按 ⌃⌥K，⌃⌥K 可呼出、⌥H 不再响应；录制中按 Esc 取消
-- [ ] Shortcut → Capture and Explain 常驻显示，默认开启、快捷键 ⌥⇧H；关闭后快捷键不再截图，Attach 中截图项不可用，已有回答继续；重新开启恢复原快捷键，退出再启动仍保留开关和快捷键
-- [ ] 截图快捷键录制中关闭 Capture and Explain：录制立即取消，普通快捷键恢复可用；关闭时不显示“快捷键不可用”的冲突警告
+- [ ] Shortcut → Capture and Explain 默认 ⌥⇧H；清空后不再通过快捷键触发截图，Attach 中的手动截图仍可用，正在框选的截图和已有回答不受影响；重启后仍为空
+- [ ] 三个录入框都支持录制时按 Delete 清空、Esc 取消；空值不显示注册失败警告；清空 Open Howler / Open Settings 后仍能从菜单打开
 - [ ] Keyboard shortcut：只含 ⇧ 的组合提示需加 ⌘/⌥/⌃；⌘V、⌘C、⌘Space 等系统快捷键被拒绝；被其他应用占用时显示红色提示；点 ↺ 恢复 ⌥H
 - [ ] Keyboard shortcut：开始录制后切到其他窗口或关闭设置窗口，录制自动结束，原快捷键恢复可用
 - [ ] General → Launch at login：打开后注销重新登录，Howler 自动启动（若提示需批准，按提示到“登录项”中允许）
@@ -208,4 +208,4 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 - [ ] tag 构建缺少 Developer ID 证书时失败，不发布 ad-hoc 包；普通分支构建仍允许 ad-hoc 签名
 - [ ] 推送不一致的 tag：CI 的 “Publish release” 步骤失败并说明原因
 
-- [ ] Capture and Explain 使用小尺寸原生开关，位于快捷键右侧；开关关闭时轻雾覆盖快捷键但字符仍可读，浅色/深色模式及键盘操作正常。
+- [ ] 旧截图开关关闭的配置升级后迁移为空快捷键；重新录入或恢复默认后重启，不会被旧开关再次停用

@@ -10,7 +10,7 @@ struct HotKeyRecorder: View {
     @ObservedObject var settings: AppSettings
 
     var action: ShortcutAction = .letter
-    private var combo: HotKeyCombo { settings.shortcut(for: action) }
+    private var combo: HotKeyCombo? { settings.shortcut(for: action) }
     private var standard: HotKeyCombo { action.standard }
     private var recording: Bool { settings.isRecordingHotKey && settings.recordingAction == action }
 
@@ -25,7 +25,7 @@ struct HotKeyRecorder: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            // Reset sits to the left so the shortcut button keeps to the row's trailing edge.
+            // Reset precedes the recorder; reserve the clear slot even when empty.
             if combo != standard && !recording {
                 Button {
                     hint = nil
@@ -44,11 +44,29 @@ struct HotKeyRecorder: View {
             Button {
                 recording ? stopRecording() : startRecording()
             } label: {
-                Text(recording ? "Type a shortcut…" : combo.display)
+                Text(recording ? "Type a shortcut…" : combo?.display ?? "Not set")
+                    .foregroundStyle(combo == nil && !recording ? .secondary : .primary)
                     .frame(minWidth: 64)
             }
             .accessibilityLabel("\(action.name) shortcut")
-            .accessibilityValue(recording ? "Recording" : combo.display)
+            .accessibilityValue(recording ? "Recording" : combo?.display ?? "Not set, disabled")
+            .help("Click to record. Delete clears the shortcut; Esc cancels.")
+            if combo != nil && !recording {
+                Button {
+                    hint = nil
+                    settings.setShortcut(nil, for: action)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .help("Clear shortcut")
+                .accessibilityLabel("Clear \(action.name) shortcut")
+            } else {
+                Color.clear.frame(width: 20, height: 20).accessibilityHidden(true)
+            }
         }
         .onDisappear(perform: stopRecording)
         // Settings ends recording when its page is switched away (the page stays mounted).
@@ -76,8 +94,14 @@ struct HotKeyRecorder: View {
     }
 
     private func record(_ event: NSEvent) {
-        if event.keyCode == 53 && event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty {
+        if event.keyCode == 53 && Self.modifiers(event.modifierFlags).isEmpty {
             stopRecording() // bare Esc cancels
+            return
+        }
+        if [51, 117].contains(event.keyCode),
+           Self.modifiers(event.modifierFlags).isEmpty {
+            settings.setShortcut(nil, for: action)
+            stopRecording()
             return
         }
         // The unshifted character, so ⇧⌘1 reads "⇧⌘1" rather than "⇧⌘!".
