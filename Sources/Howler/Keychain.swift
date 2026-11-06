@@ -3,10 +3,19 @@ import Security
 
 struct KeychainError: LocalizedError {
     let status: OSStatus
+    var operation = "access"
 
     var errorDescription: String? {
+        let context = "Keychain \(operation) (OSStatus \(status))"
+        switch status {
+        case errSecAuthFailed, errSecInteractionNotAllowed:
+            return "\(context): access was denied or requires authorization. Open \(AppInfo.name) Settings and retry there. Do not reset your configuration."
+        case errSecUserCanceled:
+            return "\(context): authorization was cancelled."
+        default: break
+        }
         let message = SecCopyErrorMessageString(status, nil) as String? ?? "OSStatus \(status)"
-        return "Keychain: \(message)"
+        return "\(context): \(message)"
     }
 }
 
@@ -14,6 +23,13 @@ struct KeychainError: LocalizedError {
 /// (service = bundle identifier, account = api-key:<destination scope>).
 /// Older installations use api-key or a provider ID until migrated.
 enum Keychain {
+    struct Operations {
+        var update: (CFDictionary, CFDictionary) -> OSStatus = SecItemUpdate
+        var add: (CFDictionary, UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus = SecItemAdd
+        var delete: (CFDictionary) -> OSStatus = SecItemDelete
+        var copy: (CFDictionary, UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus = SecItemCopyMatching
+    }
+
     private static var service: String { AppInfo.bundleIdentifier }
 
     private static func baseQuery(account: String) -> [String: Any] {
@@ -24,10 +40,10 @@ enum Keychain {
         ]
     }
 
-    static func set(_ value: String, account: String) throws {
+    static func set(_ value: String, account: String, operations: Operations = Operations()) throws {
         let data = Data(value.utf8)
         let query = baseQuery(account: account)
-        let updateStatus = SecItemUpdate(
+        let updateStatus = operations.update(
             query as CFDictionary,
             [kSecValueData as String: data] as CFDictionary
         )
@@ -36,33 +52,31 @@ enum Keychain {
             return
         case errSecItemNotFound:
             break
-        case errSecAuthFailed, errSecInteractionNotAllowed:
-            // The item's access list names an earlier code identity (ad-hoc signatures change
-            // on every rebuild). Replace it so the key is stored under the current identity.
-            let deleteStatus = SecItemDelete(query as CFDictionary)
-            guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
-                throw KeychainError(status: deleteStatus)
-            }
         default:
-            throw KeychainError(status: updateStatus)
+            // Access denial is not proof of an obsolete identity. Never delete a
+            // credential to work around authorization or interaction failures.
+            throw KeychainError(status: updateStatus, operation: "save")
         }
 
         var item = query
         item[kSecValueData as String] = data
         item[kSecAttrLabel as String] = "\(AppInfo.name) API key (\(account))"
-        let addStatus = SecItemAdd(item as CFDictionary, nil)
-        guard addStatus == errSecSuccess else { throw KeychainError(status: addStatus) }
+        let addStatus = operations.add(item as CFDictionary, nil)
+        guard addStatus == errSecSuccess else { throw KeychainError(status: addStatus, operation: "save") }
     }
 
-    static func get(account: String) -> String? {
+    static func get(account: String, operations: Operations = Operations()) throws -> String? {
         var query = baseQuery(account: account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data
-        else { return nil }
-        return String(data: data, encoding: .utf8)
+        let status = operations.copy(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else { throw KeychainError(status: status, operation: "read") }
+        guard let data = result as? Data, let value = String(data: data, encoding: .utf8) else {
+            throw KeychainError(status: errSecDecode, operation: "read")
+        }
+        return value
     }
 
     /// Checks presence via attributes only, which never triggers a keychain access prompt.

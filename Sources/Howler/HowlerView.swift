@@ -14,6 +14,8 @@ struct HowlerView: View {
     let showProviderMenu: () -> Void
     /// Offers "Paste from Clipboard" and "Capture Screen Region".
     let showAttachMenu: () -> Void
+    var burnLetter: () -> Void = {}
+    var registerDismiss: (@escaping () -> Bool) -> Void = { _ in }
     /// Reports the sheet height the content would like (the controller clamps it).
     let onDesiredHeight: (CGFloat) -> Void
 
@@ -24,30 +26,35 @@ struct HowlerView: View {
     @State private var footerHeight: CGFloat = 0
     @State private var unfolded = true
     @State private var showingContext = false
-    @State private var sheetSize: CGSize = .zero
-    @State private var burnField: BurnField?
+    @State private var hoveringBurn = false
 
     var body: some View {
         let parchment = Parchment.forScheme(viewModel.candlelit ? .dark : .light)
-        TimelineView(.animation(paused: viewModel.burnStartedAt == nil)) { timeline in
-            let progress = burnProgress(at: timeline.date)
+        ZStack(alignment: .top) {
+            shadow
             ZStack(alignment: .top) {
-                // The shadow goes with the first flames, so no outline of the sheet lingers.
-                shadow.opacity(1 - min(max((progress ?? 0) * 3, 0), 1))
-                ZStack(alignment: .top) {
-                    sheet(parchment)
-                    if settings.isConfigured {
-                        letter(parchment)
-                    } else {
-                        SetupPage(pressKey: viewModel.openCount, openSettings: openSettings)
-                    }
+                sheet(parchment)
+                if settings.isConfigured {
+                    letter(parchment)
+                } else {
+                    SetupPage(pressKey: viewModel.openCount, openSettings: openSettings)
                 }
-                .modifier(BurningLetter(field: burnField, progress: progress))
             }
-        }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { sheetSize = $0 }
-        .onChange(of: viewModel.burnStartedAt) { _, start in
-            burnField = start == nil ? nil : BurnField(size: sheetSize)
+            .overlay(alignment: .bottomTrailing) {
+                Button(action: burnLetter) {
+                    Image(systemName: "flame")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(parchment.seal)
+                        .frame(width: 40, height: 40)
+                        .background(parchment.seal.opacity(hoveringBurn ? 0.10 : 0), in: Circle())
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { hoveringBurn = $0 }
+                .help("Burn this letter · Esc")
+                .accessibilityLabel("Close and clear conversation")
+                .padding(.bottom, 8).padding(.trailing, 8)
+            }
         }
         .scaleEffect(unfolded ? 1 : 0.97, anchor: .top)
         .rotation3DEffect(.degrees(unfolded ? 0 : 10), axis: (x: 1, y: 0, z: 0), anchor: .top, perspective: 0.5)
@@ -55,9 +62,15 @@ struct HowlerView: View {
         .padding(margins)
         .environment(\.parchment, parchment)
         .environment(\.copyText, viewModel.copyText)
-        .onAppear(perform: focusInput)
+        .onAppear {
+            focusInput()
+            registerDismiss {
+                if showingContext { showingContext = false; return true }
+                return false
+            }
+        }
         .onChange(of: reduceMotion, initial: true) { _, reduced in
-            viewModel.quill.instant = reduced
+            viewModel.updateReduceMotion(reduced)
         }
         .onChange(of: viewModel.openCount) { _, _ in
             unfold()
@@ -65,7 +78,7 @@ struct HowlerView: View {
         }
         .onChange(of: viewModel.focusTick) { _, _ in focusInput() }
         .onChange(of: desiredHeight, initial: true) { _, height in onDesiredHeight(height) }
-        .onChange(of: viewModel.attachment == nil) { _, isEmpty in
+        .onChange(of: viewModel.previewAttachment == nil) { _, isEmpty in
             if isEmpty { showingContext = false }
         }
     }
@@ -76,11 +89,6 @@ struct HowlerView: View {
 
     private var desiredHeight: CGFloat {
         headerHeight + (hasTranscript ? transcriptHeight + footerHeight : 0)
-    }
-
-    private func burnProgress(at date: Date) -> Double? {
-        guard let start = viewModel.burnStartedAt, burnField != nil else { return nil }
-        return BurnField.progress(elapsed: date.timeIntervalSince(start))
     }
 
     // MARK: Sheet
@@ -111,7 +119,8 @@ struct HowlerView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 0) {
                 header(parchment)
-                if showingContext, let attachment = viewModel.attachment {
+                taskControls(parchment)
+                if showingContext, let attachment = viewModel.previewAttachment {
                     ContextCard(attachment: attachment) {
                         withAnimation(.easeOut(duration: 0.2)) { viewModel.removeAttachment() }
                     }
@@ -156,7 +165,7 @@ struct HowlerView: View {
             }
             .padding(.top, 9)
 
-            if viewModel.isStreaming {
+            if viewModel.queue.active != nil && !viewModel.queue.isPaused {
                 Button(action: viewModel.stop) {
                     Image(systemName: "stop.circle")
                         .font(.system(size: 19, weight: .regular))
@@ -170,14 +179,14 @@ struct HowlerView: View {
             sigil
         }
         .padding(.leading, 24)
-        .padding(.trailing, 20)
+        .padding(.trailing, 48)
         .padding(.top, 20)
         .padding(.bottom, 14)
     }
 
     @ViewBuilder
     private var sigil: some View {
-        if let attachment = viewModel.attachment {
+        if let attachment = viewModel.previewAttachment {
             Button {
                 withAnimation(.easeOut(duration: 0.2)) { showingContext.toggle() }
             } label: {
@@ -201,7 +210,68 @@ struct HowlerView: View {
     }
 
     private var placeholder: String {
-        viewModel.attachment == nil ? "Write upon the parchment…" : "Ask about it, or just press ↩…"
+        viewModel.queue.active != nil ? "Ask a follow-up while the quill writes…"
+            : (viewModel.previewAttachment == nil ? "Write upon the parchment…" : "Ask about it, or just press ↩…")
+    }
+
+    @ViewBuilder
+    private func taskControls(_ parchment: Parchment) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !viewModel.images.isEmpty {
+                HStack {
+                    Menu {
+                        Button("No image") { viewModel.selectDraftImage(nil) }
+                        ForEach(viewModel.images) { image in
+                            Button("Screenshot \(image.number)") { viewModel.selectDraftImage(image.id) }
+                        }
+                    } label: {
+                        let number = viewModel.image(viewModel.draftImageID)?.number
+                        Label(number.map { "Asking about screenshot \($0)" } ?? "No image selected", systemImage: "photo")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                    Spacer()
+                }
+            }
+            if viewModel.queue.isPaused {
+                Text(viewModel.queue.pauseReason ?? "Replies paused")
+                    .foregroundStyle(parchment.error).fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 16) {
+                    if viewModel.queue.active != nil {
+                        Button("Retry reply", action: viewModel.retry)
+                        Button("Skip and continue", action: viewModel.skipAndContinue)
+                    } else {
+                        Button("Continue with current setup", action: viewModel.skipAndContinue)
+                    }
+                }
+                .buttonStyle(.plain).foregroundStyle(parchment.seal)
+            }
+            let waiting = viewModel.queue.waiting
+            if !waiting.isEmpty {
+                Text("\(waiting.count) waiting · replies appear in order")
+                    .foregroundStyle(parchment.fadedInk)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(waiting) { task in
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(viewModel.displayQuestion(task)).lineLimit(2)
+                                Spacer(minLength: 8)
+                                if task.kind == .question {
+                                    Button("Edit") { viewModel.withdraw(task.id) }
+                                        .buttonStyle(.plain).foregroundStyle(parchment.seal)
+                                        .disabled(!viewModel.input.isEmpty || viewModel.attachment != nil)
+                                        .help("Restore to the empty input; sending it again places it at the end")
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(height: CGFloat(min(3, waiting.count)) * 36)
+            }
+        }
+        .font(Lettering.marginalia(12))
+        .padding(.horizontal, 28)
+        .padding(.bottom, viewModel.images.isEmpty && viewModel.queue.waiting.isEmpty && !viewModel.queue.isPaused ? 0 : 12)
     }
 
     private var stampHelp: String {
@@ -228,7 +298,8 @@ struct HowlerView: View {
             .font(Lettering.marginalia(11.5))
             .foregroundStyle(parchment.fadedInk)
         }
-        .padding(.horizontal, 26)
+        .padding(.leading, 26)
+        .padding(.trailing, 60)
         .padding(.top, 2)
         .padding(.bottom, 14)
     }

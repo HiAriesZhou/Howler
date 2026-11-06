@@ -314,6 +314,27 @@ final class StateSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testLanguagePreferenceInvalidatesChecksWithoutChangingConnection() throws {
+        try store.save(service())
+        try store.setAPIKey("fixture-secret-a")
+        let settings = AppSettings(defaults: defaults, keys: keys.access)
+        XCTAssertEqual(settings.replyLanguage, "system")
+        XCTAssertEqual(settings.apiKey(), "fixture-secret-a")
+        let connection = settings.connectionVersion
+        store.recordCheck(passed: true, message: nil, for: store.revision)
+        settings.setReplyLanguage("zh-Hant")
+        XCTAssertEqual(settings.resolvedReplyLanguage, "zh-Hant")
+        XCTAssertNil(store.lastCheck)
+        XCTAssertEqual(settings.connectionVersion, connection)
+        settings.setInstructions("Different instructions")
+        XCTAssertEqual(settings.connectionVersion, connection)
+        try store.setAPIKey("fixture-secret-b")
+        settings.reload()
+        XCTAssertNotEqual(settings.connectionVersion, connection)
+        XCTAssertEqual(settings.apiKey(), "fixture-secret-b")
+    }
+
+    @MainActor
     func testClosingTheConversationClearsParsedAnswers() async {
         let settings = AppSettings(defaults: defaults, keys: keys.access)
         let model = ChatViewModel(settings: settings)

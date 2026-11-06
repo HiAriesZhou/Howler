@@ -12,12 +12,12 @@ enum CLI {
 
     /// Runs a command-line invocation and returns its exit status, or nil when the
     /// arguments are not a command and the app should launch as usual.
-    static func run(_ arguments: [String]) -> Int32? {
+    static func run(_ arguments: [String], store suppliedStore: ServiceStore? = nil) -> Int32? {
         let args = Array(arguments.dropFirst())
         guard let command = args.first, commands.contains(command) else { return nil }
         // Keep stdout and stderr in order when piped (an assistant reads both).
         setvbuf(stdout, nil, _IOLBF, 0)
-        let store = ServiceStore()
+        let store = suppliedStore ?? ServiceStore()
         store.migrateLegacySetup()
         do {
             switch command {
@@ -69,7 +69,7 @@ enum CLI {
                 let service = try ServiceConfig.apply(fields, to: store.service)
                 try store.save(service)
                 print("Saved: \(service.summary)")
-                print(store.hasKey ? "Next: \(name) check" : "Next: pbpaste | \(name) config set api-key --stdin")
+                print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General > API Key, then Save & Check.")
             }
         case "reset":
             store.reset()
@@ -91,7 +91,7 @@ enum CLI {
             ("endpoint", service.endpointDescription),
             ("body", service.body.isEmpty ? "—" : JSONValue.compact(service.body)),
             ("headers", service.headers.isEmpty ? "—" : JSONValue.compact(service.headers.mapValues(JSONValue.string))),
-            ("api-key", store.hasKey ? "saved in Keychain" : "not set"),
+            ("api-key", store.hasKey ? "record present; access not verified" : "no record detected"),
             ("prompt", promptSummary(store)),
             ("check", checkSummary(store.lastCheck)),
         ]
@@ -138,12 +138,7 @@ enum CLI {
         default:
             throw ServiceConfigError.apiKeyOnCommandLine
         }
-        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty else { throw UsageError("The API key is empty. Copy it again and retry.") }
-        guard !key.contains(where: \.isWhitespace) else {
-            throw UsageError("That doesn't look like a single API key (it contains spaces or line breaks).")
-        }
-        try store.setAPIKey(key)
+        try store.setAPIKey(raw)
         print("API key saved in Keychain.")
         if store.service != nil { print("Next: \(name) check") }
     }
@@ -156,20 +151,28 @@ enum CLI {
             printError("No model service yet. See: \(name) config schema")
             return 1
         }
-        guard let key = store.apiKey(for: service), !key.isEmpty else {
-            printError("No API key saved. Copy it, then run: pbpaste | \(name) config set api-key --stdin")
+        let key: String
+        do {
+            guard let saved = try store.readAPIKey(for: service), !saved.isEmpty else {
+                throw ConfigurationFailure.missingKey
+            }
+            key = saved
+        } catch {
+            store.recordCheck(passed: false, message: error.localizedDescription, for: revision)
+            printError(error.localizedDescription)
+            printError("No model request was sent. Stop here; do not repeatedly import or reset the key.")
             return 1
         }
         guard store.revision == revision else {
             printError("The setup changed. Run check again for the current setup.")
             return 1
         }
-        if verbose { describeRequest(service: service, apiKey: key, systemPrompt: store.systemPrompt) }
+        if verbose { describeRequest(service: service, apiKey: key, systemPrompt: store.systemPrompt, replyLanguage: store.resolvedReplyLanguage) }
         print("Checking \(service.summary) …")
 
         let result = wait {
             try await ConnectionTester.test(
-                client: ChatClient(), service: service, apiKey: key, appName: name, systemPrompt: store.systemPrompt
+                client: ChatClient(), service: service, apiKey: key, appName: name, systemPrompt: store.systemPrompt, replyLanguage: store.resolvedReplyLanguage
             )
         }
         switch result {
@@ -195,11 +198,12 @@ enum CLI {
     }
 
     /// Prints the probe request as it will be sent, with the key masked.
-    private static func describeRequest(service: ModelService, apiKey: String, systemPrompt: String?) {
+    private static func describeRequest(service: ModelService, apiKey: String, systemPrompt: String?, replyLanguage: String) {
         do {
             let request = try RequestBuilder.streamingRequest(
                 service: service, apiKey: apiKey,
-                messages: ConnectionTester.probeMessages,
+                messages: [ChatMessage(role: .user, content: ConnectionTester.probePrompt,
+                                       taskInstructions: ReplyLanguage.instruction(replyLanguage))],
                 options: ConnectionTester.probeOptions(appName: name, systemPrompt: systemPrompt)
             )
             print("\(request.httpMethod ?? "POST") \(request.url?.absoluteString ?? "?")")

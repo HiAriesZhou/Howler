@@ -39,7 +39,7 @@ Press **⌥H** anywhere. A letter settles at the top of the screen, already seal
 - **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. Your question sits on a ruled line, and the answer is set in a book face below it. The sheet grows with the answer up to an A4 page, then follows the quill.
 - **A quill that writes.** Answers stream in at a hand's pace. Fresh ink glows gold before it settles to sepia, and the quill rests after the last word. While the model thinks, the quill hovers and counts the seconds.
 - **Wax seals.** The crimson seal names the model writing to you. Paste a long text or a picture, or capture a region of the screen, and it is sealed into an amber seal cut with runes instead of filling your question.
-- **Burn after reading.** Press Esc or click outside, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is saved.
+- **Burn after reading.** Press Esc or click the flame in the bottom-right corner, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is saved.
 
 <table>
   <tr>
@@ -76,10 +76,12 @@ Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, rig
 Howler writes with one model service. The setup is short enough to hand to an AI assistant.
 
 <p align="center">
-  <img src="docs/images/settings.png" width="460" alt="Howler Settings, General tab: the model with its host, status, Check and Copy Setup Prompt, then the shortcut and Launch at login">
+  <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General contains model setup, reply language, login and update preferences">
 </p>
 
-Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It asks which service and model you want, checks the official docs, writes the setup and runs a check until it passes. It never asks for your API key in the chat. When it needs the key, it asks you to copy it, then runs `pbpaste | Howler config set api-key --stdin`, which sends the key straight into the Keychain.
+Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It configures the service, model and request parameters. Then return to **General › API Key**, choose **Add Key** or **Replace Key**, paste the key into the secure field, and click **Save & Check**. The key goes directly into macOS Keychain; never send it in the assistant's chat.
+
+Save & Check sends one test request with a 30-second connection deadline. A saved key record does not prove the key is readable or the service works. Keychain access failures keep their diagnostic code and stop the flow; they never automatically delete and recreate the old key. For other failures, the setup prompt allows one diagnosed correction and retry before reporting the remaining problem.
 
 You can run the same commands yourself. They live in the app binary:
 
@@ -110,7 +112,7 @@ Changing the host, scheme, port or authentication format clears the saved key. S
 Every conversation starts with a short system prompt, shown in full in **Settings › Prompt**:
 
 - **The date, in UTC**, e.g. `Current date: 2026-10-29 (UTC).` Without it a model takes its training cutoff for today. UTC says nothing about your time zone or location. Howler adds it; it can't be edited.
-- **Instructions**, editable. The suggested ones ask for short answers without tables (the letter can't show them), in the language of your question. **Reset** brings them back.
+- **Instructions**, editable. The suggested ones ask for short answers without tables (the letter can't show them), following the reply language requested for the current task. **Reset** brings them back.
 
 Leave the instructions empty to turn the whole prompt off, date included, for models that reject a system prompt. A `body` that sets `system` (Anthropic) or `systemInstruction` / `system_instruction` (Gemini) replaces it.
 
@@ -120,22 +122,32 @@ The model can't search the web: it answers from what it was trained on, and the 
 
 | | |
 | --- | --- |
-| **⌥H** | Open the letter. Press again to burn it. The shortcut can be changed in Settings. |
-| **⌥,** | Open Settings from any app |
+| **⌥H** | Show or focus the letter. Press again while focused to conceal it, keeping the conversation. Change or clear it in Settings › Shortcut. |
+| **⌥⇧H** | Capture a region, send it immediately and introduce it automatically. Change or clear this shortcut in Settings › Shortcut. |
+| **⌥,** | Open Settings from any app. Change or clear it in Settings › Shortcut |
 | **↩** / **⌥↩** | Send / new line |
 | **⌘C** | Copy the latest answer (or click ❧ Copy). With text selected, it copies the selection. |
 | **+ Attach** | Paste from the clipboard, or capture a screen region |
 | **⌘V** | Short text goes into the question. Text of 280+ characters or 3+ lines, or a picture, is sealed as an attachment, including an image copied in a browser or an image file copied in Finder. |
-| **Esc** / click outside | Burn the letter, and the conversation with it |
+| **Esc** / bottom-right flame | Burn and clear the letter. Esc first cancels composition, capture or an open preview. |
+| **Click outside** | Return focus to the other app; keep the letter and replies. |
 
-Follow-up questions stay on the same sheet, separated by a fleuron. ⏹ stops a reply and keeps what is already written. Attachments travel only with your next question, so leave out passwords and other secrets. Screen capture asks for Screen & System Audio Recording permission the first time. Howler only takes a still image of the region you drag and never records audio; macOS simply grants screen and audio access together.
+Capture and Explain sends your selected region to the configured model immediately and starts an introduction. Pasted text and pictures still wait for you to send. While the model thinks or writes, type follow-ups and press Return to queue them: the introduction appears first, then each answer in order. Use Edit on a waiting question when the input is empty to restore it; sending it again places it at the end. ⏹ stops the current reply and pauses the queue, keeping partial text. Retry reply replaces that attempt; Skip and continue keeps it as incomplete context. Network errors pause the queue too.
+
+Further screenshots add introductions to the same queue. The input shows which screenshot a question refers to and lets you change it. A new capture does not silently change existing drafts or queued questions. Click the amber seal to preview the selected image.
+
+Settings has three tabs: General, Prompt and Shortcut. All three shortcuts can be changed or cleared in Shortcut. Click the clear button, or press Delete while recording, to disable that global shortcut; an empty field stays empty after restart. Restore its default with the reset button. Recording and resetting check conflicts against other configured shortcuts. Menu actions and manual capture in Attach remain available, and existing replies continue. The menu bar menu uses complete, left-aligned text labels without icons.
+
+Settings › General › Reply language follows your macOS preferred language by default, regardless of the screenshot language, or lets you choose a language. An explicit language request in a question overrides the default for that turn. Custom system instructions may affect how well the model follows it.
+
+Concealing the letter, clicking outside or opening Settings keeps the conversation in memory. Burning it or quitting clears it; restarting does not restore it. A model setup or key change pauses the queue until you explicitly continue. Leave out passwords and other secrets. Screen capture asks for Screen & System Audio Recording permission the first time. Howler only takes a still image of the region you drag and never records audio; macOS simply grants screen and audio access together.
 
 ## Privacy
 
-- No chat history, ever. Messages and parsed-answer caches are cleared when the letter closes. A screen capture uses a temporary PNG that Howler attempts to delete after reading it.
-- Stored: the model setup, its last check, your system prompt instructions and your shortcut (UserDefaults), plus the API key (Keychain).
-- The system prompt carries the date in UTC and nothing about you: no name, language setting, time zone or location.
-- The clipboard and the screen are read only when you paste or capture.
+- No chat history, ever. Messages and parsed-answer caches are cleared when the letter burns or the app quits. A concealed letter stays in memory. A screen capture uses a temporary PNG that Howler attempts to delete after reading it.
+- Stored: the model setup, its last check, your system prompt instructions, three optional shortcuts and reply language preference (UserDefaults), plus the API key (Keychain).
+- The system prompt carries the date in UTC; tasks add the necessary reply language instruction. They send no full system language list, name, region, time zone or location.
+- The clipboard and the screen are read only when you paste or capture. Capture and Explain sends the selected region immediately. Burning local content does not delete data retained by your model service.
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.
 - Update checks fetch `appcast.xml` from Howler's latest GitHub Release, at most once a day, and only after you allow it. They send no system profile; GitHub sees only the request, with the app and Sparkle versions in its User-Agent. Turn them off in Settings › General.
 - The command line never prints the key.

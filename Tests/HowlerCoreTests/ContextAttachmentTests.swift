@@ -86,12 +86,12 @@ final class HotKeyComboTests: XCTestCase {
         XCTAssertNotEqual(HotKeyCombo.standard, HotKeyCombo.previousStandard)
     }
 
-    func testOptionCommaIsKeptForSettings() {
+    func testOptionCommaIsAValidConfigurableShortcut() {
         XCTAssertEqual(HotKeyCombo.settings.display, "⌥,")
         XCTAssertEqual(HotKeyCombo.settings.keyCode, 43) // kVK_ANSI_Comma
-        // It can't also open the letter; a stored ⌥, (the default in 0.1.8–0.1.9) falls back to ⌥H.
-        XCTAssertFalse(HotKeyCombo.settings.isValid)
-        XCTAssertEqual(HotKeyCombo.effective(stored: .settings), .standard)
+        // Action conflicts and historical migration are handled by AppSettings.
+        XCTAssertTrue(HotKeyCombo.settings.isValid)
+        XCTAssertEqual(HotKeyCombo.effective(stored: .settings), .settings)
     }
 
     func testStoredShortcutResolution() {

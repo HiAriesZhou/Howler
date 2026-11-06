@@ -4,7 +4,17 @@ import HowlerCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let settings = AppSettings()
+    private let settings: AppSettings = {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["HOWLER_DEMO"] != nil {
+            let defaults = DemoDefaults(suiteName: "HowlerDemo")!
+            let keys = ServiceStore.KeyAccess(exists: { _ in false }, get: { _ in nil },
+                                             set: { _, _ in }, delete: { _ in })
+            return AppSettings(defaults: defaults, keys: keys)
+        }
+        #endif
+        return AppSettings()
+    }()
     private let updater = Updater()
     private var statusItem: NSStatusItem?
     private var hotKeyWarningItem: NSMenuItem?
@@ -13,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsController: SettingsWindowController?
     private var hotKey: HotKey?
     private var settingsHotKey: HotKey?
+    private var screenshotHotKey: HotKey?
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -26,9 +37,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Re-register whenever the shortcut changes; stand aside while Settings records one.
         settings.$hotKey.removeDuplicates()
+            .combineLatest(settings.$settingsHotKey.removeDuplicates(),
+                           settings.$screenshotHotKey.removeDuplicates())
             .combineLatest(settings.$isRecordingHotKey.removeDuplicates())
-            .sink { [weak self] combo, recording in
-                MainActor.assumeIsolated { self?.registerHotKey(combo, suspended: recording) }
+            .sink { [weak self] combos, recording in
+                MainActor.assumeIsolated {
+                    self?.registerHotKey(combos.0, settingsCombo: combos.1, capture: combos.2,
+                                         suspended: recording)
+                }
             }
             .store(in: &cancellables)
 
@@ -37,7 +53,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if ProcessInfo.processInfo.environment["HOWLER_DEMO_DARK"] != nil {
                 NSApp.appearance = NSAppearance(named: .darkAqua)
             }
+            if demo == "menu", let menu = statusItem?.menu {
+                MenuDemo.present(menu)
+                return
+            }
             if demo == "settings" {
+                settings.useDemoService(.anthropic)
+                if ProcessInfo.processInfo.environment["HOWLER_DEMO_CAPTURE"] == "off" {
+                    settings.setScreenshotHotKey(nil)
+                }
                 if let raw = ProcessInfo.processInfo.environment["HOWLER_DEMO_PROVIDER"], let provider = Provider(rawValue: raw) {
                     settings.useDemoService(provider)
                 }
@@ -61,72 +85,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func registerHotKey(_ combo: HotKeyCombo, suspended: Bool) {
+    private func registerHotKey(_ combo: HotKeyCombo?, settingsCombo: HotKeyCombo?,
+                                capture: HotKeyCombo?, suspended: Bool) {
         hotKey = nil // unregister first: re-registering our own combo would fail
         settingsHotKey = nil
+        screenshotHotKey = nil
         guard !suspended else { return }
-        hotKey = HotKey(keyCode: combo.keyCode, modifiers: combo.modifiers.rawValue) { [weak self] in
-            MainActor.assumeIsolated { self?.togglePanel() }
+        if let combo {
+            hotKey = HotKey(keyCode: combo.keyCode, modifiers: combo.modifiers.rawValue) { [weak self] in
+                MainActor.assumeIsolated { self?.panelController?.toggle() }
+            }
         }
-        // ⌥, opens Settings from any app; if another app holds it, the menu still does.
-        let settingsCombo = HotKeyCombo.settings
-        settingsHotKey = HotKey(keyCode: settingsCombo.keyCode, modifiers: settingsCombo.modifiers.rawValue) { [weak self] in
-            MainActor.assumeIsolated { self?.openSettings() }
+        if let settingsCombo, combo.map({ settingsCombo.matches($0) }) != true {
+            settingsHotKey = HotKey(keyCode: settingsCombo.keyCode, modifiers: settingsCombo.modifiers.rawValue) { [weak self] in
+                MainActor.assumeIsolated { self?.openSettings() }
+            }
         }
+        if let capture, ![combo, settingsCombo].compactMap({ $0 }).contains(where: { capture.matches($0) }) {
+            screenshotHotKey = HotKey(keyCode: capture.keyCode, modifiers: capture.modifiers.rawValue) { [weak self] in
+                MainActor.assumeIsolated { self?.panelController?.viewModel.captureScreen() }
+            }
+        }
+        settings.screenshotHotKeyRegistered = screenshotHotKey != nil
+        settings.settingsHotKeyRegistered = settingsHotKey != nil
         settings.hotKeyRegistered = hotKey != nil
         updateMenu(for: combo)
-    }
-
-    /// The size macOS 26 draws menu item symbols at.
-    private static let menuIconSide: CGFloat = 16
-
-    private static func menuSymbol(_ name: String) -> NSImage? {
-        NSImage(systemSymbolName: name, accessibilityDescription: nil)
     }
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = MenuBarMark.image()
 
-        let menu = NSMenu()
-        menu.autoenablesItems = false // the update item follows Sparkle's canCheckForUpdates
-        // No key equivalents: the global shortcut opens the letter, and a menu shortcut is one
-        // more thing to press by accident.
-        let open = NSMenuItem(title: "Open \(AppInfo.name)", action: #selector(togglePanel), keyEquivalent: "")
-        open.target = self
-        menu.addItem(open)
-        let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        warning.isEnabled = false
-        warning.isHidden = true
-        menu.addItem(warning)
-        menu.addItem(.separator())
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
-        settingsItem.target = self
-        menu.addItem(settingsItem)
-        if updater.isEnabled {
-            let update = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
-            update.target = self
-            menu.addItem(update)
-            updateItem = update
-        }
-        let feedback = NSMenuItem(title: "Send Feedback…", action: #selector(sendFeedback), keyEquivalent: "")
-        feedback.target = self
-        menu.addItem(feedback)
-        menu.addItem(.separator())
-        let quit = NSMenuItem(title: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
-        menu.addItem(quit)
-        if #available(macOS 26, *) {
-            // macOS 26 draws icons beside menu items; give every row one, in one style,
-            // instead of the system's defaults for Settings… and Quit.
-            open.image = MenuBarMark.image(side: Self.menuIconSide)
-            settingsItem.image = Self.menuSymbol("gearshape")
-            updateItem?.image = Self.menuSymbol("arrow.triangle.2.circlepath")
-            feedback.image = Self.menuSymbol("bubble.left")
-            quit.image = Self.menuSymbol("power")
-        }
+        let parts = Self.makeStatusMenu(showsUpdate: updater.isEnabled, target: self)
+        let menu = parts.menu
+        updateItem = parts.update
         item.menu = menu
         statusItem = item
-        hotKeyWarningItem = warning
+        hotKeyWarningItem = parts.warning
         if let updateItem {
             // Subscribe after the controls exist: @Published emits its current value immediately.
             updater.$available.combineLatest(updater.$canCheck)
@@ -140,15 +135,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// "Check for Updates…", or the gentle reminder when a scheduled check found one.
-    static func updateUpdateItem(_ updateItem: NSMenuItem, statusItem: NSStatusItem, available: String?, canCheck: Bool) {
-        updateItem.title = available.map { "Update to \(AppInfo.name) \($0)…" } ?? "Check for Updates…"
-        updateItem.isEnabled = canCheck
-        if #available(macOS 26, *) {
-            updateItem.image = Self.menuSymbol(available == nil ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
-        } else {
-            updateItem.image = available == nil ? nil : Self.menuSymbol("arrow.down.circle")
+    static func makeStatusMenu(showsUpdate: Bool, target: AnyObject) -> (menu: NSMenu, warning: NSMenuItem, update: NSMenuItem?) {
+        let menu = NSMenu()
+        var updateItem: NSMenuItem?
+        menu.autoenablesItems = false // the update item follows Sparkle's canCheckForUpdates
+        menu.showsStateColumn = false
+        // AppKit adds images for recognized actions such as openSettings even after
+        // image is cleared. A neutral menu action keeps this menu entirely text-only.
+        func item(_ title: String, action: Selector) -> NSMenuItem {
+            ClosureMenuItem(title: title) { [weak target] in
+                guard let target else { return }
+                NSApp.sendAction(action, to: target, from: nil)
+            }
         }
+        // No key equivalents: the global shortcut opens the letter, and a menu shortcut is one
+        // more thing to press by accident.
+        let open = item("Open \(AppInfo.name)", action: #selector(togglePanel))
+        menu.addItem(open)
+        let warning = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        warning.isEnabled = false
+        warning.isHidden = true
+        menu.addItem(warning)
+        menu.addItem(.separator())
+        let settingsItem = item("Settings", action: #selector(openSettings))
+        menu.addItem(settingsItem)
+        if showsUpdate {
+            let update = item("Check for Updates", action: #selector(checkForUpdates))
+            menu.addItem(update)
+            updateItem = update
+        }
+        let feedback = item("Send Feedback", action: #selector(sendFeedback))
+        menu.addItem(feedback)
+        menu.addItem(.separator())
+        let quit = ClosureMenuItem(title: "Quit \(AppInfo.name)") { NSApp.terminate(nil) }
+        menu.addItem(quit)
+        return (menu, warning, updateItem)
+    }
+
+    /// "Check for Updates", or the gentle reminder when a scheduled check found one.
+    static func updateUpdateItem(_ updateItem: NSMenuItem, statusItem: NSStatusItem, available: String?, canCheck: Bool) {
+        updateItem.title = available.map { "Update to \(AppInfo.name) \($0)" } ?? "Check for Updates"
+        updateItem.isEnabled = canCheck
+        updateItem.image = nil
         let description = available.map { "\(AppInfo.name) \(AppInfo.version), version \($0) is available" }
             ?? "\(AppInfo.name) \(AppInfo.version)"
         statusItem.button?.image = MenuBarMark.image(updateAvailable: available != nil)
@@ -157,10 +185,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Explains in the menu when the shortcut isn't active.
-    private func updateMenu(for combo: HotKeyCombo) {
+    private func updateMenu(for combo: HotKeyCombo?) {
         guard let hotKeyWarningItem else { return }
-        hotKeyWarningItem.title = "\(combo.display) is used by another app"
-        hotKeyWarningItem.isHidden = settings.hotKeyRegistered
+        hotKeyWarningItem.title = combo.map { "\($0.display) is used by another app" } ?? ""
+        hotKeyWarningItem.isHidden = combo == nil || settings.hotKeyRegistered
     }
 
     /// Accessory apps show no menu bar, but key equivalents still route through the main
@@ -183,7 +211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func togglePanel() {
-        panelController?.toggle()
+        panelController?.show()
     }
 
     @objc private func sendFeedback() {

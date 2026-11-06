@@ -6,6 +6,7 @@ import SwiftUI
 struct Transcript: View {
     @ObservedObject var viewModel: ChatViewModel
     @Binding var contentHeight: CGFloat
+    @Environment(\.parchment) private var parchment
 
     @State private var viewportHeight: CGFloat = 0
     @State private var scrollOffset: CGFloat = 0
@@ -55,10 +56,7 @@ struct Transcript: View {
             .scrollIndicators(.never)
             .mask(PageFade())
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
-            .onChange(of: viewModel.messages.count) { _, _ in
-                // A new question always brings the page back to the bottom.
-                DispatchQueue.main.async { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
-            }
+
         }
     }
 
@@ -74,6 +72,13 @@ struct Transcript: View {
                 }
             }
             .transition(.opacity)
+        }
+        if viewModel.queue.tasks.contains(where: { $0.replyID == message.id && $0.state == .skipped }) {
+            Text("Incomplete reply · skipped")
+                .font(Lettering.marginalia(12))
+                .foregroundStyle(parchment.error)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityLabel("Incomplete reply. Skipped by user.")
         }
     }
 }

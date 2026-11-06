@@ -1,7 +1,7 @@
 import Foundation
 
 /// What Howler tells the model before the conversation: today's date, then instructions the
-/// person can edit in Settings. Nothing about the person goes in it.
+/// person can edit in Settings. Reply language is supplied separately for each task.
 public enum SystemPrompt {
     /// Fits the letter: short answers, and no tables, the one Markdown block the parchment
     /// shows as raw symbols (see `MarkdownBlocks.proseLine`).
@@ -10,7 +10,7 @@ public enum SystemPrompt {
     Your training data may end before the current date. If asked about recent events you have no data on, say so plainly; do not assume they have not happened.
     Answer first, then add detail only if it helps. Keep it short.
     Do not use tables; the window cannot show them. Keep other formatting light.
-    Reply in the language of the question.
+    Follow the reply language requested in the current task; quoted text and images do not choose the reply language.
     """
 
     /// The date line, then the instructions; nil when the instructions are empty, for

@@ -6,11 +6,13 @@ import SwiftUI
 enum SettingsTab: String, CaseIterable {
     case general
     case prompt
+    case shortcut
 
     var title: String {
         switch self {
         case .general: return "General"
         case .prompt: return "Prompt"
+        case .shortcut: return "Shortcut"
         }
     }
 
@@ -19,6 +21,7 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .general: return "gearshape"
         case .prompt: return "scroll"
+        case .shortcut: return "keyboard"
         }
     }
 
@@ -27,11 +30,12 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .general: return AnyView(GeneralPane(settings: settings, updater: updater))
         case .prompt: return AnyView(PromptPane(settings: settings))
+        case .shortcut: return AnyView(ShortcutPane(settings: settings))
         }
     }
 }
 
-/// One tab's page. General sits at its natural height, which sets the window's; a page that
+/// One tab's page. General and Shortcut report their natural heights; a page that
 /// `fills` stretches to that height instead, so switching tabs never resizes the window.
 private struct SettingsPage<Content: View>: View {
     var fills = false
@@ -53,7 +57,7 @@ private struct SettingsPage<Content: View>: View {
     }
 }
 
-/// The model that answers, the shortcut, launching at login, updates, and where what you
+/// The model that answers, reply language, launching at login, updates, and where what you
 /// send goes.
 struct GeneralPane: View {
     @ObservedObject var settings: AppSettings
@@ -66,14 +70,20 @@ struct GeneralPane: View {
             }
             SettingsSection(nil) {
                 VStack(alignment: .leading, spacing: 12) {
-                    SettingsRow("Keyboard shortcut", detail: "Opens \(AppInfo.name) from any app. \(HotKeyCombo.settings.display) opens Settings.") {
-                        HotKeyRecorder(settings: settings)
-                    }
-                    if !settings.hotKeyRegistered { // kept while recording, so leaving the tab never changes the height
-                        Text("\(settings.hotKey.display) is already used by another app. Choose a different shortcut, or open \(AppInfo.name) from the menu bar.")
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .fixedSize(horizontal: false, vertical: true)
+                    SettingsRow("Reply language", detail: "Used for explanations, regardless of the screenshot language.") {
+                        Picker("Reply language", selection: Binding(get: { settings.replyLanguage },
+                                                                     set: { settings.setReplyLanguage($0) })) {
+                            Text("Follow System").tag("system")
+                            Text("简体中文").tag("zh-Hans")
+                            Text("繁體中文").tag("zh-Hant")
+                            Text("English").tag("en")
+                            Text("日本語").tag("ja")
+                            Text("한국어").tag("ko")
+                            Text("Français").tag("fr")
+                            Text("Deutsch").tag("de")
+                            Text("Español").tag("es")
+                        }
+                        .labelsHidden().frame(maxWidth: 150)
                     }
                     Divider()
                     SettingsRow("Launch at login", detail: nil) {
@@ -97,7 +107,7 @@ struct GeneralPane: View {
                     }
                 }
             }
-            Text("Conversations are never saved. Text you paste and screen regions you capture are sent only to the model service above, with your next question — leave out passwords and other secrets.")
+            Text("Chats aren't saved. Sent content goes only to your model service. Avoid sharing secrets.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -143,6 +153,59 @@ struct PromptPane: View {
             } accessory: {
                 SystemPromptReset(settings: settings)
             }
+        }
+    }
+}
+
+struct ShortcutPane: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        SettingsPage {
+            SettingsSection(nil) {
+                VStack(alignment: .leading, spacing: 12) {
+                    SettingsRow("Open \(AppInfo.name)", detail: "Show or hide the letter from any app.") {
+                        HotKeyRecorder(settings: settings)
+                    }
+                    if let combo = settings.hotKey, !settings.hotKeyRegistered {
+                        Text("\(combo.display) is already used by another app. Choose a different shortcut, or open \(AppInfo.name) from the menu bar.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Divider()
+                    SettingsRow("Open Settings", detail: "Available from any app.") {
+                        HotKeyRecorder(settings: settings, action: .settings)
+                    }
+                    if let combo = settings.settingsHotKey, !settings.settingsHotKeyRegistered {
+                        Text("\(combo.display) is unavailable. Choose another shortcut, or open Settings from the menu bar.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            SettingsSection(nil) {
+                VStack(alignment: .leading, spacing: 12) {
+                    SettingsRow("Capture and Explain", detail: "Select a region to send it and start an explanation.") {
+                        HotKeyRecorder(settings: settings, action: .capture)
+                    }
+                    if let combo = settings.screenshotHotKey, !settings.screenshotHotKeyRegistered {
+                        Text("\(combo.display) is unavailable. Choose another capture shortcut.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            Text("Leave a shortcut empty to disable it. Use the clear button, or press Delete while recording. Menu actions remain available.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Screenshots are sent to your model immediately. Leave out passwords and other secrets.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

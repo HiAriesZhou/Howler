@@ -55,8 +55,9 @@ final class UpdatePresentationTests: XCTestCase {
         status.menu = menu
 
         AppDelegate.updateUpdateItem(item, statusItem: status, available: "0.1.13", canCheck: true)
-        XCTAssertEqual(item.title, "Update to \(AppInfo.name) 0.1.13…")
+        XCTAssertEqual(item.title, "Update to \(AppInfo.name) 0.1.13")
         XCTAssertTrue(item.isEnabled)
+        XCTAssertNil(item.image)
         let button = try XCTUnwrap(status.button)
         XCTAssertTrue(try XCTUnwrap(button.toolTip).contains("0.1.13"))
         XCTAssertTrue(try XCTUnwrap(button.accessibilityLabel()).contains(AppInfo.version))
@@ -69,7 +70,8 @@ final class UpdatePresentationTests: XCTestCase {
         // update window, dismisses it, or a session fails.
         XCTAssertTrue(try XCTUnwrap(button.toolTip).contains("0.1.13"))
         AppDelegate.updateUpdateItem(item, statusItem: status, available: nil, canCheck: true)
-        XCTAssertEqual(item.title, "Check for Updates…")
+        XCTAssertEqual(item.title, "Check for Updates")
+        XCTAssertNil(item.image)
         XCTAssertEqual(button.toolTip, "\(AppInfo.name) \(AppInfo.version)")
         XCTAssertEqual(button.accessibilityLabel(), button.toolTip)
         XCTAssertEqual(button.image?.accessibilityDescription, AppInfo.name)

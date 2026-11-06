@@ -12,26 +12,28 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
 - [ ] 首次启动（未配置）自动弹出 Settings 窗口
 - [ ] Finder、DMG 中的 Howler.app 显示羽毛笔火漆图标（不是空白应用图标）
-- [ ] 菜单栏图标为羽毛笔，随浅色 / 深色菜单栏变色；菜单包含：Open Howler、Settings…、Check for Updates…、Quit Howler，均不显示快捷键；macOS 26 上每项都有同一风格的图标（羽毛笔、齿轮、循环箭头、电源）；Quit 可正常退出
+- [ ] 菜单栏图标为羽毛笔，随浅色 / 深色菜单栏变色；菜单包含 Open Howler、Settings、Check for Updates、Send Feedback、Quit Howler，均无图标、无快捷键，文字共用左侧起点且完整显示，无尾部省略号；菜单不含 Capture and Explain；Quit 可正常退出
 
 ## 2. 全局快捷键与面板 / Hotkey & panel
 
 - [ ] 在任意应用（Finder、Safari、全屏应用）中按 ⌥H 呼出信纸，位于当前屏幕上方居中，带纸张落下的动画与火漆印“盖章”动画
-- [ ] 再按 ⌥H：信纸从底边起火烧掉（约 0.6 秒，干脆利落），然后消失
+- [ ] 信纸已聚焦时再按 ⌥H：暂时收起；再次呼出恢复原对话、草稿及排队问题
+- [ ] 等长回答完全显示后收起再呼出：信纸保持展开高度；烧掉后再呼出恢复空白小信纸。移动到较小屏幕时高度不超出可用区域
 - [ ] 信纸出现时输入框自动获得焦点，可直接输入；前台应用不会被切走（菜单栏仍显示原应用名）
 - [ ] 中文输入法：可正常输入拼音选词；选词过程中按 Esc 只取消组字，不关闭信纸
 - [ ] ⌘V / ⌘C / ⌘A / ⌘Z 在输入框中可用
-- [ ] Esc 烧掉信纸；点击纸张外部（包括纸张阴影区域）烧掉信纸
+- [ ] Esc 或右下角火焰烧掉信纸并立即清空；火焰不遮挡页脚或正文；点击纸外或阴影只交出焦点，回答继续；其他应用中的 Esc 不影响信纸
 - [ ] 燃烧中再按 ⌥H：立即出现一张新的空白信纸
-- [ ] 从菜单或火漆印打开 Settings：信纸直接收起，不燃烧
+- [ ] 从菜单或火漆印打开 Settings：信纸直接收起并保留会话；从菜单打开信纸只唤回，不反向收起
 - [ ] 多显示器：在鼠标所在屏幕上弹出
 - [ ] 未配置时，信纸显示 “This parchment has no ink yet.” 与 “Open Settings” 按钮，点击打开设置
 
 ## 2a. 信纸交互 / Letter interactions
 
 - [ ] 空白信纸：毛边、纤维纹理、中间折痕；左上角为当前模型服务的深红火漆印（蜡滴、下陷压印、浮雕字母、高光）；中间有花体提示
+- [ ] 未安装楷体、宋体等可下载字体时：信纸仍正常打开并显示文字，不触发字体下载或授权窗口；离线亦可打开
 - [ ] 系统为深色模式时纸张变暗为“烛光”色，文字与占位符仍为深色墨水
-- [ ] 右上角为淡色虚线圆圈 “+ Attach”；点击弹出菜单：Paste from Clipboard、Capture Screen Region…
+- [ ] 右上角为淡色虚线圆圈 “+ Attach”；点击弹出菜单：Paste from Clipboard、Capture and Explain…
 - [ ] 复制一段文字后选择 Paste from Clipboard：右上角压上琥珀色火漆印（刻符文、文档图标），下方写 “Pasted text / N chars”；输入框**不**包含这段文字
 - [ ] 复制一张图片（如在预览中 ⌘C）后在输入框按 ⌘V：封成 “Pasted image / 宽×高” 火漆印（图片图标）
 - [ ] 在 Safari / Chrome 里对图片「拷贝图像」后按 ⌘V：封成图片附件，不把链接粘进输入框
@@ -40,10 +42,10 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 向输入框粘贴 280 字以上、或 3 行以上（如复制的一段回答）的文本：文本不留在输入框，变成 “Pasted text” 火漆印；一两行的短文本照常进入输入框
 - [ ] 输入框最多显示 4 行，更多内容在框内滚动，信纸不被撑高
 - [ ] 剪贴板为空时选择 Paste from Clipboard：显示 “There's no text or picture on the clipboard.”
-- [ ] Capture Screen Region…（首次）：提示到“录屏与系统录音”中允许 Howler；允许后再次选择：信纸让开，出现十字准星，拖出区域后信纸带着原对话回来，压上 “Screenshot / 宽×高” 火漆印；Esc 取消时信纸原样回来
+- [ ] Capture and Explain…（首次）：提示到“录屏与系统录音”中允许 Howler；允许后再次选择：信纸让开，出现十字准星，拖出区域后信纸带着原对话回来，自动介绍，无需回车；Esc 取消恢复原状态且不发送
 - [ ] 点火漆印：展开预览卡片（文字显示前几行，图片显示缩略图），可 Remove
-- [ ] 有火漆印、输入框为空时按 ↩：以 “Explain this.” 发送
-- [ ] 带火漆印发送：问题前出现 ✦，回答针对附件内容（截图问 “图里写了什么”）；之后的问题不再附带
+- [ ] 粘贴附件后输入框为空时按 ↩：发送默认解释请求；截图入口自动发送，普通粘贴不自动发送
+- [ ] 带火漆印发送：问题前出现 ✦，回答针对附件内容；文本附件发送后清空，后续图片是否附带由输入框当前选择的目标决定
 - [ ] DeepSeek 下带图片发送：请求照常发出；模型能读图则回答图片内容，不能则显示 DeepSeek 返回的错误（Howler 不预先拦截）
 - [ ] 不主动粘贴或截屏时，Howler 从不读取剪贴板（macOS 15.4+ 不会弹出“允许粘贴”提示）
 - [ ] 点左上角火漆印：菜单显示 “Written by <模型>”（悬停显示完整配置）与 Settings…；页脚显示 “模型 · 主机”
@@ -52,22 +54,47 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 纸张随回答向下变长；超过 A4 比例或屏幕可用高度后改为滚动，顶部文字在书写线下渐隐
 - [ ] 书写中向上滚动阅读：不会被拉回底部；滚回底部后继续跟随
 - [ ] 回答写完后出现 ❧ Copy；点击或按 ⌘C（未选中文字时）复制整条回答，显示 ✓ Copied；在输入框或回答里选中一段文字后按 ⌘C，只复制选中的部分
-- [ ] 多轮对话之间有 ❦ 花饰分隔；新问题发送后滚动到底部
+- [ ] 多轮对话之间有 ❦ 花饰分隔；在上方阅读时，自动开始下一段不把页面拉到底部
 - [ ] 系统设置开启“减少动态效果”：无落纸、盖章、火漆光晕、燃烧和逐字动画，文字随到随显，关闭时直接消失
+
+
+## 2b. 截图介绍与排队 / Screenshot introductions and queued replies
+
+以下项目实施后逐项实测；未勾选不表示通过。使用合成截图，不记录私人内容。
+
+- [ ] ⌥⇧H 从任意应用直接框选；完成后立即发送并介绍；重复触发不会出现多个选择器
+- [ ] 没有信纸时取消框选不留空白窗口；有信纸时保留草稿、会话与原可见状态
+- [ ] 介绍思考及书写期间输入 Q1、Q2 并回车：介绍完整呈现后才依次回答 Q1、Q2
+- [ ] 等待区显示问题与截图关联；空输入时 Edit 撤回，重新提交加入队尾，不覆盖其他草稿
+- [ ] 模型生成结束但书写未完成时不抢先回答；收起窗口后队列继续，不依赖动画刷新
+- [ ] 英文截图 + 中文回答偏好：介绍和答疑默认中文；明确要求另一语言只覆盖当前轮
+- [ ] 跟随系统保留必要简繁信息，不发送地区、完整语言列表或时区；关闭 system/date 仍有效
+- [ ] 再截图不改变已有草稿/排队项的图片关联；可显式切换，发送后仍可预览原图
+- [ ] 停止或网络错误后暂停队列；Retry 不重复用户轮且替换旧的部分答案；Skip 保留“不完整”标记并继续
+- [ ] 模型服务、模型或 Key 改动暂停队列；仅语言和系统指令变动不取消当前项，作用于后续提交任务
+- [ ] 焚烧后立即再开、旧流/截图/动画晚到时，新会话没有旧内容；退出后不恢复
+- [ ] 火焰入口深浅色可见、可键盘聚焦、读屏能识别；预览中的 Esc 先关闭预览，第二次才焚烧
+- [ ] 截图快捷键可独立录制/重置；与普通/设置快捷键冲突时拒绝或明确提示，保留旧快捷键迁移
+- [ ] 普通粘贴、选择复制、输入法组字和 Reduce Motion 不回归
 
 ## 3. 设置 / Settings
 
 - [ ] 设置窗口左上角有关闭和最小化按钮（没有缩放按钮），最小化可用；按 Esc 关闭设置窗口，录制快捷键或输入法组字时 Esc 只取消录制 / 组字
-- [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt 分段控件（图标 + 文字）在同一行；General 页依次是模型卡片、快捷键与开机启动、隐私说明（提醒不要粘贴或截取敏感信息）；设置页任何地方都不要求输入 API Key
-- [ ] 切换标签：两页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
+- [ ] 设置窗口标题为 “Howler Settings”，与窗口按钮、General / Prompt / Shortcut 分段控件（图标 + 文字）在同一行且不截断；General 页保留模型、API Key、回答语言、开机启动、更新、反馈、隐私说明；Key 只在 Add Key / Replace Key 密码输入窗口中输入
+- [ ] Settings > Shortcut：三个动作只显示快捷键录入及清空/恢复按钮，没有独立开关或雾效；空值显示 Not set，仍可点击录入；清空按钮有可读的辅助功能标签
+- [ ] 切换标签：三页同高，只交叉淡入，窗口大小不变；Prompt 页的编辑框填满剩余高度；开启“减弱动态效果”后直接切换；未配置模型时打开设置总是停在 General 页
 - [ ] 在 Prompt 编辑框里输入后切到 General 再按 Delete / ⌘A：系统提示词不被改动
 - [ ] Check 失败使 General 变高：窗口平滑变高、上边缘不动，Prompt 页编辑框随之变高
 - [ ] 未配置：Model 显示问号火漆印、“No model yet”，下方 “Set up a model” 与 Copy Setup Prompt；没有 Check 按钮
 - [ ] 已配置：深红火漆印（DeepSeek 为 “D”、Gemini 为 ✦，其他服务为域名首字母）、模型名、“主机 · 格式”，状态为 Ready / Not checked yet / Failed / No API key
-- [ ] Copy Setup Prompt：按钮短暂显示 ✓ Copied；粘贴出的提示词包含本机可执行文件路径与当前配置（未配置时为 “not set up yet”），要求助手用 `pbpaste | Howler config set api-key --stdin` 写入 Key
-- [ ] 把提示词交给 Claude Code（或 Codex）：助手询问服务与模型，运行 `config schema` → `config set` → 请你复制 Key 后运行 `pbpaste | … --stdin` → `check` → `config show`；全程 Key 不出现在聊天与输出中
+- [ ] Copy Setup Prompt：按钮短暂显示 ✓ Copied；提示词包含可执行文件路径与当前配置，要求助手仅配置非敏感参数，然后引导用户回到 General › API Key › Save & Check；不得自动读取剪贴板里的 Key
+- [ ] 把提示词交给 Claude Code（或 Codex）：先检查已有配置，保留可用密钥；钥匙串权限错误立即停止，其他错误最多一次有明确原因的修正与重试；不得无限重配或删除密钥
+- [ ] Add Key / Replace Key 打开原生密码输入窗口，显示服务主机，不回显旧 Key；取消或关闭后清空输入，保存时禁用重复提交
+- [ ] Save & Check 保存到钥匙串后只发一次检查请求；空值或含空白的 Key 不写入，保存失败显示错误并保留旧 Key；编辑期间服务被 CLI 更改时拒绝给新服务保存旧输入
+- [ ] 拒绝或取消钥匙串授权：保存弹窗只显示简短结果，不显示 OSStatus 或要求回到当前页面重试；CLI 保留操作和错误码，检查失败覆盖旧的通过状态，且没有发起模型请求
+- [ ] 连接检查超过 30 秒仍无可见文本时结束；普通信纸的请求超时不受影响
 - [ ] 应用运行时在终端执行 `config set model=…`：设置页与信纸页脚立即显示新模型，状态变为 Not checked yet
-- [ ] 同一来源只改模型或 API 路径：Key 保留；更改主机、协议、端口或认证格式：显示 No API key，保存新 Key 前不能检查或发送，不会把旧 Key 发给新服务
+- [ ] 同一来源只改模型或 API 路径：Key 保留；更改主机、协议、端口或认证格式：显示 No API key，保存新 Key 前检查只提示添加密钥，不发送请求，也不会把旧 Key 发给新服务
 - [ ] 替换 Key 失败且旧钥匙串条目仍在时：旧 Key 仍可用，重启后亦可，检查状态回到 Not checked yet；重试成功后使用新 Key
 - [ ] Check 尚未完成时通过 CLI 修改配置或 Key：旧请求完成后不把新配置标为 Ready / Failed；编辑系统指令同样使旧检查失效
 - [ ] 服务错误回显提交的 Key（使用合成凭据和测试服务）：界面、CLI 和持久化检查结果中均不出现该 Key，仍保留可读错误原因
@@ -77,7 +104,9 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 从配置了服务商的旧版本升级：首次启动后原服务商、模型与 Key 自动迁移，设置页直接显示该模型（状态 Not checked yet），发送可用
 - [ ] 退出并重启应用：模型服务、Key、快捷键仍然有效
 - [ ] 从 v0.1.8 / v0.1.9 升级：没录制过快捷键的，升级后恢复为 ⌥H；录制过其他快捷键的保持不变
-- [ ] 在任意应用里按 ⌥,：打开设置窗口；录制快捷键时按 ⌥,，提示 “⌥, opens Settings” 且不被采用
+- [ ] Open Settings 默认 ⌥,，可录制新组合并即时生效，重启后保留；旧组合不再打开设置，菜单仍可打开设置
+- [ ] 三个已配置快捷键互相检查冲突；清空后释放原组合供其他动作使用；恢复默认若冲突则提示并保留当前值（包括空值）
+- [ ] 录制任一快捷键期间暂停三个全局快捷键，Esc 取消录制，切换标签页或窗口失焦结束录制；设置快捷键被其他应用占用时显示提示
 - [ ] 从 v0.1.4 升级：没改过快捷键（或曾点过 ↺ 恢复 ⌥Space）的，升级后跟随默认快捷键；录制过其他快捷键的保持不变；升级后再特意录制 ⌥Space，重启后仍是 ⌥Space
 
 ### 3a. 命令行 / Command line
@@ -89,14 +118,16 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] `$H config set api-key=sk-…`：拒绝，提示用 `--stdin` / `--env` / `--file`
 - [ ] `$H config set api-key --stdin` 直接在终端运行（无管道）：拒绝并给出 `pbpaste | …` 用法
 - [ ] `$H config set 'body={"messages":[]}'`、`'headers={"Authorization":"x"}'`、`base-url=http://example.com`：均被拒绝并说明原因
-- [ ] `$H config set preset=deepseek 'body={"thinking":{"type":"disabled"}}'` 后 `$H config show`：显示 endpoint、body；api-key 只显示 saved in Keychain / not set
+- [ ] `$H config set preset=deepseek 'body={"thinking":{"type":"disabled"}}'` 后 `$H config show`：显示 endpoint、body；api-key 显示 record present; access not verified / no record detected，不把记录存在当作连接成功
 - [ ] `$H check --verbose`：打印请求 URL、请求头（认证头为 `••••`）与请求体，失败时显示 HTTP 状态与错误
 - [ ] 本机 Ollama 等：`$H config set format=chat-completions base-url=http://localhost:11434/v1 model=<本地模型>` 后 `check` 通过，信纸可正常流式回答
 - [ ] `$H config reset`：配置与 Key 被删除，设置页回到 “No model yet”
 
 ### 3b. 通用 / General
 
-- [ ] General → Keyboard shortcut：点按钮后按 ⌃⌥K，⌃⌥K 可呼出、⌥H 不再响应；录制中按 Esc 取消
+- [ ] Shortcut → Open Howler：点按钮后按 ⌃⌥K，⌃⌥K 可呼出、⌥H 不再响应；录制中按 Esc 取消
+- [ ] Shortcut → Capture and Explain 默认 ⌥⇧H；清空后不再通过快捷键触发截图，Attach 中的手动截图仍可用，正在框选的截图和已有回答不受影响；重启后仍为空
+- [ ] 三个录入框都支持录制时按 Delete 清空、Esc 取消；空值不显示注册失败警告；清空 Open Howler / Open Settings 后仍能从菜单打开
 - [ ] Keyboard shortcut：只含 ⇧ 的组合提示需加 ⌘/⌥/⌃；⌘V、⌘C、⌘Space 等系统快捷键被拒绝；被其他应用占用时显示红色提示；点 ↺ 恢复 ⌥H
 - [ ] Keyboard shortcut：开始录制后切到其他窗口或关闭设置窗口，录制自动结束，原快捷键恢复可用
 - [ ] General → Launch at login：打开后注销重新登录，Howler 自动启动（若提示需批准，按提示到“登录项”中允许）
@@ -113,7 +144,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ### 3e. 反馈 / Feedback
 
-- [ ] 菜单 “Send Feedback…”（macOS 26 上有对话气泡图标）、设置页 General 卡片里的 “Feedback” 一行（Send Feedback… 按钮）：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
+- [ ] 菜单 “Send Feedback”（无图标）、设置页 General 卡片里的 “Feedback” 一行（Send Feedback… 按钮）：在浏览器打开 GitHub 新建 issue 页，使用 “反馈 Feedback” 模板，Howler 版本（如 0.1.11 (12)）、macOS 版本（如 26.5.2 (25F84)）、芯片架构已填好
 - [ ] 不点击时不访问任何网址
 
 ### 3d. 更新 / Updates
@@ -181,3 +212,5 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 - [ ] 递增 `VERSION` 和 `BUILD_NUMBER`，推送匹配的附注 tag：CI 完成签名和公证后创建正式 Release，附上 `Howler.zip`、`Howler.dmg` 与 `appcast.xml`
 - [ ] tag 构建缺少 Developer ID 证书时失败，不发布 ad-hoc 包；普通分支构建仍允许 ad-hoc 签名
 - [ ] 推送不一致的 tag：CI 的 “Publish release” 步骤失败并说明原因
+
+- [ ] 旧截图开关关闭的配置升级后迁移为空快捷键；重新录入或恢复默认后重启，不会被旧开关再次停用
