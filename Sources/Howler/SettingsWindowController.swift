@@ -9,19 +9,19 @@ final class SettingsTabState: ObservableObject {
     /// The page fading out, which stays enabled until it has gone; every other hidden page
     /// is disabled so it leaves the keyboard focus order.
     @Published var leaving: SettingsTab?
-    /// The General page's natural height, which every page shares.
+    /// The larger natural height of General and Shortcut, which every page shares.
     @Published var height: CGFloat = 0
 }
 
 /// The Settings window: toolbar tabs, like System Settings' older panes. Every page has the
-/// General page's height and all stay mounted, so a switch is only a crossfade: the window
-/// keeps its size and nothing is rebuilt. When General grows (e.g. a failed check) the window
+/// shared height and all stay mounted, so a switch is only a crossfade: the window
+/// keeps its size and nothing is rebuilt. When a natural-height page grows the window
 /// eases to the new height, top edge fixed. Reduce Motion switches and resizes at once.
 @MainActor
 final class SettingsWindowController: NSObject, NSToolbarDelegate {
     static let switchDuration: TimeInterval = 0.22
     /// Every page's width (see `SettingsPage`).
-    static let width: CGFloat = 460
+    static let width: CGFloat = 560
 
     private let settings: AppSettings
     private let updater: Updater
@@ -221,7 +221,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
 
 
 /// Every page at once, stacked from the top; only the selected one is visible and takes
-/// input. General reports its natural height, which the window takes.
+/// input. General and Shortcut report natural heights; the window takes their maximum.
 private struct SettingsTabsView: View {
     @ObservedObject var settings: AppSettings
     let updater: Updater
@@ -236,7 +236,7 @@ private struct SettingsTabsView: View {
                     let shown = tab == state.selected
                     tab.pane(settings, updater: updater)
                         .background(GeometryReader { page in
-                            Color.clear.preference(key: GeneralHeight.self, value: tab == .general ? page.size.height : 0)
+                            Color.clear.preference(key: SettingsHeight.self, value: tab == .prompt ? 0 : page.size.height)
                         })
                         .opacity(shown ? 1 : 0)
                         .zIndex(shown ? 1 : 0) // clicks land on the page you see
@@ -248,13 +248,13 @@ private struct SettingsTabsView: View {
             .frame(width: window.size.width, height: window.size.height, alignment: .top)
             .clipped()
         }
-        .onPreferenceChange(GeneralHeight.self) { height in
+        .onPreferenceChange(SettingsHeight.self) { height in
             if height > 0, abs(height - state.height) > 0.5 { state.height = height }
         }
     }
 }
 
-private struct GeneralHeight: PreferenceKey {
+private struct SettingsHeight: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())

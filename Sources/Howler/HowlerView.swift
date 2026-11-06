@@ -40,7 +40,7 @@ struct HowlerView: View {
                     SetupPage(pressKey: viewModel.openCount, openSettings: openSettings)
                 }
             }
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .bottomTrailing) {
                 Button(action: burnLetter) {
                     Image(systemName: "flame")
                         .font(.system(size: 16, weight: .medium))
@@ -53,7 +53,7 @@ struct HowlerView: View {
                 .onHover { hoveringBurn = $0 }
                 .help("Burn this letter · Esc")
                 .accessibilityLabel("Close and clear conversation")
-                .padding(.top, 8).padding(.trailing, 8)
+                .padding(.bottom, 8).padding(.trailing, 8)
             }
         }
         .scaleEffect(unfolded ? 1 : 0.97, anchor: .top)
@@ -298,7 +298,8 @@ struct HowlerView: View {
             .font(Lettering.marginalia(11.5))
             .foregroundStyle(parchment.fadedInk)
         }
-        .padding(.horizontal, 26)
+        .padding(.leading, 26)
+        .padding(.trailing, 60)
         .padding(.top, 2)
         .padding(.bottom, 14)
     }

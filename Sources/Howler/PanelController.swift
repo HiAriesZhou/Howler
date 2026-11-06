@@ -267,7 +267,10 @@ final class PanelController {
         paste.keyEquivalent = "v"
         paste.keyEquivalentModifierMask = .command
         menu.addItem(paste)
-        menu.addItem(ClosureMenuItem(title: "Capture and Explain…") { [weak self] in self?.viewModel.captureScreen() })
+        let capture = ClosureMenuItem(title: "Capture and Explain…") { [weak self] in self?.viewModel.captureScreen() }
+        menu.autoenablesItems = false
+        capture.isEnabled = settings.captureAndExplainEnabled
+        menu.addItem(capture)
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 
