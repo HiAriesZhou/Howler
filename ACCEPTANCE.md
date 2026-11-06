@@ -205,3 +205,5 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 - [ ] 递增 `VERSION` 和 `BUILD_NUMBER`，推送匹配的附注 tag：CI 完成签名和公证后创建正式 Release，附上 `Howler.zip`、`Howler.dmg` 与 `appcast.xml`
 - [ ] tag 构建缺少 Developer ID 证书时失败，不发布 ad-hoc 包；普通分支构建仍允许 ad-hoc 签名
 - [ ] 推送不一致的 tag：CI 的 “Publish release” 步骤失败并说明原因
+
+- [ ] Capture and Explain 使用小尺寸原生开关，位于快捷键右侧；开关关闭时轻雾覆盖快捷键但字符仍可读，浅色/深色模式及键盘操作正常。
