@@ -82,7 +82,7 @@ pr() {
         trap 'rm -rf "$scratch"' EXIT
         base_sha="$(api GET "$TAP/git/ref/heads/main" | jq -er '.object.sha')"
         api GET "$TAP/contents/$CASK?ref=$base_sha" > "$scratch/base.json"
-        jq -ej '.content | @base64d' "$scratch/base.json" > "$scratch/base.rb"
+        jq -ej '.content | gsub("[\r\n]"; "") | @base64d' "$scratch/base.json" > "$scratch/base.rb"
         # Edit only the two literal stanzas; never evaluate tap Ruby or release text.
         jq -Rse '
             split("\n") |
@@ -122,7 +122,7 @@ pr() {
             ref="$base_sha"
         fi
         api GET "$TAP/contents/$CASK?ref=$ref" > "$scratch/branch.json"
-        jq -ej '.content | @base64d' "$scratch/branch.json" > "$scratch/branch.rb"
+        jq -ej '.content | gsub("[\r\n]"; "") | @base64d' "$scratch/branch.json" > "$scratch/branch.rb"
         if [[ "$(jq -Rrs '@base64' "$scratch/branch.rb")" != "$contents" ]]; then
             if [[ "$ref" != "$base_sha" ]]; then
                 # A failed first attempt may have created only the branch. It is
