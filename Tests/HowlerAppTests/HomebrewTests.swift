@@ -114,6 +114,14 @@ final class HomebrewTests: XCTestCase {
         func save(_ value: [String: Any], _ path: String) throws {
             try JSONSerialization.data(withJSONObject: value).write(to: root.appendingPathComponent(path))
         }
+        func wrapContent(_ path: String, lineEnding: String) throws {
+            var response = try json(path)
+            let characters = Array(try XCTUnwrap(response["content"] as? String))
+            response["content"] = stride(from: 0, to: characters.count, by: 60).map {
+                String(characters[$0..<min($0 + 60, characters.count)])
+            }.joined(separator: lineEnding) + lineEnding
+            try save(response, path)
+        }
         func release(draft: Bool = false, prerelease: Bool = false, missing: String? = nil, checksum: String? = nil) throws {
             let names: [String] = ["Howler.dmg", "Howler.zip", "appcast.xml"]
             let assets = names.filter { $0 != missing }.map {
@@ -238,6 +246,41 @@ final class HomebrewTests: XCTestCase {
         let retry = try f.run("pr")
         XCTAssertEqual(retry.status, 0, retry.output)
         XCTAssertEqual(f.read("calls").components(separatedBy: "PUT ").count - 1, 1)
+    }
+
+    func testCurrentCaskDecodesWrappedGitHubContentsWithoutWriting() throws {
+        for lineEnding in ["\n", "\r\n"] {
+            let f = try Fixture()
+            try f.manifest()
+            try f.base(version: "0.1.13", checksum: f.digest)
+            try f.wrapContent("base.json", lineEnding: lineEnding)
+            XCTAssertTrue((try f.json("base.json")["content"] as? String ?? "").contains(lineEnding))
+
+            let result = try f.run("pr")
+            XCTAssertEqual(result.status, 0, result.output)
+            XCTAssertTrue(result.output.contains("Howler 0.1.13 is already in the tap."))
+            XCTAssertFalse(f.read("calls").contains("POST"))
+            XCTAssertFalse(f.read("calls").contains("PUT"))
+        }
+    }
+
+    func testRetryDecodesWrappedGitHubBranchContentsWithoutWriting() throws {
+        for lineEnding in ["\n", "\r\n"] {
+            let f = try Fixture()
+            try f.manifest()
+            let first = try f.run("pr")
+            XCTAssertEqual(first.status, 0, first.output)
+            try f.wrapContent("branch.json", lineEnding: lineEnding)
+            XCTAssertTrue((try f.json("branch.json")["content"] as? String ?? "").contains(lineEnding))
+            try f.write("", "calls")
+
+            let retry = try f.run("pr")
+            XCTAssertEqual(retry.status, 0, retry.output)
+            XCTAssertTrue(retry.output.contains("Existing upgrade PR:"))
+            XCTAssertTrue(f.read("calls").contains("contents/Casks/howler.rb?ref=updated"))
+            XCTAssertFalse(f.read("calls").contains("POST"))
+            XCTAssertFalse(f.read("calls").contains("PUT"))
+        }
     }
 
     func testInterruptedBranchCanResumeAfterUnrelatedMainChanges() throws {
