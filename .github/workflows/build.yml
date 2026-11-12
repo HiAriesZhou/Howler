@@ -8,11 +8,38 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        id: filter
+        with:
+          script: |
+            let app = true;
+            if (context.eventName === 'pull_request') {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                ...context.repo, pull_number: context.issue.number, per_page: 100
+              });
+              // Build on empty/incomplete results and unknown paths, including renames.
+              if (files.length > 0 && files.length < 3000) {
+                const paths = files.flatMap(file => [file.filename, file.previous_filename].filter(Boolean));
+                app = paths.some(path => !(/^[^/]+\.md$/.test(path) || path.startsWith('docs/')));
+              }
+            }
+            core.setOutput('app', String(app));
+
+  build-app:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: macos-latest
     timeout-minutes: 30
     permissions:
@@ -21,10 +48,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Toolchain
+        id: toolchain
         run: |
           sw_vers
           xcodebuild -version
           swift --version
+          echo "key=$({ xcodebuild -version; swift --version; } | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Swift build
+        # Release builds remain independent of caches from ordinary validation.
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-${{ runner.arch }}-swift-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-swift-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-
 
       - name: Test
         run: swift test
@@ -149,6 +188,27 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" build/*.zip build/*.dmg build/appcast.xml \
               --title "$APP_NAME $GITHUB_REF_NAME" --notes-file "$NOTES" --latest
+          fi
+
+  # Keep the required check present on docs-only PRs and detector failures.
+  build:
+    needs: [changes, build-app]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify required results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          APP_REQUIRED: ${{ needs.changes.outputs.app }}
+          APP: ${{ needs.build-app.result }}
+        run: |-
+          test "$CHANGES" = success
+          if [ "$APP_REQUIRED" = true ]; then
+            test "$APP" = success
+          else
+            test "$APP" = skipped
           fi
 
   homebrew:
