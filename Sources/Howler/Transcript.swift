@@ -1,53 +1,73 @@
+import AppKit
 import HowlerCore
 import SwiftUI
 
-/// Everything written on the letter so far. Follows the quill down the page only while
-/// the reader is already at the bottom, so scrolling up to reread is never yanked back.
+/// Everything written on the letter so far, newest exchange first, right under the writing
+/// line. The page grows downward; once the sheet is full, older exchanges continue below
+/// the fold. The page never scrolls on its own to follow the quill.
+///
+/// A reader at the top stays there and watches the newest answer grow below the line.
+/// A reader who has scrolled down keeps their place: when the newest answer grows above
+/// the view, or the next queued exchange begins, the page moves down by the same amount.
+/// Asking a question returns to the top.
 struct Transcript: View {
     @ObservedObject var viewModel: ChatViewModel
     @Binding var contentHeight: CGFloat
     @Environment(\.parchment) private var parchment
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var viewportHeight: CGFloat = 0
+    @State private var scroller = PageScroller()
     @State private var scrollOffset: CGFloat = 0
+    @State private var newest: TrackedTurn?
+    @State private var layout: TranscriptLayout?
 
-    /// How close to the bottom still counts as "following along".
-    private static let followSlack: CGFloat = 90
-    private static let bottomID = "bottom"
+    /// How close to the top still counts as reading the newest exchange.
+    private static let topSlack: CGFloat = 40
+    private static let topID = "top"
 
     var body: some View {
+        let turns = viewModel.turns
+        let taskCount = viewModel.queue.tasks.count
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
-                        switch message.role {
-                        case .user:
-                            if index > 0 { Flourish().padding(.vertical, 6) }
-                            QuestionLine(message: message)
-                        case .assistant:
-                            answer(for: message)
+                VStack(alignment: .leading, spacing: 0) {
+                    Color.clear.frame(height: 0).id(Self.topID)
+                    VStack(alignment: .leading, spacing: 14) {
+                        if let error = viewModel.errorText {
+                            ErrorLine(text: error)
+                        }
+                        ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
+                            VStack(alignment: .leading, spacing: 14) {
+                                if index > 0 { Flourish().padding(.vertical, 6) }
+                                QuestionLine(message: turn.question)
+                                answer(for: turn.answer)
+                            }
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("transcript")) } action: { frame in
+                                if index == 0 { holdIfGrownAbove(turn.id, frame) }
+                            }
                         }
                     }
-                    if let error = viewModel.errorText {
-                        ErrorLine(text: error)
-                    }
-                    Color.clear.frame(height: 1).id(Self.bottomID)
+                    .padding(.horizontal, 30)
+                    .padding(.top, 4)
+                    .padding(.bottom, 16)
                 }
-                .padding(.horizontal, 30)
-                .padding(.top, 4)
-                .padding(.bottom, 16)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("transcript")) } action: { frame in
-                    scrollOffset = -frame.minY
-                    if abs(frame.height - contentHeight) > 0.5 {
-                        let wasFollowing = contentHeight - (scrollOffset + viewportHeight) < Self.followSlack
-                        contentHeight = frame.height
-                        // The sheet grows first; only once it is at full height does the
-                        // page itself need to scroll after the quill.
-                        guard wasFollowing else { return }
-                        DispatchQueue.main.async {
-                            if contentHeight > viewportHeight + 0.5 {
-                                proxy.scrollTo(Self.bottomID, anchor: .bottom)
-                            }
+                .background(ScrollViewLocator(scroller: scroller))
+                .onGeometryChange(for: TranscriptLayout.self) {
+                    TranscriptLayout(frame: $0.frame(in: .named("transcript")),
+                                     newest: turns.first?.id, tasks: taskCount)
+                } action: { next in
+                    let previous = layout
+                    layout = next
+                    scrollOffset = -next.frame.minY
+                    contentHeight = next.frame.height
+                    guard let previous else { return }
+                    if next.tasks > previous.tasks {
+                        scrollToTop(proxy)
+                    } else if next.newest != previous.newest {
+                        if scrollOffset < Self.topSlack {
+                            scrollToTop(proxy)
+                        } else {
+                            scroller.shift(by: next.frame.height - previous.frame.height)
                         }
                     }
                 }
@@ -55,8 +75,24 @@ struct Transcript: View {
             .coordinateSpace(name: "transcript")
             .scrollIndicators(.never)
             .mask(PageFade())
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
+        }
+    }
 
+    /// Keeps a reader below the newest exchange in place while its answer is written.
+    private func holdIfGrownAbove(_ id: UUID, _ frame: CGRect) {
+        let previous = newest
+        newest = TrackedTurn(id: id, frame: frame)
+        guard let previous, previous.id == id else { return }
+        let growth = frame.height - previous.frame.height
+        guard abs(growth) > 0.5, previous.frame.maxY <= 0 else { return }
+        scroller.shift(by: growth)
+    }
+
+    private func scrollToTop(_ proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
+                proxy.scrollTo(Self.topID, anchor: .top)
+            }
         }
     }
 
@@ -168,5 +204,54 @@ private struct CopyAnswerButton: View {
         .onHover { hovering = $0 }
         .help("Copy this answer")
         .animation(.easeOut(duration: 0.15), value: copied)
+    }
+}
+
+private struct TrackedTurn {
+    let id: UUID
+    let frame: CGRect
+}
+
+private struct TranscriptLayout: Equatable {
+    let frame: CGRect
+    let newest: UUID?
+    let tasks: Int
+}
+
+/// Moves the transcript's AppKit scroll view by an exact distance, which SwiftUI's
+/// `ScrollView` cannot do on macOS 14.
+@MainActor
+private final class PageScroller {
+    weak var scrollView: NSScrollView?
+
+    func shift(by distance: CGFloat) {
+        guard let scrollView else { return }
+        let clip = scrollView.contentView
+        clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: max(0, clip.bounds.origin.y + distance)))
+        scrollView.reflectScrolledClipView(clip)
+    }
+}
+
+/// Finds the scroll view that hosts the transcript.
+private struct ScrollViewLocator: NSViewRepresentable {
+    let scroller: PageScroller
+
+    func makeNSView(context: Context) -> NSView { LocatorView(scroller: scroller) }
+    func updateNSView(_ view: NSView, context: Context) {}
+
+    private final class LocatorView: NSView {
+        let scroller: PageScroller
+
+        init(scroller: PageScroller) {
+            self.scroller = scroller
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            scroller.scrollView = enclosingScrollView
+        }
     }
 }

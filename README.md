@@ -36,7 +36,7 @@
 
 Press **⌥H** anywhere. A letter settles at the top of the screen, already sealed in wax.
 
-- **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. Your question sits on a ruled line, and the answer is set in a book face below it. The sheet grows with the answer up to an A4 page, then follows the quill.
+- **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. The newest question and its answer sit just below the writing line, with earlier exchanges beneath them. The sheet grows downward up to an A4 page or the available screen height, then stays in place as the answer continues below the fold. Scroll down to read more; sending a question returns to the top.
 - **A quill that writes.** Answers stream in at a hand's pace. Fresh ink glows gold before it settles to sepia, and the quill rests after the last word. While the model thinks, the quill hovers and counts the seconds.
 - **Wax seals.** The crimson seal names the model writing to you. Paste a long text or a picture, or capture a region of the screen, and it is sealed into an amber seal cut with runes instead of filling your question.
 - **Burn after reading.** Press Esc or click the flame in the bottom-right corner, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is saved.

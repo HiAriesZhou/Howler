@@ -72,6 +72,26 @@ final class ConversationExecutionTests: XCTestCase {
         model.reset()
     }
 
+    func testTurnsListNewestStartedTurnFirstAndLeaveWaitingQuestionsOut() async {
+        let model = model()
+        model.input = "First"
+        model.send()
+        streams[0].yield("First answer")
+        streams[0].finish()
+        await waitUntil { model.queue.active == nil }
+        model.input = "Second"
+        model.send()
+        model.input = "Third"
+        model.send()
+        XCTAssertEqual(model.queue.waiting.count, 1)
+        XCTAssertEqual(model.turns.map(\.question.content), ["Second", "First"])
+        XCTAssertEqual(model.turns.map(\.answer.content), ["", "First answer"])
+        XCTAssertEqual(model.turns.map(\.id), model.queue.tasks.prefix(2).reversed().map(\.id))
+        XCTAssertEqual(model.messages.map(\.content), ["First", "First answer", "Second", ""],
+                       "The request history stays in chronological order")
+        model.reset()
+    }
+
     func testPresentationMustFinishAndHidingCannotStallTheQueue() async {
         let model = model()
         model.panelDidOpen(reduceMotion: false, candlelit: false)

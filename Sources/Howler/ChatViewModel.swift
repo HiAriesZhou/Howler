@@ -11,6 +11,13 @@ final class ChatViewModel: ObservableObject {
         let attachment: ContextAttachment
     }
 
+    /// One question and its reply, identified by the question.
+    struct LetterTurn: Identifiable {
+        let question: ChatMessage
+        let answer: ChatMessage
+        var id: UUID { question.id }
+    }
+
     @Published var input = "" {
         didSet {
             inputRevision &+= 1
@@ -57,12 +64,19 @@ final class ChatViewModel: ObservableObject {
         }
     }
 
-    var messages: [ChatMessage] {
-        queue.tasks.filter { $0.state != .queued }.flatMap { task in
-            [ChatMessage(id: task.id, role: .user, content: displayQuestion(task), attachment: task.attachment),
-             ChatMessage(id: task.replyID, role: .assistant, content: task.answer)]
+    /// Started question-and-answer pairs, newest first: the letter is written from the line
+    /// at the top downward, so the latest exchange sits right under it. Waiting questions
+    /// stay in the queue list until their turn starts.
+    var turns: [LetterTurn] {
+        queue.tasks.filter { $0.state != .queued }.reversed().map { task in
+            LetterTurn(
+                question: ChatMessage(id: task.id, role: .user, content: displayQuestion(task), attachment: task.attachment),
+                answer: ChatMessage(id: task.replyID, role: .assistant, content: task.answer)
+            )
         }
     }
+    /// The same exchanges in the order they were written.
+    var messages: [ChatMessage] { turns.reversed().flatMap { [$0.question, $0.answer] } }
     var isStreaming: Bool { queue.active?.state == .generating }
     var latestImageID: UUID? { images.last?.id }
     var previewAttachment: ContextAttachment? { attachment ?? image(draftImageID)?.attachment }
