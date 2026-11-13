@@ -7,7 +7,7 @@ import SwiftUI
 /// scripted answer, without any network or API key. Used to check the look and motion.
 ///
 /// Variants: `HOWLER_DEMO=setup` (no model yet), `empty` (configured blank letter), `long` (overflows an A4 page),
-/// `multi` (a follow-up question), `queue` (screenshot with two waiting questions), `burn` (dismissed once written), `image` (a captured screen region),
+/// `multi` (a follow-up question), `reread` (`long` with a long follow-up, for scrolling down while it is written), `queue` (screenshot with two waiting questions), `burn` (dismissed once written), `image` (a captured screen region),
 /// `settings` (the Settings window with a synthetic setup; `HOWLER_DEMO_PROVIDER=anthropic` shows a demo one,
 /// `HOWLER_DEMO_TAB=general|prompt|shortcut` opens that tab, `cycle` switches tabs every 1.5 s; without a
 /// model Settings always opens on General; `HOWLER_DEMO_UPDATE=1` shows the update row, `=0.1.9` a
@@ -95,7 +95,7 @@ extension PanelController {
             scheduleLetterSnapshot()
             return
         }
-        let repeats = variant == "long" ? 4 : 1
+        let repeats = variant == "long" || variant == "reread" ? 4 : 1
         viewModel.demoStream = { Self.demoStream(repeats: repeats) }
         show()
         viewModel.attach(
@@ -117,7 +117,7 @@ extension PanelController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 8.5) { [weak self] in self?.hide() }
         }
         scheduleLetterSnapshot()
-        if variant == "multi" {
+        if variant == "multi" || variant == "reread" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 9) { [weak self] in
                 self?.viewModel.input = "再用一句话总结"
                 self?.viewModel.send()
