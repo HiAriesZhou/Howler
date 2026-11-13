@@ -82,6 +82,18 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <integer>86400</integer>
     <key>SUAllowsAutomaticUpdates</key>
     <false/>
+    <!-- Shortcuts starts Capture and Explain by opening howler://capture. -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>${BUNDLE_ID}</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>howler</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
 PLIST

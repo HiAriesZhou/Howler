@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKey: HotKey?
     private var settingsHotKey: HotKey?
     private var screenshotHotKey: HotKey?
+    private var captureLinks = CaptureLinkGate()
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -80,8 +81,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         #endif
-        if !settings.isConfigured {
+        // A Shortcuts link can arrive before this returns. Start the capture then,
+        // and do not also open Settings over the screen being selected.
+        if captureLinks.becomeReady() {
+            panelController?.viewModel.captureScreen()
+        } else if !settings.isConfigured {
             openSettings()
+        }
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        #if DEBUG
+        // Demo launches are for screenshots of the interface, not a real capture.
+        if ProcessInfo.processInfo.environment["HOWLER_DEMO"] != nil { return }
+        #endif
+        if captureLinks.receive(urls) {
+            panelController?.viewModel.captureScreen()
         }
     }
 
