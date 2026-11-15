@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Howler — Burn after reading</title>
-  <meta name="description" content="A sealed letter for quick AI questions on macOS. Write on parchment, a quill writes the answer, and the letter burns when you're done. Menu bar, any model, nothing saved.">
+  <meta name="description" content="A sealed letter for quick AI questions on macOS. Write on parchment, a quill writes the answer, and the letter burns when you're done. Menu bar, any model, no saved chat history.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#f3ead6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#140f0b" media="(prefers-color-scheme: dark)">
@@ -155,13 +155,13 @@
       </p>
 
       <div class="feature">
-        <img src="assets/letter.webp" width="1200" height="999" loading="lazy" decoding="async" alt="A Howler letter: a question beside a crimson wax seal, and the answer written beneath it with a code block and a list">
+        <img src="assets/letter.webp" width="1424" height="1156" loading="lazy" decoding="async" alt="A Howler letter with the latest question and answer below the writing line, a Swift code block, and the bottom-right flame">
         <div>
           <h3><span class="en">Parchment and a quill</span><span class="zh">羊皮纸与羽毛笔</span></h3>
-          <p><span class="en">Deckled edges, fibers, a fold. Your question sits on a ruled line; the answer streams in at a hand's pace, fresh ink glowing gold before it settles to sepia. The sheet grows with the answer, up to an A4 page.</span>
-          <span class="zh">毛边、纤维纹理、一道折痕。问题写在横线上，回答按手写的节奏逐字出现，新墨先泛起金光，再沉为墨色。纸随回答向下展开，最长到 A4 比例。</span></p>
-          <p><span class="en">Markdown, code blocks with copy, and follow-up questions on the same sheet, separated by a fleuron.</span>
-          <span class="zh">支持 Markdown 和可复制的代码块；追问写在同一张纸上，每轮之间用花饰隔开。</span></p>
+          <p><span class="en">Deckled edges, fibers, a fold. The newest question and answer sit just below the writing line, with earlier exchanges beneath them. The answer streams in at a hand's pace, fresh ink glowing gold before it settles to sepia. The sheet grows up to an A4 page or the available screen height; scroll down to read more.</span>
+          <span class="zh">毛边、纤维纹理、一道折痕。最新一轮问题和回答紧贴输入框下方，旧轮次依次排在下面。回答按手写的节奏逐字出现，新墨先泛起金光，再沉为墨色。纸随回答向下展开，达到 A4 比例或屏幕可用高度后，可向下滚动继续阅读。</span></p>
+          <p><span class="en">Markdown, code blocks with copy, and follow-up questions on the same sheet, separated by a fleuron. Sending a question returns to the top.</span>
+          <span class="zh">支持 Markdown 和可复制的代码块；追问写在同一张纸上，每轮之间用花饰隔开。发送问题时回到顶部。</span></p>
         </div>
       </div>
 
@@ -169,18 +169,18 @@
         <img src="assets/burning.webp" width="960" height="799" loading="lazy" decoding="async" alt="The letter catching fire at its bottom edge, scorch and sparks climbing toward the seal">
         <div>
           <h3><span class="en">Burn after reading</span><span class="zh">阅后即焚</span></h3>
-          <p><span class="en">Press Esc, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is kept.</span>
-          <span class="zh">按 Esc，信纸从底边起火，焦痕、火光和火星一路烧到火漆印，这次对话也随之烧掉，什么都不留。</span></p>
-          <p class="aside"><span class="en">Reduce Motion skips the fire; the letter simply goes.</span><span class="zh">开启“减少动态效果”时不播放燃烧，信纸直接收起。</span></p>
+          <p><span class="en">Press Esc or click the bottom-right flame to burn the letter and clear the local conversation. Scorch, embers and sparks climb to the seal. Pressing ⌥H while focused conceals it; opening Settings also keeps it in memory. Clicking outside only returns focus. Burning does not delete records kept by your model service.</span>
+          <span class="zh">按 Esc 或点击右下角火焰，焚烧信纸并清空本地会话，焦痕、火光和火星一路烧到火漆印。信纸聚焦时按 ⌥H 暂时收起，打开设置也会保留内存会话；点击纸外只交出焦点。焚烧不会删除模型服务保留的记录。</span></p>
+          <p class="aside"><span class="en">Reduce Motion skips the fire; burning still clears the conversation immediately.</span><span class="zh">开启“减少动态效果”时不播放燃烧，焚烧仍会立即清空会话。</span></p>
         </div>
       </div>
 
       <div class="feature">
-        <img src="assets/letter-dark.webp" width="960" height="799" loading="lazy" decoding="async" alt="The same letter on candlelit paper in Dark Mode">
+        <img src="assets/letter-dark.webp" width="1424" height="1156" loading="lazy" decoding="async" alt="A Howler letter in Dark Mode, with the latest question and answer below the writing line">
         <div>
           <h3><span class="en">Wax-sealed context, candlelit at night</span><span class="zh">火漆附件，夜里是烛光</span></h3>
-          <p><span class="en">Paste a long text or a picture, or capture a region of the screen: it is sealed into an amber seal cut with runes instead of filling your question. The clipboard is read only when you paste.</span>
-          <span class="zh">粘贴长文本或图片，或截取屏幕区域，内容会封进一枚刻着符文的琥珀色火漆印，不会塞进问题里。剪贴板只在你粘贴时读取。</span></p>
+          <p><span class="en">Paste a long text or a picture to seal it into an amber seal cut with runes, then send it when ready. Capture and Explain (<kbd>⌥⇧H</kbd> or Attach) sends the selected screen region to your configured model immediately and starts an introduction. Cancelling the selection sends nothing. The clipboard is read only when you paste.</span>
+          <span class="zh">粘贴长文本或图片，内容会封进一枚刻着符文的琥珀色火漆印，等你手动发送。通过 <kbd>⌥⇧H</kbd> 或 Attach 的 Capture and Explain 框选截图，完成后会立即发送到已配置的模型并开始介绍；取消框选不发送。剪贴板只在你粘贴时读取。</span></p>
           <p><span class="en">In Dark Mode the paper dims to candlelight, so it never glares against a dark desktop.</span>
           <span class="zh">深色模式下，纸张暗成烛光色，不会在深色桌面上刺眼。</span></p>
         </div>
@@ -191,15 +191,14 @@
     <section class="chapter" id="setup">
       <h2><span class="en">Any model. Set up by your assistant.</span><span class="zh">任何模型，交给 AI 助手配置</span></h2>
       <div class="feature flip">
-        <img class="settings-shot" src="assets/settings.webp" width="1144" height="1290" loading="lazy" decoding="async" alt="Howler Settings, General tab: the model with its host, status, Check and Copy Setup Prompt, then the shortcut, launch at login, automatic updates and feedback">
+        <img class="settings-shot" src="assets/settings.webp" width="560" height="563" loading="lazy" decoding="async" alt="Howler Settings with General, Prompt and Shortcut tabs; General shows model status, API Key with Replace Key, Copy Setup Prompt, reply language and update preferences">
         <div>
-          <p><span class="en">Howler writes with one model service. Copy the setup prompt from Settings and paste it into Claude Code, Codex or any assistant that can run commands. It asks which model you want, reads the docs, configures Howler's built-in command line and checks it works.</span>
-          <span class="zh">Howler 只连接一个模型服务。在设置里复制配置提示词，粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪个模型、查官方文档、用 Howler 自带的命令行写好配置，并检查能否正常回答。</span></p>
-          <p><span class="en">Your API key never enters the chat: you copy it, and it goes straight into the Keychain.</span>
-          <span class="zh">API Key 不会出现在聊天里：你复制好，它直接存进钥匙串。</span></p>
-<pre><code>pbpaste | Howler config set api-key --stdin
-Howler check
-✓ Passed: deepseek-flash answered.</code></pre>
+          <p><span class="en">Howler writes with one model service. Copy the setup prompt from Settings › General and paste it into Claude Code, Codex or any assistant that can run commands. It configures the service, model and request parameters through Howler's built-in command line.</span>
+          <span class="zh">Howler 只连接一个模型服务。在 Settings › General 复制配置提示词，粘贴给 Claude Code、Codex 等能运行命令的 AI 助手，由它通过 Howler 自带的命令行配置服务、模型和请求参数。</span></p>
+          <p><span class="en">Then return to General › API Key, choose Add Key or Replace Key, paste your key into the native secure field, and click Save &amp; Check. The key goes directly into macOS Keychain; never send it in the assistant's chat. Save &amp; Check saves the key and sends one test request.</span>
+          <span class="zh">然后回到 General › API Key，选择 Add Key 或 Replace Key，在原生密码输入框中粘贴密钥，点击 Save &amp; Check。密钥直接存入 macOS 钥匙串，不要发到助手的聊天里。Save &amp; Check 保存密钥后只发送一次测试请求。</span></p>
+<pre><code>Howler config set preset=deepseek
+Howler config show</code></pre>
         </div>
       </div>
 
@@ -215,9 +214,11 @@ Howler check
 
     <!-- Privacy -->
     <section class="chapter" id="privacy">
-      <h2><span class="en">Nothing is saved</span><span class="zh">什么都不保存</span></h2>
+      <h2><span class="en">No saved chat history</span><span class="zh">不保存聊天历史</span></h2>
       <ul class="vows">
-        <li><span class="en">No chat history, ever. Messages live in memory and burn with the letter.</span><span class="zh">从不保存对话：消息只在内存里，随信纸烧掉。</span></li>
+        <li><span class="en">Howler keeps the conversation in memory when concealed. Burning the letter or quitting clears messages and parsed-answer caches; restarting does not restore them.</span><span class="zh">暂时收起时，Howler 保留内存会话；焚烧信纸或退出应用才清空消息和回答解析缓存，重启不会恢复。</span></li>
+        <li><span class="en">Screen capture uses a temporary PNG that Howler attempts to delete after reading it.</span><span class="zh">截屏会使用临时 PNG 文件，Howler 读取后会尝试删除。</span></li>
+        <li><span class="en">Model settings and preferences are stored locally. Burning local content does not delete records kept by your model service.</span><span class="zh">模型设置和偏好保存在本机；本地焚烧不会删除模型服务保留的记录。</span></li>
         <li><span class="en">The API key lives in the macOS Keychain and is never printed.</span><span class="zh">API Key 存在 macOS 钥匙串里，从不打印。</span></li>
         <li><span class="en">Requests go straight to the service you chose, never through a relay.</span><span class="zh">请求直接发往你选择的服务，不经过任何中转。</span></li>
         <li><span class="en">No logs, no telemetry, no account.</span><span class="zh">没有日志，没有统计，不需要注册账号。</span></li>
@@ -231,7 +232,7 @@ Howler check
       <ol>
         <li><span class="en">Download <strong>Howler.dmg</strong> and drag Howler onto Applications.</span><span class="zh">下载 <strong>Howler.dmg</strong>，把 Howler 拖到 Applications。</span></li>
         <li><span class="en">Open it. It is signed with a Developer ID and notarized by Apple, so it opens like any other app.</span><span class="zh">打开它。应用已用 Developer ID 签名并经 Apple 公证，像其他应用一样直接打开。</span></li>
-        <li><span class="en">Copy the setup prompt from Settings, hand it to your assistant, then press <kbd>⌥H</kbd>.</span><span class="zh">在设置里复制配置提示词交给 AI 助手，然后按 <kbd>⌥H</kbd>。</span></li>
+        <li><span class="en">Hand the setup prompt to your assistant, then add your API key in Settings › General with Save &amp; Check. Press <kbd>⌥H</kbd> to write.</span><span class="zh">把配置提示词交给 AI 助手，再到 Settings › General 添加 API Key，点击 Save &amp; Check，然后按 <kbd>⌥H</kbd> 开始提问。</span></li>
       </ol>
       <div class="actions center">
         <a class="btn wax" href="https://github.com/HiAriesZhou/Howler/releases/latest/download/Howler.dmg">

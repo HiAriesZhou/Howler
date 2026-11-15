@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/letter.png" width="720" alt="A Howler letter: a question beside a crimson wax seal, the answer written beneath it in ink">
+  <img src="docs/images/letter.png" width="720" alt="A Howler letter with the latest question and answer below the writing line, a Swift code block, and the bottom-right flame">
 </p>
 
 ---
@@ -39,7 +39,7 @@ Press **⌥H** anywhere. A letter settles at the top of the screen, already seal
 - **Parchment, not a text box.** The paper has deckled edges, fibers and a fold crease. The newest question and its answer sit just below the writing line, with earlier exchanges beneath them. The sheet grows downward up to an A4 page or the available screen height, then stays in place as the answer continues below the fold. Scroll down to read more; sending a question returns to the top.
 - **A quill that writes.** Answers stream in at a hand's pace. Fresh ink glows gold before it settles to sepia, and the quill rests after the last word. While the model thinks, the quill hovers and counts the seconds.
 - **Wax seals.** The crimson seal names the model writing to you. Paste a long text or a picture, or capture a region of the screen, and it is sealed into an amber seal cut with runes instead of filling your question.
-- **Burn after reading.** Press Esc or click the flame in the bottom-right corner, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is saved.
+- **Burn after reading.** Press Esc or click the flame in the bottom-right corner, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal as Howler clears the local conversation. This does not delete records kept by your model service.
 
 <table>
   <tr>
@@ -76,7 +76,7 @@ Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, rig
 Howler writes with one model service. The setup is short enough to hand to an AI assistant.
 
 <p align="center">
-  <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General contains model setup, reply language, login and update preferences">
+  <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General shows model status, API Key with Replace Key, Copy Setup Prompt, reply language and update preferences">
 </p>
 
 Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It configures the service, model and request parameters. Then return to **General › API Key**, choose **Add Key** or **Replace Key**, paste the key into the secure field, and click **Save & Check**. The key goes directly into macOS Keychain; never send it in the assistant's chat.
@@ -146,8 +146,8 @@ Concealing the letter, clicking outside or opening Settings keeps the conversati
 
 ## Privacy
 
-- No chat history, ever. Messages and parsed-answer caches are cleared when the letter burns or the app quits. A concealed letter stays in memory. A screen capture uses a temporary PNG that Howler attempts to delete after reading it.
-- Stored: the model setup, its last check, your system prompt instructions, three optional shortcuts and reply language preference (UserDefaults), plus the API key (Keychain).
+- Howler does not write chat history to disk. Messages and parsed-answer caches are cleared when the letter burns or the app quits. A concealed letter stays in memory. A screen capture uses a temporary PNG that Howler attempts to delete after reading it.
+- Stored: the model setup, credential ownership and configuration revision metadata, the last check, your system prompt instructions, three optional shortcuts, reply language and update preferences (UserDefaults), plus the API key (Keychain).
 - The system prompt carries the date in UTC; tasks add the necessary reply language instruction. They send no full system language list, name, region, time zone or location.
 - The clipboard and the screen are read only when you paste or capture. Capture and Explain sends the selected region immediately. Burning local content does not delete data retained by your model service.
 - No logs, no telemetry. Network requests use an ephemeral `URLSession`.
