@@ -218,7 +218,7 @@ final class StateSafetyTests: XCTestCase {
         XCTAssertNil(store.lastCheck)
         XCTAssertFalse(store.recordCheck(passed: false, message: "Old failure", for: keyRevision))
         let resetRevision = passedRevision()
-        store.reset()
+        try store.reset()
         XCTAssertFalse(store.hasKey)
         XCTAssertFalse(store.recordCheck(passed: true, message: nil, for: resetRevision))
         XCTAssertNil(store.lastCheck)

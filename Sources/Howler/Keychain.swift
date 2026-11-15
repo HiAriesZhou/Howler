@@ -88,7 +88,10 @@ enum Keychain {
         return SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess
     }
 
-    static func delete(account: String) {
-        SecItemDelete(baseQuery(account: account) as CFDictionary)
+    static func delete(account: String, operations: Operations = Operations()) throws {
+        let status = operations.delete(baseQuery(account: account) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainError(status: status, operation: "delete")
+        }
     }
 }
