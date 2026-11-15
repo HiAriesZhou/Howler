@@ -35,6 +35,39 @@ These steps need the Apple Developer Program **Account Holder** role. Only the A
 5. A tagged build that is signed but has no notarization secrets fails on purpose. Gatekeeper would still block such a release.
 6. On `v*` tags, CI fetches Sparkle's `sign_update` (the version `Package.swift` pins, checked against its SHA-256). `scripts/appcast.sh` then signs the stapled zip with `SPARKLE_ED_PRIVATE_KEY` and writes `appcast.xml`, which is attached to the release. Installed copies read it through `SUFeedURL` (`app.config`). A tag without the secret fails, because installed copies would never be offered that release.
 
+Publication runs in a separate job, serialized across tags without cancelling the
+active publisher. `queue: max` retains up to 100 pending publishers instead of
+replacing an older pending job. `scripts/release.py` checks all published stable versions and
+requires a higher version and a build number exceeding every published Sparkle feed before uploading,
+then repeats that check before promotion. Queue order does not determine which
+version becomes latest.
+Older releases predating Sparkle have no feed and retain the version guard; the
+highest published version must have a valid feed before a new release can proceed.
+
+New releases use `gh release create --draft --verify-tag` with the ZIP, DMG and
+appcast. GitHub CLI already stages asset uploads through a draft; keeping it a
+draft explicitly allows verification before publishing. CI downloads the assets,
+checks their sizes and SHA-256 against both GitHub metadata and the current batch,
+verifies the ZIP using the appcast signature with Sparkle, and checks the DMG's
+signature, stapled notarization ticket and Gatekeeper acceptance. Only then does
+it publish the draft and mark it latest. These remain separate API operations.
+The downloaded ZIP is extracted and the DMG mounted read-only; both contained
+apps must match `app.config`'s version, build number and bundle ID, and pass code
+signature, stapled ticket and Gatekeeper checks. The DMG is detached on failure
+as well as success.
+
+A failed draft can be retried and its assets replaced. A published release is
+read-only on retry: CI downloads and verifies its original ZIP, DMG and appcast,
+without regenerating signatures, comparing against newly built archives, updating
+notes or changing latest. Missing or invalid published assets require maintainer
+investigation; automation does not repair them. Only an HTTP 404 from the release
+tag lookup permits creation. Authentication, transport, rate-limit, malformed
+responses and other HTTP failures stop publication. A failure after promotion may
+have published successfully; inspect the remote state or rerun verification.
+
+Homebrew delivery keeps its own concurrency group and manual retry entry point.
+Its failure does not undo or republish the app release.
+
 ## The update key
 
 Sparkle verifies every update against `SPARKLE_PUBLIC_KEY` in `app.config`, the public half of an EdDSA key. The private half lives in the login keychain (account `howler`, made with Sparkle's `generate_keys --account howler`), in a backup outside the repo, and in the `SPARKLE_ED_PRIVATE_KEY` secret. If it is lost, installed copies can't verify new updates and need one manual download. Never put it in the repo or a chat.
