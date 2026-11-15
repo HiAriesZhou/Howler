@@ -45,18 +45,6 @@ public struct HotKeyCombo: Equatable, Codable, Sendable {
 
     public static let spaceKeyCode: UInt32 = 49
 
-    /// The shortcut to use for what settings hold: a missing or invalid combo means the default.
-    public static func effective(stored: HotKeyCombo?) -> HotKeyCombo {
-        guard let stored, stored.isValid else { return standard }
-        return stored
-    }
-
-    /// Applied once, on the first launch after the default moved off ⌥Space: a stored ⌥Space is
-    /// dropped so it follows the default. After that, ⌥Space recorded on purpose stays.
-    public static func storedAfterDefaultChange(_ stored: HotKeyCombo?) -> HotKeyCombo? {
-        stored == previousStandard ? nil : stored
-    }
-
     /// "⌃⌥⇧⌘K" — Apple's canonical modifier order.
     public var display: String {
         var result = ""
