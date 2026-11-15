@@ -226,9 +226,15 @@ struct HowlerView: View {
                         }
                     } label: {
                         let number = viewModel.image(viewModel.draftImageID)?.number
-                        Label(number.map { "Asking about screenshot \($0)" } ?? "No image selected", systemImage: "photo")
+                        HStack(spacing: 6) {
+                            Label(number.map { "Asking about screenshot \($0)" } ?? "No image selected", systemImage: "photo")
+                            Image(systemName: "chevron.down").font(.system(size: 9))
+                        }
+                        .font(Lettering.marginalia(12))
+                        .foregroundStyle(parchment.ink)
                     }
-                    .menuStyle(.borderlessButton)
+                    .menuStyle(.button)
+                    .buttonStyle(.plain)
                     .fixedSize()
                     Spacer()
                 }

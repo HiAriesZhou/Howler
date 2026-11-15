@@ -17,6 +17,10 @@ Howler is a macOS 14+ menu bar app (Swift 5.10, SwiftPM). `HowlerCore` holds the
 - API keys belong in Keychain, never command arguments, logs, fixtures or documentation. Read the clipboard and screen only after a user action; use an ephemeral session for chat requests.
 - Preserve input-method composition, selection-aware copy, Reduce Motion, and legacy configuration/shortcut migration. Add manual checks when behavior changes.
 - The Settings footer shows either the current version or one Update button. A click authorizes only the offered update, including restart; cancellation, failure or session end clears that consent. Keep download validation and installation in Sparkle, with its progress and error UI. Informational and major-upgrade offers retain Sparkle's standard confirmation.
+- CLI help, version and schema output must not mutate settings, migrate data, access Keychain or send requests.
+- Restore queued drafts directly, preserving their text and context without passing them through paste or input conversion.
+- Detect configuration and credential changes independently of the in-memory cache; clearing a cache must not hide a change.
+- Never overwrite published release artifacts. Verify rejection and failure cases as well as successful paths.
 
 ## Commands
 

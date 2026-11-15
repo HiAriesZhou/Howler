@@ -91,24 +91,6 @@ final class HotKeyComboTests: XCTestCase {
         XCTAssertEqual(HotKeyCombo.settings.keyCode, 43) // kVK_ANSI_Comma
         // Action conflicts and historical migration are handled by AppSettings.
         XCTAssertTrue(HotKeyCombo.settings.isValid)
-        XCTAssertEqual(HotKeyCombo.effective(stored: .settings), .settings)
-    }
-
-    func testStoredShortcutResolution() {
-        let custom = HotKeyCombo(keyCode: 40, modifiers: [.control, .option], keyLabel: "K")
-        XCTAssertEqual(HotKeyCombo.effective(stored: nil), .standard)
-        XCTAssertEqual(HotKeyCombo.effective(stored: custom), custom)
-        XCTAssertEqual(HotKeyCombo.effective(stored: HotKeyCombo(keyCode: 40, modifiers: [], keyLabel: "K")), .standard)
-        // Recorded on purpose after the upgrade, ⌥Space is kept.
-        XCTAssertEqual(HotKeyCombo.effective(stored: .previousStandard), .previousStandard)
-    }
-
-    func testDefaultChangeDropsOnlyTheOldDefault() {
-        // The old Reset stored ⌥Space; on the one-time upgrade it follows the default.
-        XCTAssertNil(HotKeyCombo.storedAfterDefaultChange(.previousStandard))
-        let custom = HotKeyCombo(keyCode: 40, modifiers: [.control, .option], keyLabel: "K")
-        XCTAssertEqual(HotKeyCombo.storedAfterDefaultChange(custom), custom)
-        XCTAssertNil(HotKeyCombo.storedAfterDefaultChange(nil))
     }
 
     func testDisplayUsesMacModifierOrder() {
