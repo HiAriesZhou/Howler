@@ -138,6 +138,63 @@ final class ConversationExecutionTests: XCTestCase {
         XCTAssertTrue(model.images.isEmpty)
     }
 
+    func testTransportSizeErrorsRetainHistoryAndPauseWaitingQuestions() async throws {
+        func frame(_ text: String) -> String {
+            "data: {\"choices\":[{\"delta\":{\"content\":\"\(text)\"}}]}\n\n"
+        }
+        let partial = "Partial"
+        let half = String(repeating: "a", count: 512 * 1024)
+        let chunk = String(repeating: "a", count: 256 * 1024)
+        let replyPrefix = String(repeating: frame(chunk), count: 31)
+            + frame(String(repeating: "a", count: chunk.utf8.count - partial.utf8.count))
+        let cases = [
+            (String(repeating: "a", count: 1024 * 1024 + 1) + "\n\n", partial,
+             "The server sent a line larger than 1 MiB."),
+            ("data: \(half)\ndata: \(half)\n\n", partial,
+             "The server sent an event larger than 1 MiB."),
+            (replyPrefix + frame("b"), partial + String(repeating: "a", count: 8 * 1024 * 1024 - partial.utf8.count),
+             "The reply is larger than 8 MiB.")
+        ]
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [QueueBoundaryURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let client = ChatClient(session: session)
+        for (suffix, expected, reason) in cases {
+            let model = model()
+            model.input = "Earlier question"
+            model.send()
+            streams.last?.yield("Earlier answer")
+            streams.last?.finish()
+            await waitUntil { model.queue.active == nil }
+            QueueBoundaryURLProtocol.body = Data((frame(partial) + suffix + "data: [DONE]\n\n").utf8)
+            var requestCount = 0
+            model.streamFactory = { messages, options in
+                requestCount += 1
+                return client.stream(service: Provider.openAI.service(), apiKey: "fixture-key",
+                                     messages: messages, options: options)
+            }
+            model.input = "Bounded question"
+            model.send()
+            model.input = "Waiting question"
+            model.send()
+            let deadline = ContinuousClock.now + .seconds(30)
+            while !model.queue.isPaused, model.queue.tasks[1].state != .completed,
+                  ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            XCTAssertTrue(model.queue.isPaused)
+            XCTAssertEqual(model.queue.pauseReason, reason)
+            XCTAssertEqual(model.queue.tasks[0].answer, "Earlier answer")
+            XCTAssertEqual(model.queue.tasks[0].state, .completed)
+            XCTAssertTrue(model.queue.tasks[1].answer == expected)
+            XCTAssertEqual(model.queue.tasks[1].state, .paused)
+            XCTAssertEqual(model.queue.tasks[2].state, .queued)
+            XCTAssertEqual(requestCount, 1)
+            model.reset()
+        }
+    }
+
     func testNewScreenshotPreservesDraftAssociationAndLanguageSnapshot() async {
         let model = model()
         model.settings.setReplyLanguage("zh-Hans")
@@ -274,4 +331,21 @@ final class ConversationExecutionTests: XCTestCase {
             model.reset()
         }
     }
+}
+
+private final class QueueBoundaryURLProtocol: URLProtocol {
+    static var body = Data()
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1",
+                                       headerFields: ["Content-Type": "text/event-stream"])!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Self.body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }
