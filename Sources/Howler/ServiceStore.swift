@@ -50,6 +50,9 @@ struct ServiceStore {
     init(defaults: UserDefaults = .standard, keys: KeyAccess = .keychain) {
         self.defaults = defaults
         self.keys = keys
+    }
+
+    private func migrateLegacyKeyScope() {
         // Bind an existing installation's key to its existing destination exactly once.
         // No secret is read here, and an absent binding later must never adopt a new host.
         if !defaults.bool(forKey: DefaultsKey.keyScopeMigrated) {
@@ -66,8 +69,19 @@ struct ServiceStore {
         defaults.data(forKey: DefaultsKey.service).flatMap { try? JSONDecoder().decode(ModelService.self, from: $0) }
     }
 
+    var serviceForEditing: ModelService? { service ?? legacySetup?.service }
+
+    private var legacySetup: (provider: Provider, service: ModelService)? {
+        guard defaults.data(forKey: DefaultsKey.service) == nil,
+              let raw = defaults.string(forKey: DefaultsKey.legacyProvider),
+              let provider = Provider(rawValue: raw) else { return nil }
+        let models = defaults.dictionary(forKey: DefaultsKey.legacyModels) as? [String: String] ?? [:]
+        return (provider, provider.service(model: models[provider.rawValue]))
+    }
+
     func save(_ service: ModelService) throws {
         let data = try JSONEncoder().encode(service)
+        migrateLegacyKeyScope()
         let previous = self.service
         invalidateCheck()
         defer { finishChange() }
@@ -105,6 +119,7 @@ struct ServiceStore {
         guard let service else { throw ServiceConfigError.missing(["format", "base-url", "model"]) }
         guard expected == nil || expected == service else { throw ConfigurationFailure.changed }
         let key = try Self.validatedAPIKey(raw)
+        migrateLegacyKeyScope()
         invalidateCheck()
         let revision = self.revision
         defer { finishChange() }
@@ -190,13 +205,11 @@ struct ServiceStore {
     func reset() throws {
         let previous = service
         let legacyProvider = defaults.string(forKey: DefaultsKey.legacyProvider).flatMap(Provider.init(rawValue:))
-        let legacyModels = defaults.dictionary(forKey: DefaultsKey.legacyModels) ?? [:]
-        let legacyProviders = Provider.allCases.filter { $0 == legacyProvider || legacyModels[$0.rawValue] != nil }
         invalidateCheck()
         defer { finishChange() }
         if let previous { try deleteKey(Self.keyAccount(for: previous)) }
         try deleteKey(Self.legacyKeyAccount)
-        for provider in legacyProviders { try deleteKey(provider.rawValue) }
+        if let legacyProvider { try deleteKey(legacyProvider.rawValue) }
         defaults.removeObject(forKey: DefaultsKey.service)
         defaults.removeObject(forKey: DefaultsKey.keyScope)
         defaults.removeObject(forKey: DefaultsKey.legacyKeyScope)
@@ -207,13 +220,9 @@ struct ServiceStore {
     /// Turns the provider chosen in an earlier version, with its model and key, into the
     /// model service. Runs once; keys saved for other providers stay where they were.
     func migrateLegacySetup() {
-        guard defaults.data(forKey: DefaultsKey.service) == nil,
-              let raw = defaults.string(forKey: DefaultsKey.legacyProvider),
-              let provider = Provider(rawValue: raw)
-        else { return }
-        let models = defaults.dictionary(forKey: DefaultsKey.legacyModels) as? [String: String] ?? [:]
+        migrateLegacyKeyScope()
+        guard let (provider, service) = legacySetup else { return }
         do {
-            let service = provider.service(model: models[provider.rawValue])
             let sourceAccount = keys.exists(Self.legacyKeyAccount) ? Self.legacyKeyAccount : provider.rawValue
             if keys.exists(sourceAccount) {
                 // A key that exists but can't be read yet (e.g. access was denied) is retried

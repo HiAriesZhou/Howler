@@ -33,6 +33,9 @@ enum CLI {
                 break
             }
             let store = makeStore()
+            if case .set(let fields) = operation {
+                _ = try ServiceConfig.apply(fields, to: store.serviceForEditing)
+            }
             switch operation {
             case .reset:
                 try store.reset()

@@ -122,6 +122,80 @@ final class CLIStorageBoundaryTests: XCTestCase {
         XCTAssertNil(fixture.defaults.string(forKey: "provider"))
     }
 
+    func testInvalidPartialConfigurationDoesNotInitializeOrMigrateStorage() throws {
+        for legacy in [false, true] {
+            let fixture = BoundaryFixture()
+            if legacy { fixture.seedLegacy() }
+            else { fixture.defaults.set(try JSONEncoder().encode(Provider.anthropic.service()), forKey: "service") }
+            fixture.values["api-key"] = "synthetic-unbound"
+            let before = fixture.defaults.values as NSDictionary
+            let previousKeys = fixture.values
+            let output = capture {
+                CLI.run(["Howler", "config", "set", "body={\"messages\":[]}"], store: fixture.store)
+            }
+            XCTAssertEqual(output.status, 1)
+            XCTAssertTrue(output.stderr.contains("can't be set in body"))
+            XCTAssertEqual(fixture.defaults.values as NSDictionary, before)
+            XCTAssertEqual(fixture.values, previousKeys)
+            XCTAssertEqual(fixture.calls, [])
+        }
+    }
+
+    func testIncompleteConfigurationDoesNotInitializeStorage() {
+        let fixture = BoundaryFixture()
+        let output = capture { CLI.run(["Howler", "config", "set", "model=fixture"], store: fixture.store) }
+        XCTAssertEqual(output.status, 1)
+        XCTAssertTrue(output.stderr.contains("Missing format, base-url"))
+        XCTAssertTrue(fixture.defaults.values.isEmpty)
+        XCTAssertEqual(fixture.calls, [])
+    }
+
+    func testInvalidFormatChangeDoesNotInitializeStorage() throws {
+        let fixture = BoundaryFixture()
+        var current = Provider.gemini.service()
+        current.body = ["messages": .array([])]
+        fixture.defaults.set(try JSONEncoder().encode(current), forKey: "service")
+        fixture.values["api-key"] = "synthetic-current"
+        let before = fixture.defaults.values as NSDictionary
+        let output = capture {
+            CLI.run(["Howler", "config", "set", "format=chat-completions"], store: fixture.store)
+        }
+        XCTAssertEqual(output.status, 1)
+        XCTAssertTrue(output.stderr.contains("can't be set in body"))
+        XCTAssertEqual(fixture.defaults.values as NSDictionary, before)
+        XCTAssertEqual(fixture.values, ["api-key": "synthetic-current"])
+        XCTAssertEqual(fixture.calls, [])
+    }
+
+    func testStoreConstructionIsPureUntilExplicitLegacyMigration() throws {
+        let fixture = BoundaryFixture()
+        fixture.defaults.set(try JSONEncoder().encode(fixture.service()), forKey: "service")
+        fixture.values["api-key"] = "synthetic-legacy"
+        let before = fixture.defaults.values as NSDictionary
+        let store = fixture.store
+        XCTAssertEqual(fixture.defaults.values as NSDictionary, before)
+        XCTAssertEqual(fixture.calls, [])
+        XCTAssertEqual(fixture.values, ["api-key": "synthetic-legacy"])
+        store.migrateLegacySetup()
+        XCTAssertEqual(try store.readAPIKey(), "synthetic-legacy")
+    }
+
+    func testFirstOriginChangeCannotBindLegacyKeyToTheNewHost() throws {
+        let fixture = BoundaryFixture()
+        fixture.defaults.set(try JSONEncoder().encode(fixture.service()), forKey: "service")
+        fixture.values["api-key"] = "synthetic-legacy"
+        let store = fixture.store
+        try store.save(fixture.service("b.example"))
+        XCTAssertNil(fixture.values["api-key"])
+        XCTAssertNil(try store.readAPIKey())
+        fixture.values["api-key"] = "synthetic-orphan"
+        let reopened = fixture.store
+        reopened.migrateLegacySetup()
+        XCTAssertEqual(reopened.service?.host, "b.example")
+        XCTAssertFalse(reopened.hasKey)
+        XCTAssertNil(try reopened.readAPIKey())
+    }
+
     func testResetRemovesPendingLegacySetupAndItsKeyWithoutResurrection() throws {
         let fixture = BoundaryFixture()
         let store = fixture.store
@@ -155,20 +229,32 @@ final class CLIStorageBoundaryTests: XCTestCase {
         XCTAssertNil(fixture.store.service)
     }
 
-    func testResetRemovesKeysReferencedOnlyByPendingLegacyModels() throws {
+    func testResetPreservesKeysReferencedOnlyByPendingLegacyModels() throws {
         let fixture = BoundaryFixture()
         let store = fixture.store
         fixture.defaults.set(["anthropic": "fixture-a", "gemini": "fixture-g", "unknown": "fixture-u"], forKey: "models")
         fixture.values = ["anthropic": "synthetic-a", "gemini": "synthetic-g", "openai": "synthetic-unrelated"]
+        let previousKeys = fixture.values
         fixture.deletionFailures["gemini"] = errSecAuthFailed
-        XCTAssertThrowsError(try store.reset())
-        XCTAssertNotNil(fixture.defaults.object(forKey: "models"))
-        XCTAssertEqual(fixture.values["gemini"], "synthetic-g")
-        XCTAssertEqual(fixture.values["openai"], "synthetic-unrelated")
-        fixture.deletionFailures = [:]
         try store.reset()
         XCTAssertNil(fixture.defaults.object(forKey: "models"))
+        XCTAssertEqual(fixture.values, previousKeys)
+        XCTAssertEqual(fixture.calls, ["delete:api-key"])
+    }
+
+    func testResetDeletesOnlySelectedLegacyProviderDespiteOtherSavedModels() throws {
+        let fixture = BoundaryFixture()
+        let store = fixture.store
+        fixture.seedLegacy()
+        fixture.defaults.set(["anthropic": "fixture-a", "openai": "fixture-o"], forKey: "models")
+        fixture.values["openai"] = "synthetic-unrelated"
+        fixture.deletionFailures["openai"] = errSecAuthFailed
+        fixture.calls = []
+        try store.reset()
         XCTAssertEqual(fixture.values, ["openai": "synthetic-unrelated"])
+        XCTAssertEqual(fixture.calls, ["delete:api-key", "delete:anthropic"])
+        XCTAssertNil(fixture.defaults.object(forKey: "provider"))
+        XCTAssertNil(fixture.defaults.object(forKey: "models"))
     }
 
     func testPartialDeletionAdvancesKeyRevisionBeforeFailureCanExposeAStaleCachedKey() throws {
@@ -349,6 +435,7 @@ final class CLIStorageBoundaryTests: XCTestCase {
             fixture.defaults.set(try JSONEncoder().encode(original), forKey: "service")
             fixture.values["api-key"] = "synthetic-legacy"
             let store = fixture.store
+            store.migrateLegacySetup()
             let scope = try XCTUnwrap(fixture.defaults.string(forKey: "apiKeyScope"))
             let scoped = "api-key:" + scope
             if hasScopedItem { fixture.values[scoped] = "synthetic-scoped" }
@@ -376,6 +463,7 @@ final class CLIStorageBoundaryTests: XCTestCase {
         fixture.defaults.set(try JSONEncoder().encode(original), forKey: "service")
         fixture.values["api-key"] = "synthetic-legacy"
         let store = fixture.store
+        store.migrateLegacySetup()
         let scope = fixture.defaults.string(forKey: "apiKeyScope")
         let revision = store.keyRevision
         fixture.deletionFailures["api-key"] = errSecUserCanceled
@@ -471,6 +559,7 @@ final class CLIStorageBoundaryTests: XCTestCase {
         fixture.defaults.set(try JSONEncoder().encode(original), forKey: "service")
         fixture.values["api-key"] = "synthetic-legacy"
         let store = fixture.store
+        store.migrateLegacySetup()
         let scope = try XCTUnwrap(fixture.defaults.string(forKey: "apiKeyScope"))
         let scoped = "api-key:" + scope
         fixture.values[scoped] = "synthetic-current"

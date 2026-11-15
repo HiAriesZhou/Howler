@@ -117,6 +117,7 @@ final class StateSafetyTests: XCTestCase {
         defaults.removeObject(forKey: "apiKeyScopeMigrated")
         keys.values["api-key"] = "fixture-legacy-secret"
         let upgraded = ServiceStore(defaults: defaults, keys: keys.access)
+        upgraded.migrateLegacySetup()
         XCTAssertEqual(upgraded.apiKey(), "fixture-legacy-secret")
         var access = keys.access
         access.set = { _, _ in throw FixtureKeyWriteError.unavailable }
@@ -182,6 +183,7 @@ final class StateSafetyTests: XCTestCase {
         defaults.removeObject(forKey: "apiKeyScopeMigrated")
         keys.values["api-key"] = "fixture-legacy-secret"
         let upgraded = ServiceStore(defaults: defaults, keys: keys.access)
+        upgraded.migrateLegacySetup()
         XCTAssertEqual(upgraded.apiKey(), "fixture-legacy-secret")
         try upgraded.save(service("https://service-b.example/v1"))
         keys.values["api-key"] = "fixture-orphaned-secret"
