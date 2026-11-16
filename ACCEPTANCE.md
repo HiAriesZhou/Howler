@@ -215,3 +215,7 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 - [ ] 推送不一致的 tag：CI 的 “Publish release” 步骤失败并说明原因
 
 - [ ] 旧截图开关关闭的配置升级后迁移为空快捷键；重新录入或恢复默认后重启，不会被旧开关再次停用
+
+## 9. 官网 / Website
+
+- [ ] 在桌面和窄屏浏览器中检查中英文、深浅色：首页余烬信使完整显示，背景透明，下载按钮可用，无横向溢出；点击演示链接能到达信纸区域，书写、燃烧和语言切换正常
