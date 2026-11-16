@@ -106,8 +106,13 @@ main { padding: 0 16px; overflow-x: clip; } /* the fire canvas reaches past the 
   max-width: 1120px; margin: 0 auto; padding: 72px 0 40px;
   display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: center;
 }
-@media (max-width: 920px) { .hero { grid-template-columns: 1fr; padding-top: 40px; gap: 40px; } }
-.hero-icon { width: 112px; height: 112px; margin-bottom: 12px; filter: drop-shadow(0 10px 18px rgba(43, 30, 19, .25)); }
+.hero-mascot { width: 520px; justify-self: center; }
+.demo-link { font-size: 17px; }
+@media (max-width: 920px) {
+  .hero { grid-template-columns: 1fr; padding-top: 40px; gap: 24px; }
+  .hero-mascot { width: 360px; }
+}
+@media (max-width: 600px) { .hero-mascot { width: 280px; } }
 h1 { font: 700 clamp(56px, 8vw, 84px)/.95 var(--display); margin: 0; letter-spacing: -.01em; }
 .slogan { font: italic 600 clamp(28px, 3.6vw, 38px)/1.2 var(--display); color: var(--wax); margin: 10px 0 18px; }
 @media (prefers-color-scheme: dark) { .slogan { color: #d96a52; } }
@@ -183,7 +188,7 @@ h1 { font: 700 clamp(56px, 8vw, 84px)/.95 var(--display); margin: 0; letter-spac
 }
 
 /* The live letter */
-.demo { margin: 0; }
+.demo { max-width: 760px; margin: 0 auto 64px; }
 .hero > * { min-width: 0; }
 /* The shadow sits on a wrapper: the sheet's deckled clip-path would cut off its own. */
 .paper { filter: var(--lift); }
@@ -247,7 +252,7 @@ h1 { font: 700 clamp(56px, 8vw, 84px)/.95 var(--display); margin: 0; letter-spac
 .hint { opacity: .6; }
 
 /* Chapters */
-.chapter { max-width: 1120px; margin: 0 auto; padding: 72px 0; border-top: 1px solid color-mix(in srgb, var(--rule) 40%, transparent); }
+.chapter { max-width: 1120px; margin: 0 auto; padding: 72px 0; scroll-margin-top: 64px; border-top: 1px solid color-mix(in srgb, var(--rule) 40%, transparent); }
 h2 { font: 600 clamp(36px, 5vw, 52px)/1.1 var(--display); text-align: center; margin: 0 0 12px; }
 h3 { font: 600 30px/1.15 var(--display); margin: 0 0 12px; }
 .chapter-lede { text-align: center; font-size: 21px; margin: 0 auto 48px; max-width: 34em; opacity: .85; }
