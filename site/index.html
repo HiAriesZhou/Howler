@@ -156,24 +156,26 @@
           <span class="hint"><span class="en">or press Esc. A live letter: it writes, then burns.</span><span class="zh">或按 Esc。这是一封现场书写、读完即焚的信。</span></span>
         </figcaption>
       </figure>
-      <div class="feature">
+      <div class="feature" id="writing">
         <img src="assets/letter.webp" width="1200" height="999" loading="lazy" decoding="async" alt="A Howler letter: a question beside a crimson wax seal, and the answer written beneath it with a code block and a list">
-        <div>
+        <div class="feature-copy">
           <h3><span class="en">Parchment and a quill</span><span class="zh">羊皮纸与羽毛笔</span></h3>
           <p><span class="en">Deckled edges, fibers, a fold. Your question sits on a ruled line; the answer streams in at a hand's pace, fresh ink glowing gold before it settles to sepia. The sheet grows with the answer, up to an A4 page.</span>
           <span class="zh">毛边、纤维纹理、一道折痕。问题写在横线上，回答按手写的节奏逐字出现，新墨先泛起金光，再沉为墨色。纸随回答向下展开，最长到 A4 比例。</span></p>
           <p><span class="en">Markdown, code blocks with copy, and follow-up questions on the same sheet, separated by a fleuron.</span>
           <span class="zh">支持 Markdown 和可复制的代码块；追问写在同一张纸上，每轮之间用花饰隔开。</span></p>
+          <img class="section-mascot" src="assets/mascot-writing.webp" width="384" height="384" alt="" loading="lazy" decoding="async">
         </div>
       </div>
 
-      <div class="feature flip">
+      <div class="feature flip" id="burning">
         <img src="assets/burning.webp" width="960" height="799" loading="lazy" decoding="async" alt="The letter catching fire at its bottom edge, scorch and sparks climbing toward the seal">
-        <div>
+        <div class="feature-copy">
           <h3><span class="en">Burn after reading</span><span class="zh">阅后即焚</span></h3>
           <p><span class="en">Press Esc, and the letter catches fire at its bottom edge. Scorch, embers and sparks climb to the seal, and the conversation goes with them. Nothing is kept.</span>
           <span class="zh">按 Esc，信纸从底边起火，焦痕、火光和火星一路烧到火漆印，这次对话也随之烧掉，什么都不留。</span></p>
           <p class="aside"><span class="en">Reduce Motion skips the fire; the letter simply goes.</span><span class="zh">开启“减少动态效果”时不播放燃烧，信纸直接收起。</span></p>
+          <img class="section-mascot" src="assets/mascot-goodbye.webp" width="384" height="384" alt="" loading="lazy" decoding="async">
         </div>
       </div>
 
@@ -194,7 +196,7 @@
       <h2><span class="en">Any model. Set up by your assistant.</span><span class="zh">任何模型，交给 AI 助手配置</span></h2>
       <div class="feature flip">
         <img class="settings-shot" src="assets/settings.webp" width="1144" height="1290" loading="lazy" decoding="async" alt="Howler Settings, General tab: the model with its host, status, Check and Copy Setup Prompt, then the shortcut, launch at login, automatic updates and feedback">
-        <div>
+        <div class="feature-copy">
           <p><span class="en">Howler writes with one model service. Copy the setup prompt from Settings and paste it into Claude Code, Codex or any assistant that can run commands. It asks which model you want, reads the docs, configures Howler's built-in command line and checks it works.</span>
           <span class="zh">Howler 只连接一个模型服务。在设置里复制配置提示词，粘贴给 Claude Code、Codex 等能运行命令的 AI 助手。它会问你想用哪个模型、查官方文档、用 Howler 自带的命令行写好配置，并检查能否正常回答。</span></p>
           <p><span class="en">Your API key never enters the chat: you copy it, and it goes straight into the Keychain.</span>
@@ -202,6 +204,7 @@
 <pre><code>pbpaste | Howler config set api-key --stdin
 Howler check
 ✓ Passed: deepseek-flash answered.</code></pre>
+          <img class="section-mascot" src="assets/mascot-thinking.webp" width="384" height="384" alt="" loading="lazy" decoding="async">
         </div>
       </div>
 

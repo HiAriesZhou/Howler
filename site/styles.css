@@ -133,7 +133,6 @@ h1 { font: 700 clamp(56px, 8vw, 84px)/.95 var(--display); margin: 0; letter-spac
   background: radial-gradient(120% 140% at 30% 25%, var(--wax-light), var(--wax) 55%, var(--wax-deep));
   box-shadow: inset 0 1px 0 rgba(255, 220, 200, .25), 0 6px 18px -6px rgba(92, 14, 10, .6);
 }
-.btn.quiet { border: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
 
 /* The star seal: a reader's mark, in the amber wax the app uses for attachments. */
 .star-seal {
@@ -261,11 +260,16 @@ h3 { font: 600 30px/1.15 var(--display); margin: 0 0 12px; }
 .feature.flip > img { order: 2; }
 .feature > * { min-width: 0; } /* let long code lines scroll instead of widening the column */
 .feature p { margin: 0 0 14px; }
+.feature[id] { scroll-margin-top: 88px; }
+.feature-copy { --mascot-size: 128px; position: relative; padding-bottom: var(--mascot-size); }
+.section-mascot { position: absolute; width: var(--mascot-size); right: -8px; bottom: -8px; pointer-events: none; }
+.feature.flip .section-mascot { right: auto; left: -8px; }
 .settings-shot { max-width: min(460px, 100%); justify-self: center; border-radius: 12px; }
 .aside { font-style: italic; opacity: .7; font-size: 17px; }
 @media (max-width: 860px) {
   .feature, .feature.flip { grid-template-columns: 1fr; gap: 24px; }
   .feature.flip > img { order: 0; }
+  .feature-copy { --mascot-size: 104px; }
 }
 pre {
   margin: 18px 0 0; padding: 14px 16px; border-radius: 10px; overflow-x: auto;
