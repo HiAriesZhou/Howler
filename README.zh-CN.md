@@ -160,7 +160,9 @@ $H config show
 需要 Xcode 15.3+（Swift 5.10+）和 macOS 14+。唯一的第三方依赖是负责安装更新的 [Sparkle](https://github.com/sparkle-project/Sparkle)（版本固定在 `Package.swift`）。
 
 ```bash
-make test   # 单元测试：配置、请求、流式解析、附件、快捷键、书写节奏
+make test   # 快速核心测试，不构建应用、不运行 UI 测试或加载 Sparkle
+make test-app # 原生行为和交互测试（macOS）
+make test-all # 完整测试，包含发布工具夹具
 make app    # universal 构建，生成 build/Howler.zip，应用放在 build/stage.noindex（ad-hoc，或用 SIGN_IDENTITY 签名）
 make dmg    # 同一个应用打成 build/Howler.dmg，附 Applications 快捷方式
 make run    # 构建并打开
