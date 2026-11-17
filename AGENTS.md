@@ -4,11 +4,11 @@ Howler is a macOS 14+ menu bar app (Swift 5.10, SwiftPM). `HowlerCore` holds the
 
 ## Scope and public content
 
-- Agree on the task's scope and authorization before changing files. Permission to edit does not grant permission to commit, push, publish, install or change system settings.
+- Within the requested scope, ordinary edits, verification, commits, pushes, pull requests and merging ready PRs are authorized. State the scope and next milestone; a narrower user instruction wins. Obtain confirmation immediately before final release. Installing or replacing the app, accessing personal data or changing system settings requires task authorization.
 - Preserve existing changes. Work on a task branch; changes to the protected default branch go through a pull request.
 - This is a public, MIT-licensed repository. Keep documentation about the project, not the maintainer's machine or private workflow. Do not commit personal paths, private account or certificate details, credentials, user content, raw session logs or agent memory. Use synthetic fixtures and neutral placeholders; review screenshots before committing them.
 - Preserve required license notices and intentional public author attribution, including the website's avatar, homepage and social links. These are distinct from private credentials and user data.
-- Keep durable rules here and product usage in the two READMEs. Keep one-off handoffs, audit reports and task progress local. Preserve any existing `CLAUDE.md`; do not silently replace another tool's instructions.
+- Keep project constraints here, task commands and checks in `docs/agent-guide.md`, and product usage in the two READMEs. One-off handoffs, audit reports and progress stay local. Preserve existing tool instructions; do not create a root `CLAUDE.md`.
 
 ## Engineering boundaries
 
@@ -20,7 +20,7 @@ Howler is a macOS 14+ menu bar app (Swift 5.10, SwiftPM). `HowlerCore` holds the
 
 ## Commands
 
-For builds, tests, demos, or a pull request, read [docs/agent-guide.md](docs/agent-guide.md).
+When reading `Makefile` or `Package.swift`, building, testing, running a demo, or preparing a pull request, read [docs/agent-guide.md](docs/agent-guide.md).
 
 ## Versions
 
