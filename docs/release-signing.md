@@ -28,6 +28,8 @@ These steps need the Apple Developer Program **Account Holder** role. Only the A
 
 ## What CI does
 
+PRs and main pushes select checks by changed paths (see [the scope table](agent-guide.md#ci-scope)). Content-only changes do not run native tests or package the app. Ordinary packaging checks are ad-hoc; signing credentials are imported only for tags or manual full builds. Branch-based manual builds do not publish a release. Version tags retain the complete release sequence:
+
 1. When `MACOS_CERT_P12_BASE64` is set, CI imports the certificate into a throwaway keychain and exports its identity as `SIGN_IDENTITY`.
 2. `scripts/bundle.sh` signs the app with the hardened runtime and a secure timestamp.
 3. On `v*` tags, `scripts/notarize.sh app` submits the app, staples the ticket and rebuilds the zip.
@@ -101,7 +103,7 @@ does not prove the token's write permissions or PR-triggered CI. Exercise those 
 the next real release. No new application release is needed to enable this workflow.
 
 Local fixture checks run with `swift test --filter HomebrewTests` (included in
-`make test`). They exercise the actual shell script with local API and macOS tool
+`make test-tooling` and `make test-all`). They exercise the actual shell script with local API and macOS tool
 substitutes, including validation failures and interrupted retries; they do not
 prove real signing, GitHub permissions or remote CI. To disable delivery, remove
 the Homebrew caller job from `build.yml` through a PR and revoke the dedicated token.

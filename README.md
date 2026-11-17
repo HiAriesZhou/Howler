@@ -160,7 +160,9 @@ Concealing the letter, clicking outside or opening Settings keeps the conversati
 Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. The one third-party dependency is [Sparkle](https://github.com/sparkle-project/Sparkle) (pinned in `Package.swift`), which installs updates.
 
 ```bash
-make test   # unit tests: config, requests, streaming, attachments, hotkeys, quill pacing
+make test   # fast core tests; no app, UI tests or Sparkle dependency
+make test-app # native behavior/interaction tests (macOS)
+make test-all # complete suite, including release-tool fixtures
 make app    # universal build → build/Howler.zip, app staged in build/stage.noindex (ad-hoc, or SIGN_IDENTITY)
 make dmg    # the same app in build/Howler.dmg, beside an Applications link
 make run    # build and open
