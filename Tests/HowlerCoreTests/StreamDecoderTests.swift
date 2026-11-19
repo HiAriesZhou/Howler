@@ -7,10 +7,10 @@ final class StreamDecoderTests: XCTestCase {
     }
 
     /// Runs a raw SSE transcript through parser + decoder like `ChatClient` does.
-    private func run(_ transcript: String, _ format: WireFormat) -> (text: String, done: Bool, error: String?) {
+    private func run(_ transcript: String, _ format: WireFormat) throws -> (text: String, done: Bool, error: String?) {
         var parser = SSEParser()
-        var events = parser.feed(transcript)
-        if let tail = parser.finish() { events.append(tail) }
+        var events = try parser.feed(transcript)
+        if let tail = try parser.finish() { events.append(tail) }
         var text = ""
         for event in events {
             for delta in StreamDecoder.decode(event, format: format) {
@@ -83,7 +83,7 @@ final class StreamDecoderTests: XCTestCase {
         XCTAssertEqual(decode(chunk, .openAICompatible), [.error("Provider returned error")])
     }
 
-    func testOpenAITranscript() {
+    func testOpenAITranscript() throws {
         let transcript = """
         : OPENROUTER PROCESSING
 
@@ -99,7 +99,7 @@ final class StreamDecoderTests: XCTestCase {
 
 
         """
-        let result = run(transcript, .openAICompatible)
+        let result = try run(transcript, .openAICompatible)
         XCTAssertEqual(result.text, "2 + 2 = **4**")
         XCTAssertTrue(result.done)
         XCTAssertNil(result.error)
@@ -107,7 +107,7 @@ final class StreamDecoderTests: XCTestCase {
 
     // MARK: Anthropic
 
-    func testAnthropicTranscript() {
+    func testAnthropicTranscript() throws {
         let transcript = """
         event: message_start
         data: {"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","content":[],"model":"claude-opus-5-5"}}
@@ -147,7 +147,7 @@ final class StreamDecoderTests: XCTestCase {
 
 
         """
-        let result = run(transcript, .anthropic)
+        let result = try run(transcript, .anthropic)
         XCTAssertEqual(result.text, "Hello, 世界")
         XCTAssertTrue(result.done)
         XCTAssertNil(result.error)
@@ -202,10 +202,10 @@ final class StreamDecoderTests: XCTestCase {
         guard case .error = decode(safety, .gemini).first else { return XCTFail("safety stop should be an error") }
     }
 
-    func testGeminiStopReasonEndsTheReply() {
+    func testGeminiStopReasonEndsTheReply() throws {
         let transcript = "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Line 1\\n\"}],\"role\":\"model\"}}]}\r\n\r\n"
             + "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Line 2\"}],\"role\":\"model\"},\"finishReason\":\"STOP\"}]}\r\n\r\n"
-        let result = run(transcript, .gemini)
+        let result = try run(transcript, .gemini)
         XCTAssertEqual(result.text, "Line 1\nLine 2")
         XCTAssertTrue(result.done)
         XCTAssertNil(result.error)
