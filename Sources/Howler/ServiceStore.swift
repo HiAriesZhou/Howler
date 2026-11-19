@@ -10,11 +10,11 @@ struct ServiceStore {
         var exists: (String) -> Bool
         var get: (String) throws -> String?
         var set: (String, String) throws -> Void
-        var delete: (String) -> Void
+        var delete: (String) throws -> Void
 
         static let keychain = KeyAccess(
             exists: Keychain.exists, get: { try Keychain.get(account: $0) },
-            set: { try Keychain.set($0, account: $1) }, delete: Keychain.delete
+            set: { try Keychain.set($0, account: $1) }, delete: { try Keychain.delete(account: $0) }
         )
     }
 
@@ -50,6 +50,9 @@ struct ServiceStore {
     init(defaults: UserDefaults = .standard, keys: KeyAccess = .keychain) {
         self.defaults = defaults
         self.keys = keys
+    }
+
+    private func migrateLegacyKeyScope() {
         // Bind an existing installation's key to its existing destination exactly once.
         // No secret is read here, and an absent binding later must never adopt a new host.
         if !defaults.bool(forKey: DefaultsKey.keyScopeMigrated) {
@@ -66,15 +69,26 @@ struct ServiceStore {
         defaults.data(forKey: DefaultsKey.service).flatMap { try? JSONDecoder().decode(ModelService.self, from: $0) }
     }
 
+    var serviceForEditing: ModelService? { service ?? legacySetup?.service }
+
+    private var legacySetup: (provider: Provider, service: ModelService)? {
+        guard defaults.data(forKey: DefaultsKey.service) == nil,
+              let raw = defaults.string(forKey: DefaultsKey.legacyProvider),
+              let provider = Provider(rawValue: raw) else { return nil }
+        let models = defaults.dictionary(forKey: DefaultsKey.legacyModels) as? [String: String] ?? [:]
+        return (provider, provider.service(model: models[provider.rawValue]))
+    }
+
     func save(_ service: ModelService) throws {
         let data = try JSONEncoder().encode(service)
+        migrateLegacyKeyScope()
         let previous = self.service
         invalidateCheck()
         defer { finishChange() }
         if let previous, Self.keyScope(for: previous) != Self.keyScope(for: service) {
+            try deleteKey(Self.keyAccount(for: previous))
+            try removeLegacyKey(for: previous)
             defaults.removeObject(forKey: DefaultsKey.keyScope)
-            keys.delete(Self.keyAccount(for: previous))
-            removeLegacyKey(for: previous)
         }
         defaults.set(data, forKey: DefaultsKey.service)
     }
@@ -105,6 +119,7 @@ struct ServiceStore {
         guard let service else { throw ServiceConfigError.missing(["format", "base-url", "model"]) }
         guard expected == nil || expected == service else { throw ConfigurationFailure.changed }
         let key = try Self.validatedAPIKey(raw)
+        migrateLegacyKeyScope()
         invalidateCheck()
         let revision = self.revision
         defer { finishChange() }
@@ -117,7 +132,7 @@ struct ServiceStore {
             throw ConfigurationFailure.changed
         }
         defaults.set(Self.keyScope(for: service), forKey: DefaultsKey.keyScope)
-        removeLegacyKey(for: service)
+        try removeLegacyKey(for: service)
     }
 
     var replyLanguage: String { defaults.string(forKey: "replyLanguage") ?? "system" }
@@ -187,27 +202,27 @@ struct ServiceStore {
     }
 
     /// Removes the service, its key and the last check.
-    func reset() {
+    func reset() throws {
         let previous = service
+        let legacyProvider = defaults.string(forKey: DefaultsKey.legacyProvider).flatMap(Provider.init(rawValue:))
         invalidateCheck()
         defer { finishChange() }
+        if let previous { try deleteKey(Self.keyAccount(for: previous)) }
+        try deleteKey(Self.legacyKeyAccount)
+        if let legacyProvider { try deleteKey(legacyProvider.rawValue) }
         defaults.removeObject(forKey: DefaultsKey.service)
         defaults.removeObject(forKey: DefaultsKey.keyScope)
-        if let previous { keys.delete(Self.keyAccount(for: previous)) }
         defaults.removeObject(forKey: DefaultsKey.legacyKeyScope)
-        keys.delete(Self.legacyKeyAccount)
+        defaults.removeObject(forKey: DefaultsKey.legacyProvider)
+        defaults.removeObject(forKey: DefaultsKey.legacyModels)
     }
 
     /// Turns the provider chosen in an earlier version, with its model and key, into the
     /// model service. Runs once; keys saved for other providers stay where they were.
     func migrateLegacySetup() {
-        guard defaults.data(forKey: DefaultsKey.service) == nil,
-              let raw = defaults.string(forKey: DefaultsKey.legacyProvider),
-              let provider = Provider(rawValue: raw)
-        else { return }
-        let models = defaults.dictionary(forKey: DefaultsKey.legacyModels) as? [String: String] ?? [:]
+        migrateLegacyKeyScope()
+        guard let (provider, service) = legacySetup else { return }
         do {
-            let service = provider.service(model: models[provider.rawValue])
             let sourceAccount = keys.exists(Self.legacyKeyAccount) ? Self.legacyKeyAccount : provider.rawValue
             if keys.exists(sourceAccount) {
                 // A key that exists but can't be read yet (e.g. access was denied) is retried
@@ -218,7 +233,7 @@ struct ServiceStore {
             try save(service)
             if keys.exists(Self.keyAccount(for: service)) {
                 defaults.set(Self.keyScope(for: service), forKey: DefaultsKey.keyScope)
-                keys.delete(sourceAccount)
+                try deleteKey(sourceAccount)
             }
             defaults.removeObject(forKey: DefaultsKey.legacyProvider)
             defaults.removeObject(forKey: DefaultsKey.legacyModels)
@@ -252,10 +267,15 @@ struct ServiceStore {
             && keys.exists(Self.legacyKeyAccount)
     }
 
-    private func removeLegacyKey(for service: ModelService) {
+    private func removeLegacyKey(for service: ModelService) throws {
         guard defaults.string(forKey: DefaultsKey.legacyKeyScope) == Self.keyScope(for: service) else { return }
+        try deleteKey(Self.legacyKeyAccount)
         defaults.removeObject(forKey: DefaultsKey.legacyKeyScope)
-        keys.delete(Self.legacyKeyAccount)
+    }
+
+    private func deleteKey(_ account: String) throws {
+        defaults.set(UUID().uuidString, forKey: DefaultsKey.keyRevision)
+        try keys.delete(account)
     }
 
     private func finishChange() {

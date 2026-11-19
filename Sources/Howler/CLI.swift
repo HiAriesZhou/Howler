@@ -12,19 +12,53 @@ enum CLI {
 
     /// Runs a command-line invocation and returns its exit status, or nil when the
     /// arguments are not a command and the app should launch as usual.
-    static func run(_ arguments: [String], store suppliedStore: ServiceStore? = nil) -> Int32? {
+    static func run(_ arguments: [String], store makeStore: @autoclosure () -> ServiceStore = ServiceStore()) -> Int32? {
         let args = Array(arguments.dropFirst())
         guard let command = args.first, commands.contains(command) else { return nil }
         // Keep stdout and stderr in order when piped (an assistant reads both).
         setvbuf(stdout, nil, _IOLBF, 0)
-        let store = suppliedStore ?? ServiceStore()
-        store.migrateLegacySetup()
         do {
-            switch command {
-            case "config": try config(Array(args.dropFirst()), store: store)
-            case "check": return check(verbose: args.contains("--verbose") || args.contains("-v"), store: store)
-            case "version", "--version": print("\(AppInfo.name) \(AppInfo.version)")
-            default: print(usage)
+            let operation = try parse(args)
+            switch operation {
+            case .help:
+                print(usage)
+                return 0
+            case .version:
+                print("\(AppInfo.name) \(AppInfo.version)")
+                return 0
+            case .schema:
+                print(SetupGuide.schema(appName: name))
+                return 0
+            default:
+                break
+            }
+            let store = makeStore()
+            if case .set(let fields) = operation {
+                _ = try ServiceConfig.apply(fields, to: store.serviceForEditing)
+            }
+            switch operation {
+            case .reset:
+                try store.reset()
+                print("Removed the model service and its API key.")
+            default:
+                store.migrateLegacySetup()
+                switch operation {
+                case .show:
+                    show(store)
+                case .set(let fields):
+                    let service = try ServiceConfig.apply(fields, to: store.service)
+                    try store.save(service)
+                    print("Saved: \(service.summary)")
+                    print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General > API Key, then Save & Check.")
+                case .setKey(let key):
+                    try store.setAPIKey(key)
+                    print("API key saved in Keychain.")
+                    if store.service != nil { print("Next: \(name) check") }
+                case .check(let verbose):
+                    return check(verbose: verbose, store: store)
+                default:
+                    break
+                }
             }
             return 0
         } catch {
@@ -54,29 +88,67 @@ enum CLI {
 
     // MARK: config
 
-    private static func config(_ args: [String], store: ServiceStore) throws {
+    private enum Operation {
+        case help, version, schema, show, reset
+        case set([String])
+        case setKey(String)
+        case check(Bool)
+    }
+
+    private static func parse(_ args: [String]) throws -> Operation {
+        let tail = Array(args.dropFirst())
         switch args.first {
-        case "schema":
-            print(SetupGuide.schema(appName: name))
-        case "show", nil:
-            show(store)
-        case "set":
-            let fields = Array(args.dropFirst())
-            if fields.first == "api-key" {
-                try setKey(Array(fields.dropFirst()), store: store)
-            } else {
-                guard !fields.isEmpty else { throw UsageError("Nothing to set. See: \(name) config schema") }
-                let service = try ServiceConfig.apply(fields, to: store.service)
-                try store.save(service)
-                print("Saved: \(service.summary)")
-                print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General > API Key, then Save & Check.")
+        case "help", "--help", "-h":
+            guard tail.isEmpty else { throw UsageError(usage) }
+            return .help
+        case "version", "--version":
+            guard tail.isEmpty else { throw UsageError(usage) }
+            return .version
+        case "check":
+            guard tail.allSatisfy({ ["--verbose", "-v", "--help", "-h"].contains($0) }) else {
+                throw UsageError(usage)
             }
-        case "reset":
-            store.reset()
-            print("Removed the model service and its API key.")
+            return tail.contains(where: isHelp) ? .help : .check(!tail.isEmpty)
+        case "config":
+            guard let action = tail.first else { return .show }
+            let fields = Array(tail.dropFirst())
+            if isHelp(action) {
+                guard fields.isEmpty else { throw UsageError(usage) }
+                return .help
+            }
+            switch action {
+            case "schema", "show", "reset":
+                guard fields.isEmpty || (fields.count == 1 && isHelp(fields[0])) else {
+                    throw UsageError(usage)
+                }
+                if !fields.isEmpty { return .help }
+                switch action {
+                case "schema": return .schema
+                case "show": return .show
+                default: return .reset
+                }
+            case "set":
+                guard !fields.isEmpty else { throw UsageError("Nothing to set. See: \(name) config schema") }
+                if fields.count == 1 && isHelp(fields[0]) { return .help }
+                if fields.first == "api-key" {
+                    if fields.count == 2 && isHelp(fields[1]) { return .help }
+                    return .setKey(try ServiceStore.validatedAPIKey(readKey(Array(fields.dropFirst()))))
+                }
+                do {
+                    _ = try ServiceConfig.apply(fields, to: nil)
+                } catch ServiceConfigError.missing {
+                }
+                return .set(fields)
+            default:
+                throw UsageError(usage)
+            }
         default:
             throw UsageError(usage)
         }
+    }
+
+    private static func isHelp(_ argument: String) -> Bool {
+        argument == "--help" || argument == "-h"
     }
 
     private static func show(_ store: ServiceStore) {
@@ -114,10 +186,11 @@ enum CLI {
 
     /// The key comes from a pipe, an environment variable or a file — never an argument,
     /// where it would end up in shell history and process listings.
-    private static func setKey(_ args: [String], store: ServiceStore) throws {
+    private static func readKey(_ args: [String]) throws -> String {
         let raw: String
         switch args.first {
         case "--stdin":
+            guard args.count == 1 else { throw UsageError("Usage: \(name) config set api-key --stdin") }
             guard isatty(FileHandle.standardInput.fileDescriptor) == 0 else {
                 throw UsageError("--stdin reads a pipe. Copy the key, then run: pbpaste | \(name) config set api-key --stdin")
             }
@@ -138,9 +211,7 @@ enum CLI {
         default:
             throw ServiceConfigError.apiKeyOnCommandLine
         }
-        try store.setAPIKey(raw)
-        print("API key saved in Keychain.")
-        if store.service != nil { print("Next: \(name) check") }
+        return raw
     }
 
     // MARK: check
