@@ -66,7 +66,7 @@ enum CLI {
                 try setKey(Array(fields.dropFirst()), store: store)
             } else {
                 guard !fields.isEmpty else { throw UsageError("Nothing to set. See: \(name) config schema") }
-                let service = try ServiceConfig.apply(fields, to: store.service)
+                let service = try ServiceConfig.apply(fields, to: store.directService)
                 try store.save(service)
                 print("Saved: \(service.summary)")
                 print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General > API Key, then Save & Check.")
@@ -91,7 +91,7 @@ enum CLI {
             ("endpoint", service.endpointDescription),
             ("body", service.body.isEmpty ? "—" : JSONValue.compact(service.body)),
             ("headers", service.headers.isEmpty ? "—" : JSONValue.compact(service.headers.mapValues(JSONValue.string))),
-            ("api-key", store.hasKey ? "record present; access not verified" : "no record detected"),
+            ("api-key", service.usesMagpie ? "managed by Magpie" : store.hasKey ? "record present; access not verified" : "no record detected"),
             ("prompt", promptSummary(store)),
             ("check", checkSummary(store.lastCheck)),
         ]

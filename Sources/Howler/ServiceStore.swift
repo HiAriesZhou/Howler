@@ -68,7 +68,7 @@ struct ServiceStore {
         return directService
     }
 
-    private var directService: ModelService? {
+    var directService: ModelService? {
         defaults.data(forKey: DefaultsKey.service).flatMap { try? JSONDecoder().decode(ModelService.self, from: $0) }
     }
 
@@ -93,7 +93,7 @@ struct ServiceStore {
 
     /// Checks presence via attributes only, which never triggers a keychain prompt.
     var hasKey: Bool {
-        guard let service, defaults.string(forKey: DefaultsKey.keyScope) == Self.keyScope(for: service) else { return false }
+        guard let service, !service.usesMagpie, defaults.string(forKey: DefaultsKey.keyScope) == Self.keyScope(for: service) else { return false }
         return keys.exists(Self.keyAccount(for: service)) || hasLegacyKey(for: service)
     }
 
@@ -104,7 +104,7 @@ struct ServiceStore {
     /// A missing record is nil; an unreadable record retains its Keychain error.
     func readAPIKey(for expected: ModelService? = nil) throws -> String? {
         let revision = self.revision
-        guard let service, expected == nil || expected == service,
+        guard let service, !service.usesMagpie, expected == nil || expected == service,
               defaults.string(forKey: DefaultsKey.keyScope) == Self.keyScope(for: service) else { return nil }
         let key = try keys.get(Self.keyAccount(for: service))
             ?? (hasLegacyKey(for: service) ? keys.get(Self.legacyKeyAccount) : nil)

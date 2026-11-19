@@ -25,6 +25,10 @@ final class MagpieTests: XCTestCase {
         try store.selectMagpie(nil)
         XCTAssertEqual(store.service, direct)
         XCTAssertEqual(store.apiKey(), "fixture")
+        try store.selectMagpie(selection)
+        try store.save(ServiceConfig.apply(["model=updated"], to: store.directService))
+        XCTAssertEqual(store.service?.baseURL, direct.baseURL)
+        XCTAssertEqual(store.apiKey(), "fixture")
     }
 
     func testLiveImageAndBurnButton() async throws {
