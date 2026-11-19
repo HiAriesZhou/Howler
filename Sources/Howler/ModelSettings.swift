@@ -10,6 +10,10 @@ struct ModelSettings: View {
 
     @State private var copied = false
     @State private var keyEditorTarget: KeyEditorTarget?
+    @State private var models: [Magpie.Model] = []
+    @State private var port: UInt16 = 3425
+    @State private var refresh = UUID()
+    @State private var discoveryStatus = "Looking for Magpie…"
 
     private struct KeyEditorTarget: Identifiable {
         let id = UUID()
@@ -17,7 +21,28 @@ struct ModelSettings: View {
     }
 
     var body: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                if models.isEmpty {
+                    Text(discoveryStatus).font(.callout).foregroundStyle(.secondary)
+                } else {
+                    Menu("Choose Magpie Model") {
+                        ForEach(models) { model in
+                            Button(model.id + (model.modalities?.input?.contains("image") == true ? " · Images" : "")) {
+                                select(MagpieSelection(port: port, model: model.id))
+                            }
+                        }
+                    }
+                }
+                Spacer()
+                if settings.service?.usesMagpie == true {
+                    Button("Use Direct Service") { select(nil) }
+                }
+                Button { refresh = UUID() } label: { Image(systemName: "arrow.clockwise") }
+                    .accessibilityLabel("Refresh Magpie models")
+            }
+            .disabled(settings.isSavingAPIKey || settings.checkState == .checking)
+            Divider()
             if let service = settings.service {
                 configured(service)
             } else {
@@ -25,12 +50,35 @@ struct ModelSettings: View {
             }
         }
         .onAppear { settings.reload() }
+        .task(id: refresh) {
+            struct PortSetting: Decodable { let port: UInt16 }
+            let config = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map { URL(fileURLWithPath: $0) }
+                ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config")
+            let file = config.appendingPathComponent("magpie/settings.json")
+            let detected = (try? JSONDecoder().decode(PortSetting.self, from: Data(contentsOf: file)).port) ?? 3425
+            do {
+                let catalog = try await Magpie.models(port: detected)
+                try Task.checkCancellation()
+                port = detected
+                models = catalog
+                discoveryStatus = "No chat models enabled in Magpie."
+            } catch {
+                guard !Task.isCancelled else { return }
+                models = []
+                discoveryStatus = "Local Magpie unavailable."
+            }
+        }
         .sheet(item: $keyEditorTarget) { target in
             APIKeyEditor(settings: settings, service: target.service)
         }
     }
 
     // MARK: Set up
+
+    private func select(_ selection: MagpieSelection?) {
+        do { try settings.selectMagpie(selection) }
+        catch { models = []; discoveryStatus = error.localizedDescription }
+    }
 
     /// No model yet: how to get one, step by step, ending in the button that starts it.
     private var setupGuide: some View {
@@ -120,6 +168,9 @@ struct ModelSettings: View {
 
             Divider()
 
+            if service.usesMagpie {
+                Text("Magpie manages access to this model.").font(.callout)
+            } else {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("API Key")
@@ -132,6 +183,7 @@ struct ModelSettings: View {
                     keyEditorTarget = KeyEditorTarget(service: service)
                 }
                 .disabled(settings.checkState == .checking || settings.isSavingAPIKey)
+            }
             }
             Divider()
 
@@ -171,7 +223,7 @@ struct ModelSettings: View {
 
     private var statusText: String {
         switch settings.checkState {
-        case .unchecked: return settings.hasKey ? "Not checked yet" : "No API key"
+        case .unchecked: return settings.isConfigured ? "Not checked yet" : "No API key"
         case .checking: return "Checking…"
         case .passed: return "Ready"
         case .failed: return "Failed"
@@ -180,7 +232,7 @@ struct ModelSettings: View {
 
     private var statusColor: Color {
         switch settings.checkState {
-        case .unchecked: return settings.hasKey ? .secondary : .orange
+        case .unchecked: return settings.isConfigured ? .secondary : .orange
         case .checking: return .secondary
         case .passed: return .green
         case .failed: return .red

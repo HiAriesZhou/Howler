@@ -73,6 +73,8 @@ v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以�
 
 ## 配置模型
 
+如果本机正在运行 Magpie，在设置 → 通用 → **Choose Magpie Model** 直接选模型。截图提问可选标有 **Images** 的模型。Howler 通过 Magpie 使用已配置的账号，无需填写接口密钥。点 **Use Direct Service** 可恢复原服务。焚信会清空 Howler 中的会话，Magpie 和模型服务商各自管理调用记录。
+
 Howler 只连接一个模型服务。配置步骤很少，可以直接交给 AI 助手完成。
 
 <p align="center">

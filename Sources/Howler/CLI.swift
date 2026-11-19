@@ -153,7 +153,7 @@ enum CLI {
         }
         let key: String
         do {
-            guard let saved = try store.readAPIKey(for: service), !saved.isEmpty else {
+            guard let saved = service.usesMagpie ? "" : try store.readAPIKey(for: service) else {
                 throw ConfigurationFailure.missingKey
             }
             key = saved

@@ -337,7 +337,7 @@ final class ChatViewModel: ObservableObject {
         #if DEBUG
         if let demoStream { return demoStream() }
         #endif
-        guard let service = settings.service, let key = settings.apiKey(), !key.isEmpty else { return nil }
+        guard let service = settings.service, let key = settings.apiKey() else { return nil }
         return settings.client.stream(service: service, apiKey: key, messages: history, options: options)
     }
 

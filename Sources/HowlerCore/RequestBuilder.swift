@@ -57,7 +57,7 @@ public enum RequestBuilder {
         options: RequestOptions = RequestOptions()
     ) throws -> URLRequest {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty else { throw RequestBuilderError.missingAPIKey }
+        guard service.usesMagpie || !key.isEmpty else { throw RequestBuilderError.missingAPIKey }
         let turns = normalize(messages)
         guard !turns.isEmpty else { throw RequestBuilderError.noMessages }
         // Whether a model reads images is up to the service; its own error says when it can't.
@@ -72,7 +72,11 @@ public enum RequestBuilder {
         switch service.format {
         case .openAICompatible:
             request = URLRequest(url: service.baseURL.appendingPathComponent("chat/completions"))
-            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            if service.usesMagpie {
+                request.setValue("Howler/1", forHTTPHeaderField: "User-Agent")
+            } else {
+                request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            }
             if known == .openRouter {
                 request.setValue(projectURL, forHTTPHeaderField: "HTTP-Referer")
                 request.setValue(options.appName, forHTTPHeaderField: "X-Title")

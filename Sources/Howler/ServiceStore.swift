@@ -63,12 +63,24 @@ struct ServiceStore {
     }
 
     var service: ModelService? {
+        if let data = defaults.data(forKey: "magpieSelection"),
+           let selection = try? JSONDecoder().decode(MagpieSelection.self, from: data) { return selection.service }
+        return directService
+    }
+
+    private var directService: ModelService? {
         defaults.data(forKey: DefaultsKey.service).flatMap { try? JSONDecoder().decode(ModelService.self, from: $0) }
+    }
+
+    func selectMagpie(_ selection: MagpieSelection?) throws {
+        defaults.set(try selection.map { try JSONEncoder().encode($0) }, forKey: "magpieSelection")
+        finishChange()
     }
 
     func save(_ service: ModelService) throws {
         let data = try JSONEncoder().encode(service)
-        let previous = self.service
+        let previous = directService
+        defaults.removeObject(forKey: "magpieSelection")
         invalidateCheck()
         defer { finishChange() }
         if let previous, Self.keyScope(for: previous) != Self.keyScope(for: service) {
@@ -103,6 +115,7 @@ struct ServiceStore {
 
     func setAPIKey(_ raw: String, for expected: ModelService? = nil) throws {
         guard let service else { throw ServiceConfigError.missing(["format", "base-url", "model"]) }
+        guard !service.usesMagpie else { throw ConfigurationFailure.magpieKey }
         guard expected == nil || expected == service else { throw ConfigurationFailure.changed }
         let key = try Self.validatedAPIKey(raw)
         invalidateCheck()
@@ -188,7 +201,8 @@ struct ServiceStore {
 
     /// Removes the service, its key and the last check.
     func reset() {
-        let previous = service
+        let previous = directService
+        defaults.removeObject(forKey: "magpieSelection")
         invalidateCheck()
         defer { finishChange() }
         defaults.removeObject(forKey: DefaultsKey.service)
