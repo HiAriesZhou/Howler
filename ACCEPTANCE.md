@@ -166,6 +166,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ## 4. 各服务真实流式 / Per-service real streaming
 
+- [ ] 在设置选择本机 Magpie 图片模型，用合成截图提问。回答途中点焚信，再开新信。检查取消记录、新信内容、用量日志及图片缓存。切回原服务后确认原配置可用。
+
 对每个预设：用 `config set preset=…` 写入并保存 Key、`check` 通过后，呼出面板，发送下列提示词。
 For each preset: `config set preset=…`, save a key, pass `check`, open the panel, send the prompts below.
 

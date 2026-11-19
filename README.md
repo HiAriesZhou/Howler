@@ -73,6 +73,8 @@ Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, rig
 
 ## Set up a model
 
+If Magpie is running on your Mac, open Settings → General → Choose Magpie Model. Pick a model marked **Images** for screenshots. Magpie manages access and usage, so Howler needs no API key. **Use Direct Service** restores your previous setup. Burning a letter clears it in Howler. Magpie and its model provider manage their own records.
+
 Howler writes with one model service. The setup is short enough to hand to an AI assistant.
 
 <p align="center">

@@ -169,7 +169,12 @@ final class AppSettings: ObservableObject {
         #if DEBUG
         if demoMode { return true }
         #endif
-        return service != nil && hasKey
+        return service?.usesMagpie == true || (service != nil && hasKey)
+    }
+
+    func selectMagpie(_ selection: MagpieSelection?) throws {
+        try store.selectMagpie(selection)
+        reload()
     }
 
     #if DEBUG
@@ -186,6 +191,7 @@ final class AppSettings: ObservableObject {
 
     func apiKey() -> String? {
         guard let service, service == store.service else { return nil }
+        if service.usesMagpie { return "" }
         let revision = store.keyRevision
         if let keyCache, keyCache.revision == revision, keyCache.service == service { return keyCache.key }
         do {
@@ -234,8 +240,8 @@ final class AppSettings: ObservableObject {
         do {
             // Explicit checks read afresh, even if a previous conversation cached a key.
             guard let key = try await Task.detached(operation: {
-                try store.readAPIKey(for: service)
-            }).value, !key.isEmpty else { throw ConfigurationFailure.missingKey }
+                service.usesMagpie ? "" : try store.readAPIKey(for: service)
+            }).value else { throw ConfigurationFailure.missingKey }
             guard revision == store.revision else { return }
             keyCache = (store.keyRevision, service, key)
             keyAccessError = nil
