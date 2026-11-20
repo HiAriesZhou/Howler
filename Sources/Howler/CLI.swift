@@ -69,7 +69,7 @@ enum CLI {
                 let service = try ServiceConfig.apply(fields, to: store.directService)
                 try store.save(service)
                 print("Saved: \(service.summary)")
-                print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General > API Key, then Save & Check.")
+                print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General, edit the model configuration, then Save & Check.")
             }
         case "reset":
             store.reset()

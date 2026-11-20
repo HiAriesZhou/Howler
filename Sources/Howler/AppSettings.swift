@@ -177,6 +177,22 @@ final class AppSettings: ObservableObject {
         reload()
     }
 
+    var lastMagpieSelection: MagpieSelection? { store.lastMagpieSelection }
+    var hasDirectService: Bool { store.directService != nil }
+
+    var serviceRevision: String { store.revision }
+
+    func saveDirectService(_ service: ModelService, key: String, for revision: String) async throws {
+        guard !isSavingAPIKey, checkState != .checking else { throw ConfigurationFailure.busy }
+        let store = self.store
+        isSavingAPIKey = true
+        defer { isSavingAPIKey = false; reload() }
+        try await Task.detached { try store.saveDirectService(service, key: key, for: revision) }.value
+        keyCache = nil
+        keyAccessError = nil
+        connectionVersion = UUID()
+    }
+
     #if DEBUG
     /// Demo mode (HOWLER_DEMO=1) pretends a service is configured; nothing is sent or saved.
     var demoMode = false

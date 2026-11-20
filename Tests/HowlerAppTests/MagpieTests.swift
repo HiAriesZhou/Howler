@@ -5,6 +5,39 @@ import HowlerCore
 
 @MainActor
 final class MagpieTests: XCTestCase {
+    func testManualKeychainFailureKeepsSelectedSubscription() throws {
+        let suite = "HowlerTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var keys = MemoryKeys().access
+        keys.set = { _, _ in throw ConfigurationFailure.busy }
+        let store = ServiceStore(defaults: defaults, keys: keys)
+        let subscription = MagpieSelection(port: 3425, model: "sample/vision")
+        try store.selectMagpie(subscription)
+        XCTAssertThrowsError(try store.saveDirectService(Provider.openAI.service(), key: "fixture", for: store.revision))
+        XCTAssertEqual(store.service, subscription.service)
+        XCTAssertNil(store.directService)
+    }
+
+    func testManualServiceRequiresNewKeyForNewHost() throws {
+        let suite = "HowlerTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ServiceStore(defaults: defaults, keys: MemoryKeys().access)
+        let original = Provider.anthropic.service()
+        try store.saveDirectService(original, key: "first-fixture", for: store.revision)
+        let edited = Provider.anthropic.service(model: "another-model")
+        try store.saveDirectService(edited, key: "", for: store.revision)
+        XCTAssertEqual(store.apiKey(), "first-fixture")
+        let next = Provider.openAI.service()
+        XCTAssertThrowsError(try store.saveDirectService(next, key: "", for: store.revision))
+        XCTAssertEqual(store.service, edited)
+        XCTAssertEqual(store.apiKey(), "first-fixture")
+        try store.saveDirectService(next, key: "next-fixture", for: store.revision)
+        XCTAssertEqual(store.service, next)
+        XCTAssertEqual(store.apiKey(), "next-fixture")
+    }
+
     func testSelectingMagpiePreservesDirectServiceAndNeverForwardsItsKey() throws {
         let suite = "HowlerTests.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -25,6 +58,7 @@ final class MagpieTests: XCTestCase {
         try store.selectMagpie(nil)
         XCTAssertEqual(store.service, direct)
         XCTAssertEqual(store.apiKey(), "fixture")
+        XCTAssertEqual(store.lastMagpieSelection, selection)
         try store.selectMagpie(selection)
         try store.save(ServiceConfig.apply(["model=updated"], to: store.directService))
         XCTAssertEqual(store.service?.baseURL, direct.baseURL)
