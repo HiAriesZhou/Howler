@@ -83,7 +83,8 @@ struct GeneralPane: View {
                             Text("Deutsch").tag("de")
                             Text("Español").tag("es")
                         }
-                        .labelsHidden().frame(maxWidth: 150)
+                        .labelsHidden()
+                        .fixedSize()
                     }
                     Divider()
                     SettingsRow("Launch at login", detail: nil) {
