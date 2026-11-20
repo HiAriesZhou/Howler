@@ -59,7 +59,7 @@ final class SettingsWindowController: NSObject, NSToolbarDelegate {
         let window = NSWindow(contentViewController: host)
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
-        window.title = "\(AppInfo.name) Settings"
+        window.title = AppInfo.developmentCommit == nil ? "\(AppInfo.name) Settings" : "Dev Settings"
         let toolbar = NSToolbar(identifier: "settings")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly

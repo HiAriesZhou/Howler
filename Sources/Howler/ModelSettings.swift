@@ -10,7 +10,7 @@ struct ModelSettings: View {
     @State private var models: [Magpie.Model] = []
     @State private var port: UInt16 = 3425
     @State private var refresh = UUID()
-    @State private var discoveryStatus = "Looking for models on this Mac…"
+    @State private var discoveryStatus = "Looking for models on this machine…"
     @State private var discovering = false
     @State private var choosingMagpie = false
     @State private var choosingAPIKey = false
@@ -57,14 +57,14 @@ struct ModelSettings: View {
 
     private var magpieSettings: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Use models you’ve already set up on this Mac.")
+            Text("Use models you’ve already set up on this machine.")
                 .font(.callout).foregroundStyle(.secondary)
             if !models.isEmpty || activeMagpie != nil {
                 HStack(spacing: 8) {
                     Text("Model")
-                    Spacer(minLength: 8)
+                        .fixedSize()
                     if models.isEmpty {
-                        Text(activeMagpie?.model ?? "").lineLimit(1)
+                        Text(activeMagpie?.model ?? "").lineLimit(1).truncationMode(.middle)
                     } else {
                         Menu {
                             ForEach(models) { model in
@@ -80,9 +80,12 @@ struct ModelSettings: View {
                             Text(activeMagpie?.model ?? "Choose a model").lineLimit(1).truncationMode(.middle)
                         }
                         .accessibilityLabel("Existing model")
-                        .frame(maxWidth: 260)
+                        .frame(maxWidth: 250)
+                        .fixedSize(horizontal: true, vertical: false)
                         .disabled(busy)
                     }
+                    if activeMagpie != nil, !models.isEmpty { status }
+                    Spacer(minLength: 8)
                     if activeMagpie != nil, !models.isEmpty { checkButton }
                 }
             }
@@ -93,9 +96,7 @@ struct ModelSettings: View {
                         Button("Retry") { refresh = UUID() }.controlSize(.small)
                     }
                 }
-            } else if activeMagpie != nil {
-                status
-            } else if settings.isConfigured {
+            } else if activeMagpie == nil, settings.isConfigured {
                 Text("Your API key stays active until you choose a model.")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -113,7 +114,10 @@ struct ModelSettings: View {
             } else if let service = settings.service {
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(service.model).font(.callout.weight(.medium)).lineLimit(1)
+                        HStack(spacing: 8) {
+                            Text(service.model).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
+                            status
+                        }
                         Text(service.host).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer(minLength: 8)
@@ -122,13 +126,12 @@ struct ModelSettings: View {
                         .disabled(busy)
                     if settings.hasKey { checkButton }
                 }
-                status
             }
         }
     }
 
     private var checkButton: some View {
-        Button(settings.checkState == .checking ? "Checking…" : "Check") {
+        Button("Check") {
             Task { await settings.check() }
         }
         .disabled(busy)
@@ -145,6 +148,7 @@ struct ModelSettings: View {
         return Label(message, systemImage: settings.checkState == .unchecked ? "circle" : "circle.fill")
             .font(.caption)
             .foregroundStyle(statusColor)
+            .fixedSize()
     }
 
     private var statusColor: Color {
@@ -185,7 +189,7 @@ struct ModelSettings: View {
 
     private func discoverModels() async {
         discovering = true
-        discoveryStatus = "Looking for models on this Mac…"
+        discoveryStatus = "Looking for models on this machine…"
         defer { if !Task.isCancelled { discovering = false } }
         struct PortSetting: Decodable { let port: UInt16 }
         let config = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map { URL(fileURLWithPath: $0) }
