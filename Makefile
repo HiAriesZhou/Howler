@@ -1,4 +1,4 @@
-.PHONY: build check test test-core test-app test-tooling test-all test-ci app zip dmg icon run dev clean
+.PHONY: build check check-plan test test-core test-app test-core-app test-tooling test-all test-ci app zip dmg icon run dev clean
 TOOLING_TESTS = HowlerAppTests\.(HomebrewTests|ReleaseSigningTests|ReleaseNotesTests|CaptureLinkBundleTests)
 
 build:
@@ -12,6 +12,9 @@ test-core:
 test-app:
 	swift test --filter HowlerAppTests --skip '$(TOOLING_TESTS)'
 
+test-core-app:
+	swift test --filter 'Howler(Core|App)Tests' --skip '$(TOOLING_TESTS)'
+
 test-tooling:
 	swift test --filter '$(TOOLING_TESTS)'
 
@@ -24,6 +27,9 @@ test-ci:
 # Choose checks from the diff, including local edits. Override BASE for another review base.
 check:
 	node scripts/ci-scope.mjs --check --base $(or $(BASE),origin/main)
+
+check-plan:
+	node scripts/ci-scope.mjs --base $(or $(BASE),origin/main)
 
 # Assembles build/stage.noindex/<APP_NAME>.app and build/<APP_NAME>.zip (universal binary, ad-hoc signed).
 app zip:

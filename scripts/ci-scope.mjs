@@ -8,7 +8,7 @@ const flags = ['core', 'interaction', 'tooling', 'compile', 'bundle', 'dmg', 'ci
 const toolingTests = /^(?:Tests\/HowlerAppTests\/)(?:Homebrew|ReleaseSigning|ReleaseNotes|CaptureLinkBundle)Tests\.swift$/;
 
 export function fullScope(reason) {
-  return { ...Object.fromEntries(flags.map(key => [key, true])), app: true, reason };
+  return { ...Object.fromEntries(flags.map(key => [key, true])), full: true, app: true, reason };
 }
 
 function addPath(scope, path) {
@@ -26,7 +26,7 @@ function addPath(scope, path) {
   if (path === 'scripts/test-core.sh') { scope.core = true; scope.ci = true; return true; }
   if (path === 'Makefile') { scope.ci = true; scope.tooling = true; return true; }
   if (['Package.swift', 'Package.resolved'].includes(path)) {
-    scope.core = true; scope.interaction = true; scope.bundle = true; return true;
+    scope.core = true; scope.interaction = true; scope.tooling = true; scope.bundle = true; scope.full = true; return true;
   }
   if (['.github/workflows/build.yml', '.github/workflows/homebrew.yml'].includes(path)) {
     scope.ci = true; scope.tooling = true; return true;
@@ -42,7 +42,7 @@ function addPath(scope, path) {
 
 export function classifyPaths(paths, { force = false, incomplete = false } = {}) {
   if (force || incomplete) return fullScope(force ? 'tag or explicit full check' : 'incomplete change list');
-  const scope = Object.fromEntries(flags.map(key => [key, false]));
+  const scope = { ...Object.fromEntries(flags.map(key => [key, false])), full: false };
   for (const path of paths) {
     if (!addPath(scope, path)) return fullScope(`unclassified path: ${path}`);
   }
@@ -93,7 +93,11 @@ function localScope(base) {
 export function commandsFor(scope) {
   const commands = [];
   if (scope.ci) commands.push(['make', 'test-ci']);
-  if (scope.core && scope.interaction) commands.push(['make', 'test-all']);
+  if (scope.full) commands.push(['make', 'test-all']);
+  else if (scope.core && scope.interaction) {
+    commands.push(['make', 'test-core-app']);
+    if (scope.tooling) commands.push(['make', 'test-tooling']);
+  }
   else {
     if (scope.core) commands.push(['make', 'test-core']);
     if (scope.interaction) commands.push(['make', 'test-app']);
@@ -116,7 +120,7 @@ function main(args) {
     : localScope(base);
   console.log(JSON.stringify({ ...scope, commands: commandsFor(scope) }, null, 2));
   if (github) {
-    const outputs = [...flags, 'app'].map(key => `${key}=${scope[key]}`).join('\n') + '\n';
+    const outputs = [...flags, 'app', 'full'].map(key => `${key}=${scope[key]}`).join('\n') + '\n';
     appendFileSync(process.env.GITHUB_OUTPUT, outputs);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
       `### Verification scope\n\n${scope.reason}\n\n${[...flags, 'app'].map(key => `- ${key}: ${scope[key]}`).join('\n')}\n`);
