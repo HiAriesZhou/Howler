@@ -13,9 +13,10 @@ test('core-only test edits do not build the app; core contracts also compile the
   assert.deepEqual(commandsFor(classifyPaths(['Sources/HowlerCore/SSEParser.swift'])), [['make', 'test-core'], ['swift', 'build', '--product', 'Howler']]);
 });
 
-test('native behavior keeps app checks; mixed core and app changes run the full suite once', () => {
+test('mixed core and app changes only add tooling when it is independently affected', () => {
   assert.deepEqual(commandsFor(classifyPaths(['Sources/Howler/ChatViewModel.swift'])), [['make', 'test-app']]);
-  assert.deepEqual(commandsFor(classifyPaths(['Sources/HowlerCore/ChatClient.swift', 'Sources/Howler/PanelController.swift'])), [['make', 'test-all']]);
+  assert.deepEqual(commandsFor(classifyPaths(['Sources/HowlerCore/ChatClient.swift', 'Sources/Howler/PanelController.swift'])), [['make', 'test-core-app']]);
+  assert.deepEqual(commandsFor(classifyPaths(['Sources/HowlerCore/ChatClient.swift', 'Sources/Howler/PanelController.swift', 'scripts/homebrew.sh'])), [['make', 'test-core-app'], ['make', 'test-tooling']]);
   assert.deepEqual(commandsFor(classifyPaths(['Sources/Howler/PanelController.swift', 'scripts/homebrew.sh'])), [['make', 'test-app'], ['make', 'test-tooling']]);
 });
 

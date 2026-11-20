@@ -18,6 +18,7 @@ jobs:
       contents: read
     outputs:
       app: ${{ steps.scope.outputs.app }}
+      full: ${{ steps.scope.outputs.full }}
       core: ${{ steps.scope.outputs.core }}
       interaction: ${{ steps.scope.outputs.interaction }}
       tooling: ${{ steps.scope.outputs.tooling }}
@@ -53,18 +54,22 @@ jobs:
           swift --version
 
       - name: Test core
-        if: needs.changes.outputs.core == 'true' && needs.changes.outputs.interaction != 'true'
+        if: needs.changes.outputs.full != 'true' && needs.changes.outputs.core == 'true' && needs.changes.outputs.interaction != 'true'
         run: make test-core
 
       - name: Test app behavior
-        if: needs.changes.outputs.interaction == 'true'
+        if: needs.changes.outputs.full != 'true' && needs.changes.outputs.interaction == 'true'
         env:
           CHECK_CORE: ${{ needs.changes.outputs.core }}
         run: |
-          if [[ "$CHECK_CORE" == true ]]; then make test-all; else make test-app; fi
+          if [[ "$CHECK_CORE" == true ]]; then make test-core-app; else make test-app; fi
+
+      - name: Test full suite
+        if: needs.changes.outputs.full == 'true'
+        run: make test-all
 
       - name: Test release tooling
-        if: needs.changes.outputs.tooling == 'true' && !(needs.changes.outputs.core == 'true' && needs.changes.outputs.interaction == 'true')
+        if: needs.changes.outputs.full != 'true' && needs.changes.outputs.tooling == 'true'
         run: make test-tooling
 
       - name: Compile app
