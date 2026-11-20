@@ -11,6 +11,7 @@ Read this guide when building, testing, running a demo, or preparing a pull requ
 - `make test-all`: all tests (`swift test`); use for full validation or release preparation.
 - `make test-ci`: change-classifier regression tests; no native build.
 - `make app`: universal app in `build/stage.noindex/Howler.app` and `build/Howler.zip`. Set `SIGN_IDENTITY` for a Developer ID build; otherwise it is ad-hoc signed.
+- `make dev`: build for this Mac and launch `build/dev/stage.noindex/Howler Dev.app`. It uses its own preferences and Keychain service. Updates and the `howler://` link are disabled. The Settings footer shows the short commit, with `-dirty` for uncommitted changes. The Dev menu opens letters without taking the release app's default shortcuts.
 - `make dmg`: builds the app and wraps it in `build/Howler.dmg`.
 - Debug demo: `swift build && HOWLER_DEMO=settings .build/debug/Howler`. The variants are listed at the top of `Sources/Howler/DemoMode.swift`. `HOWLER_DEMO_SNAPSHOT=out.png` saves the Settings window as a PNG without screen-recording permission.
 

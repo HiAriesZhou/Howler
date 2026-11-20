@@ -1,4 +1,4 @@
-.PHONY: build check test test-core test-app test-tooling test-all test-ci app zip dmg icon run clean
+.PHONY: build check test test-core test-app test-tooling test-all test-ci app zip dmg icon run dev clean
 TOOLING_TESTS = HowlerAppTests\.(HomebrewTests|ReleaseSigningTests|ReleaseNotesTests|CaptureLinkBundleTests)
 
 build:
@@ -39,6 +39,9 @@ icon:
 
 run: app
 	. ./app.config && open "build/stage.noindex/$$APP_NAME.app"
+
+dev:
+	./scripts/bundle.sh --dev
 
 clean:
 	rm -rf .build build

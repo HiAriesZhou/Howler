@@ -288,13 +288,14 @@ final class AppSettings: ObservableObject {
 
     /// Missing data means the default; JSON null means deliberately disabled.
     private static func loadShortcut(_ action: ShortcutAction, from defaults: UserDefaults) -> HotKeyCombo? {
-        guard let data = defaults.data(forKey: action.defaultsKey) else { return action.standard }
+        let fallback = AppInfo.developmentCommit == nil ? action.standard : nil
+        guard let data = defaults.data(forKey: action.defaultsKey) else { return fallback }
         do {
             let value = try JSONDecoder().decode(HotKeyCombo?.self, from: data)
-            if let value, !value.isValid { return action.standard }
+            if let value, !value.isValid { return fallback }
             return value
         } catch {
-            return action.standard
+            return fallback
         }
     }
 

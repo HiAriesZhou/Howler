@@ -13,19 +13,64 @@ cd "$ROOT"
 # shellcheck source=../app.config
 source ./app.config
 
-ARCHS="${ARCHS:-arm64 x86_64}"
+CONFIGURATION=release
+OUT="$ROOT/build"
+COMMIT=""
+case "${1:-}" in
+    "")
+        ARCHS="${ARCHS:-arm64 x86_64}"
+        ;;
+    --dev)
+        CONFIGURATION=debug
+        OUT="$OUT/dev"
+        ARCHS="$(uname -m)"
+        APP_NAME="$APP_NAME Dev"
+        BUNDLE_ID="$BUNDLE_ID.dev"
+        COMMIT="$(git rev-parse --short HEAD)"
+        if [[ -n "$(git status --porcelain)" ]]; then COMMIT="$COMMIT-dirty"; fi
+        ;;
+    *)
+        echo "Usage: $0 [--dev]" >&2
+        exit 2
+        ;;
+esac
 ARCH_FLAGS=()
 for arch in $ARCHS; do ARCH_FLAGS+=(--arch "$arch"); done
 
-echo "==> swift build -c release (${ARCHS})"
-swift build -c release --product "$EXECUTABLE_PRODUCT" "${ARCH_FLAGS[@]}"
-BIN_DIR="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)"
+echo "==> swift build -c ${CONFIGURATION} (${ARCHS})"
+swift build -c "$CONFIGURATION" --product "$EXECUTABLE_PRODUCT" "${ARCH_FLAGS[@]}"
+BIN_DIR="$(swift build -c "$CONFIGURATION" "${ARCH_FLAGS[@]}" --show-bin-path)"
 BINARY="$BIN_DIR/$EXECUTABLE_PRODUCT"
 [[ -x "$BINARY" ]] || { echo "error: binary not found at $BINARY" >&2; exit 1; }
 
-OUT="$ROOT/build"
 APP="$OUT/stage.noindex/$APP_NAME.app"
 ZIP="$OUT/$APP_NAME.zip"
+if [[ -n "$COMMIT" ]]; then
+    DEV_PIDS="$(osascript -l JavaScript - "$BUNDLE_ID" <<'JXA'
+ObjC.import('AppKit');
+function run(args) {
+    const applications = $.NSRunningApplication.runningApplicationsWithBundleIdentifier(args[0]);
+    const pids = [];
+    for (let index = 0; index < applications.count; index++) {
+        const application = applications.objectAtIndex(index);
+        pids.push(application.processIdentifier);
+        application.terminate;
+    }
+    return pids.join(' ');
+}
+JXA
+)"
+    for pid in $DEV_PIDS; do
+        for ((attempt = 0; attempt < 50; attempt++)); do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 0.1
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "Quit Howler Dev before rebuilding it." >&2
+            exit 1
+        fi
+    done
+fi
 rm -rf "$APP" "$ZIP" "$OUT/$APP_NAME.app" # the last: where earlier versions put the app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 
@@ -97,6 +142,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+if [[ -n "$COMMIT" ]]; then
+    for key in SUFeedURL SUPublicEDKey SUScheduledCheckInterval SUAllowsAutomaticUpdates CFBundleURLTypes; do
+        plutil -remove "$key" "$APP/Contents/Info.plist"
+    done
+    plutil -insert HowlerDevelopmentCommit -string "$COMMIT" "$APP/Contents/Info.plist"
+fi
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 plutil -lint "$APP/Contents/Info.plist"
 
@@ -120,7 +171,11 @@ lipo -info "$APP/Contents/MacOS/$APP_NAME"
 lipo "$APP/Contents/MacOS/$APP_NAME" -verify_arch $ARCHS \
     || { echo "error: binary does not contain every architecture in: $ARCHS" >&2; exit 1; }
 
-echo "==> zip"
-ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
 echo "Built $APP"
-echo "Built $ZIP"
+if [[ -n "$COMMIT" ]]; then
+    open "$APP"
+else
+    echo "==> zip"
+    ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+    echo "Built $ZIP"
+fi

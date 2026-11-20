@@ -310,7 +310,7 @@ struct VersionFootnote: View {
                     .accessibilityLabel("Update \(AppInfo.name) to \(version)")
                     .disabled(!canCheck)
             } else {
-                Text("\(AppInfo.name) \(AppInfo.version)")
+                Text(AppInfo.developmentCommit.map { "\(AppInfo.name) · \($0)" } ?? "\(AppInfo.name) \(AppInfo.version)")
                     .textSelection(.enabled)
             }
         }
