@@ -31,6 +31,8 @@ struct ServiceStore {
 
     private enum DefaultsKey {
         static let service = "service"
+        static let magpie = "magpieSelection"
+        static let lastMagpie = "lastMagpieSelection"
         static let check = "serviceCheck"
         /// Absent until the instructions are edited, so a better suggestion reaches everyone else.
         static let instructions = "systemPromptInstructions"
@@ -63,7 +65,7 @@ struct ServiceStore {
     }
 
     var service: ModelService? {
-        if let data = defaults.data(forKey: "magpieSelection"),
+        if let data = defaults.data(forKey: DefaultsKey.magpie),
            let selection = try? JSONDecoder().decode(MagpieSelection.self, from: data) { return selection.service }
         return directService
     }
@@ -73,14 +75,52 @@ struct ServiceStore {
     }
 
     func selectMagpie(_ selection: MagpieSelection?) throws {
-        defaults.set(try selection.map { try JSONEncoder().encode($0) }, forKey: "magpieSelection")
+        if let selection {
+            let data = try JSONEncoder().encode(selection)
+            defaults.set(data, forKey: DefaultsKey.magpie)
+            defaults.set(data, forKey: DefaultsKey.lastMagpie)
+        } else {
+            if let active = defaults.data(forKey: DefaultsKey.magpie) {
+                defaults.set(active, forKey: DefaultsKey.lastMagpie)
+            }
+            defaults.removeObject(forKey: DefaultsKey.magpie)
+        }
         finishChange()
+    }
+
+    var lastMagpieSelection: MagpieSelection? {
+        defaults.data(forKey: DefaultsKey.lastMagpie).flatMap { try? JSONDecoder().decode(MagpieSelection.self, from: $0) }
     }
 
     func save(_ service: ModelService) throws {
         let data = try JSONEncoder().encode(service)
+        save(service, data: data)
+    }
+
+    func saveDirectService(_ service: ModelService, key raw: String, for revision: String) throws {
+        guard self.revision == revision, !service.usesMagpie else { throw ConfigurationFailure.changed }
+        let data = try JSONEncoder().encode(service)
+        let scope = Self.keyScope(for: service)
+        if raw.isEmpty {
+            guard scope == defaults.string(forKey: DefaultsKey.keyScope),
+                  let directService, Self.keyScope(for: directService) == scope,
+                  keys.exists(Self.keyAccount(for: service)) || hasLegacyKey(for: service) else {
+                throw ConfigurationFailure.missingKey
+            }
+        } else {
+            try keys.set(Self.validatedAPIKey(raw), Self.keyAccount(for: service))
+            defaults.set(UUID().uuidString, forKey: DefaultsKey.keyRevision)
+            guard self.revision == revision else { throw ConfigurationFailure.changed }
+        }
+        save(service, data: data, bindKey: !raw.isEmpty)
+    }
+
+    private func save(_ service: ModelService, data: Data, bindKey: Bool = false) {
         let previous = directService
-        defaults.removeObject(forKey: "magpieSelection")
+        if let active = self.service?.magpie, let encoded = try? JSONEncoder().encode(active) {
+            defaults.set(encoded, forKey: DefaultsKey.lastMagpie)
+        }
+        defaults.removeObject(forKey: DefaultsKey.magpie)
         invalidateCheck()
         defer { finishChange() }
         if let previous, Self.keyScope(for: previous) != Self.keyScope(for: service) {
@@ -89,6 +129,10 @@ struct ServiceStore {
             removeLegacyKey(for: previous)
         }
         defaults.set(data, forKey: DefaultsKey.service)
+        if bindKey {
+            defaults.set(Self.keyScope(for: service), forKey: DefaultsKey.keyScope)
+            removeLegacyKey(for: service)
+        }
     }
 
     /// Checks presence via attributes only, which never triggers a keychain prompt.
@@ -202,7 +246,8 @@ struct ServiceStore {
     /// Removes the service, its key and the last check.
     func reset() {
         let previous = directService
-        defaults.removeObject(forKey: "magpieSelection")
+        defaults.removeObject(forKey: DefaultsKey.magpie)
+        defaults.removeObject(forKey: DefaultsKey.lastMagpie)
         invalidateCheck()
         defer { finishChange() }
         defaults.removeObject(forKey: DefaultsKey.service)

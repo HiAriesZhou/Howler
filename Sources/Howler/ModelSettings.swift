@@ -2,256 +2,221 @@ import AppKit
 import HowlerCore
 import SwiftUI
 
-/// The model section of Settings: what writes the letters and whether it works, plus the
-/// setup prompt. Service fields can be configured by an assistant; credentials are
-/// entered directly into a native secure sheet.
 struct ModelSettings: View {
     @ObservedObject var settings: AppSettings
 
     @State private var copied = false
-    @State private var keyEditorTarget: KeyEditorTarget?
+    @State private var showsServiceEditor = false
     @State private var models: [Magpie.Model] = []
     @State private var port: UInt16 = 3425
     @State private var refresh = UUID()
-    @State private var discoveryStatus = "Looking for Magpie…"
+    @State private var discoveryStatus = "Looking for models on this Mac…"
+    @State private var discovering = false
+    @State private var choosingMagpie = false
+    @State private var choosingAPIKey = false
+    @State private var selectionError: String?
 
-    private struct KeyEditorTarget: Identifiable {
-        let id = UUID()
-        let service: ModelService
+    private var activeMagpie: MagpieSelection? {
+        settings.service?.usesMagpie == true ? settings.service?.magpie : nil
     }
+
+    private var showsMagpie: Bool { !choosingAPIKey && (choosingMagpie || activeMagpie != nil) }
+    private var canChooseSource: Bool { !models.isEmpty || activeMagpie != nil }
+    private var busy: Bool { settings.isSavingAPIKey || settings.checkState == .checking }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                if models.isEmpty {
-                    Text(discoveryStatus).font(.callout).foregroundStyle(.secondary)
-                } else {
-                    Menu("Choose Magpie Model") {
-                        ForEach(models) { model in
-                            Button(model.id + (model.modalities?.input?.contains("image") == true ? " · Images" : "")) {
-                                select(MagpieSelection(port: port, model: model.id))
-                            }
-                        }
-                    }
-                }
+                Text("Model Source").font(.headline)
                 Spacer()
-                if settings.service?.usesMagpie == true {
-                    Button("Use Direct Service") { select(nil) }
+                if canChooseSource {
+                    Picker("Model Source", selection: Binding(get: { showsMagpie }, set: chooseSource)) {
+                        Text("Subscription").tag(true)
+                        Text("API Key").tag(false)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                    .disabled(busy)
                 }
-                Button { refresh = UUID() } label: { Image(systemName: "arrow.clockwise") }
-                    .accessibilityLabel("Refresh Magpie models")
             }
-            .disabled(settings.isSavingAPIKey || settings.checkState == .checking)
-            Divider()
-            if let service = settings.service {
-                configured(service)
+            if showsMagpie {
+                magpieSettings
             } else {
-                setupGuide
+                apiKeySettings
+            }
+            if let selectionError {
+                Text(selectionError).font(.caption).foregroundStyle(.red)
+            } else if !choosingMagpie, case .failed(let message) = settings.checkState {
+                Text(message).font(.caption).foregroundStyle(.red).textSelection(.enabled).lineLimit(4)
             }
         }
         .onAppear { settings.reload() }
-        .task(id: refresh) {
-            struct PortSetting: Decodable { let port: UInt16 }
-            let config = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map { URL(fileURLWithPath: $0) }
-                ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config")
-            let file = config.appendingPathComponent("magpie/settings.json")
-            let detected = (try? JSONDecoder().decode(PortSetting.self, from: Data(contentsOf: file)).port) ?? 3425
-            do {
-                let catalog = try await Magpie.models(port: detected)
-                try Task.checkCancellation()
-                port = detected
-                models = catalog
-                discoveryStatus = "No chat models enabled in Magpie."
-            } catch {
-                guard !Task.isCancelled else { return }
-                models = []
-                discoveryStatus = "Local Magpie unavailable."
+        .task(id: refresh) { await discoverModels() }
+    }
+
+    private var magpieSettings: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Use models you’ve already set up on this Mac.")
+                .font(.callout).foregroundStyle(.secondary)
+            if !models.isEmpty || activeMagpie != nil {
+                HStack(spacing: 8) {
+                    Text("Model")
+                    Spacer(minLength: 8)
+                    if models.isEmpty {
+                        Text(activeMagpie?.model ?? "").lineLimit(1)
+                    } else {
+                        Menu {
+                            ForEach(models) { model in
+                                Button {
+                                    select(MagpieSelection(port: port, model: model.id))
+                                } label: {
+                                    let name = model.id + (model.modalities?.input?.contains("image") == true ? " · Images" : "")
+                                    if activeMagpie?.model == model.id { Label(name, systemImage: "checkmark") }
+                                    else { Text(name) }
+                                }
+                            }
+                        } label: {
+                            Text(activeMagpie?.model ?? "Choose a model").lineLimit(1).truncationMode(.middle)
+                        }
+                        .accessibilityLabel("Existing model")
+                        .frame(maxWidth: 260)
+                        .disabled(busy)
+                    }
+                    if activeMagpie != nil, !models.isEmpty { checkButton }
+                }
             }
-        }
-        .sheet(item: $keyEditorTarget) { target in
-            APIKeyEditor(settings: settings, service: target.service)
-        }
-    }
-
-    // MARK: Set up
-
-    private func select(_ selection: MagpieSelection?) {
-        do { try settings.selectMagpie(selection) }
-        catch { models = []; discoveryStatus = error.localizedDescription }
-    }
-
-    /// No model yet: how to get one, step by step, ending in the button that starts it.
-    private var setupGuide: some View {
-        HStack(alignment: .top, spacing: 14) {
-            ProviderStamp(glyph: nil, pressKey: 0, size: 40)
-                .frame(width: 44, height: 44)
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Set up a model")
-                        .font(.title3.weight(.semibold))
-                    Text("Let an AI assistant configure the service.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 7) {
-                    step(1, "Copy the setup prompt.")
-                    step(2, "Paste it into Claude Code, Codex or another AI assistant that can run commands.")
-                    step(3, "Return here to add your API key and check the connection.")
-                }
-                HStack(spacing: 10) {
-                    copyButton
-                        .buttonStyle(.borderedProminent)
-                        .tint(Wax.crimson.base)
-                    if copied {
-                        Text("Now paste it into your assistant.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .transition(.opacity)
+            if models.isEmpty {
+                HStack(spacing: 8) {
+                    Text(discoveryStatus).font(.caption).foregroundStyle(.secondary)
+                    if !discovering {
+                        Button("Retry") { refresh = UUID() }.controlSize(.small)
                     }
                 }
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func step(_ number: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("\(number)")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Wax.crimson.base)
-                .frame(width: 17, height: 17)
-                .background(Circle().fill(Wax.crimson.base.opacity(0.12)))
-                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
-            Text(text)
-                .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    // MARK: Configured
-
-    private func configured(_ service: ModelService) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 14) {
-                ProviderStamp(glyph: service.glyph, pressKey: stampKey, size: 40)
-                    .frame(width: 44, height: 44)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(service.model)
-                        .font(.title3.weight(.semibold))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .textSelection(.enabled)
-                    Text("\(service.host) · \(service.format.displayName)")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    status
-                }
-                Spacer(minLength: 12)
-                Button(settings.checkState == .checking ? "Checking…" : "Check") {
-                    Task { await settings.check() }
-                }
-                .disabled(settings.checkState == .checking || settings.isSavingAPIKey)
-                .help("Send a tiny real request to make sure it answers")
-            }
-
-            if case .failed(let message) = settings.checkState {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-                    .lineLimit(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 58)
-            }
-
-            Divider()
-
-            if service.usesMagpie {
-                Text("Magpie manages access to this model.").font(.callout)
-            } else {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("API Key")
-                    Text(settings.hasKey ? "Saved in Keychain. Check to verify access." : "Add a key to connect.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 12)
-                Button(settings.hasKey ? "Replace Key…" : "Add Key…") {
-                    keyEditorTarget = KeyEditorTarget(service: service)
-                }
-                .disabled(settings.checkState == .checking || settings.isSavingAPIKey)
-            }
-            }
-            Divider()
-
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Setup help")
-                    Text("Configure the model with your AI assistant.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 12)
-                copyButton
+            } else if activeMagpie != nil {
+                status
+            } else if settings.isConfigured {
+                Text("Your API key stays active until you choose a model.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }
 
-    private var copyButton: some View {
-        Button(action: copyPrompt) {
-            Label(copied ? "Copied" : "Copy Setup Prompt", systemImage: copied ? "checkmark" : "doc.on.doc")
+    private var apiKeySettings: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if settings.service == nil || choosingAPIKey || showsServiceEditor {
+                DirectServiceEditor(settings: settings, onClose: {
+                    showsServiceEditor = false
+                    choosingAPIKey = false
+                },
+                                    copySetupPrompt: copySetupPrompt, copied: copied)
+            } else if let service = settings.service {
+                HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(service.model).font(.callout.weight(.medium)).lineLimit(1)
+                        Text(service.host).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Button("Edit") { showsServiceEditor = true }
+                        .accessibilityLabel("Edit API configuration")
+                        .disabled(busy)
+                    if settings.hasKey { checkButton }
+                }
+                status
+            }
         }
-        .help("Copies instructions for Claude Code, Codex or another assistant. It never asks you to paste the key into the chat.")
+    }
+
+    private var checkButton: some View {
+        Button(settings.checkState == .checking ? "Checking…" : "Check") {
+            Task { await settings.check() }
+        }
+        .disabled(busy)
+        .help("Send a short request to test this model")
     }
 
     private var status: some View {
-        HStack(spacing: 5) {
-            if settings.checkState == .checking {
-                ProgressView().controlSize(.mini)
-            } else {
-                Circle().fill(statusColor).frame(width: 6, height: 6)
-            }
-            Text(statusText)
+        let message: String = switch settings.checkState {
+        case .unchecked: settings.isConfigured ? "Not checked yet" : "No API key"
+        case .checking: "Checking…"
+        case .passed: "Ready"
+        case .failed: "Check failed"
         }
-        .font(.caption.weight(.medium))
-        .foregroundStyle(statusColor == .secondary ? Color.secondary : statusColor)
-        .padding(.top, 1)
-    }
-
-    private var statusText: String {
-        switch settings.checkState {
-        case .unchecked: return settings.isConfigured ? "Not checked yet" : "No API key"
-        case .checking: return "Checking…"
-        case .passed: return "Ready"
-        case .failed: return "Failed"
-        }
+        return Label(message, systemImage: settings.checkState == .unchecked ? "circle" : "circle.fill")
+            .font(.caption)
+            .foregroundStyle(statusColor)
     }
 
     private var statusColor: Color {
         switch settings.checkState {
-        case .unchecked: return settings.isConfigured ? .secondary : .orange
-        case .checking: return .secondary
-        case .passed: return .green
-        case .failed: return .red
+        case .unchecked, .checking: .secondary
+        case .passed: .green
+        case .failed: .red
         }
     }
 
-    /// Press the seal again whenever the service changes.
-    private var stampKey: Int {
-        settings.service?.summary.hashValue ?? 0
+    private func chooseSource(_ useMagpie: Bool) {
+        selectionError = nil
+        showsServiceEditor = false
+        if useMagpie {
+            choosingAPIKey = false
+            choosingMagpie = activeMagpie == nil
+            if choosingMagpie, let last = settings.lastMagpieSelection, models.contains(where: { $0.id == last.model }) {
+                select(MagpieSelection(port: port, model: last.model))
+            }
+        } else {
+            choosingMagpie = false
+            if activeMagpie != nil {
+                if settings.hasDirectService { select(nil) }
+                else { choosingAPIKey = true }
+            }
+        }
     }
 
-    private func copyPrompt() {
+    private func select(_ selection: MagpieSelection?) {
+        do {
+            try settings.selectMagpie(selection)
+            choosingMagpie = false
+            selectionError = nil
+        } catch {
+            selectionError = error.localizedDescription
+        }
+    }
+
+    private func discoverModels() async {
+        discovering = true
+        discoveryStatus = "Looking for models on this Mac…"
+        defer { if !Task.isCancelled { discovering = false } }
+        struct PortSetting: Decodable { let port: UInt16 }
+        let config = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map { URL(fileURLWithPath: $0) }
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config")
+        let file = config.appendingPathComponent("magpie/settings.json")
+        let detected = (try? JSONDecoder().decode(PortSetting.self, from: Data(contentsOf: file)).port) ?? 3425
+        do {
+            let catalog = try await Magpie.models(port: detected)
+            try Task.checkCancellation()
+            port = detected
+            models = catalog
+            discoveryStatus = "No configured models are available."
+            if choosingMagpie, !busy, let last = settings.lastMagpieSelection,
+               catalog.contains(where: { $0.id == last.model }) {
+                select(MagpieSelection(port: detected, model: last.model))
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            models = []
+            choosingMagpie = false
+            discoveryStatus = "Your saved connection is unavailable."
+        }
+    }
+
+    private func copySetupPrompt() {
         let executable = Bundle.main.executablePath ?? "/Applications/\(AppInfo.name).app/Contents/MacOS/\(AppInfo.name)"
-        let prompt = SetupGuide.prompt(appName: AppInfo.name, executable: executable, current: settings.service)
+        let current = settings.service.flatMap { $0.usesMagpie ? nil : $0 }
+        let prompt = SetupGuide.prompt(appName: AppInfo.name, executable: executable, current: current)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(prompt, forType: .string)
-        withAnimation(.easeOut(duration: 0.15)) { copied = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-            withAnimation(.easeOut(duration: 0.2)) { copied = false }
-        }
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { copied = false }
     }
 }

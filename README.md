@@ -73,7 +73,7 @@ Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, rig
 
 ## Set up a model
 
-If Magpie is running on your Mac, open Settings → General → Choose Magpie Model. Pick a model marked **Images** for screenshots. Magpie manages access and usage, so Howler needs no API key. **Use Direct Service** restores your previous setup. Burning a letter clears it in Howler. Magpie and its model provider manage their own records.
+When Howler detects models in a running local Magpie app, Settings → General offers **Subscription**. Pick a model marked **Images** for screenshots. You can switch to **API Key** to use your own provider key. Howler remembers both setups. Burning clears the letter in Howler. Magpie and its model provider manage their own records.
 
 Howler writes with one model service. The setup is short enough to hand to an AI assistant.
 
@@ -81,7 +81,9 @@ Howler writes with one model service. The setup is short enough to hand to an AI
   <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General contains model setup, reply language, login and update preferences">
 </p>
 
-Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It configures the service, model and request parameters. Then return to **General › API Key**, choose **Add Key** or **Replace Key**, paste the key into the secure field, and click **Save & Check**. The key goes directly into macOS Keychain; never send it in the assistant's chat.
+In **Settings › General**, select a provider, enter a model and paste your API key. Click **Edit** if you already have a saved configuration. Choose **Custom** to enter your own base URL and request format. Click **Save & Check**. The key goes directly into macOS Keychain.
+
+For help configuring service or request parameters, use **Copy Setup Prompt** and paste it into an assistant that can run commands. Enter the key in Howler.
 
 Save & Check sends one test request with a 30-second connection deadline. A saved key record does not prove the key is readable or the service works. Keychain access failures keep their diagnostic code and stop the flow; they never automatically delete and recreate the old key. For other failures, the setup prompt allows one diagnosed correction and retry before reporting the remaining problem.
 
