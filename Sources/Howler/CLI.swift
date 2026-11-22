@@ -5,7 +5,7 @@ import HowlerCore
 /// assistant (Settings › Copy Setup Prompt). It shares `ServiceStore` with the app and never
 /// prints the API key.
 ///
-///     Howler config schema | show | set field=value … | set api-key --stdin|--env NAME|--file PATH | reset
+///     Howler config schema | show | stage field=value … | set field=value … | set api-key --stdin|--env NAME|--file PATH | reset
 ///     Howler check [--verbose]
 enum CLI {
     private static let commands: Set<String> = ["config", "check", "help", "--help", "-h", "version", "--version"]
@@ -41,6 +41,7 @@ enum CLI {
           \(name) config schema                 Every field, with examples
           \(name) config show                   Current setup
           \(name) config set field=value …      Change the setup
+          \(name) config stage field=value …    Prepare API key settings while a subscription stays active
           \(name) config set api-key --stdin    Save the API key (also --env NAME, --file PATH)
           \(name) config reset                  Remove the setup and the API key
           \(name) check [--verbose]             Send a tiny real request
@@ -60,6 +61,13 @@ enum CLI {
             print(SetupGuide.schema(appName: name))
         case "show", nil:
             show(store)
+        case "stage":
+            let fields = Array(args.dropFirst())
+            guard !fields.isEmpty else { throw UsageError("Nothing to stage. See: \(name) config schema") }
+            let service = try ServiceConfig.apply(fields, to: store.pendingDirectService ?? store.directService)
+            try store.stageDirectService(service)
+            print("Prepared: \(service.summary)")
+            print("Subscription stays active. Open Settings > General > API Key > Edit, then Save & Check.")
         case "set":
             let fields = Array(args.dropFirst())
             if fields.first == "api-key" {
@@ -97,6 +105,9 @@ enum CLI {
         ]
         for (label, value) in rows {
             print(label.padding(toLength: 10, withPad: " ", startingAt: 0) + value)
+        }
+        if service.usesMagpie, let pending = store.pendingDirectService {
+            print("pending   \(pending.summary) (verify in Settings > General > API Key)")
         }
     }
 

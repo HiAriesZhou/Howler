@@ -45,6 +45,7 @@ final class AppSettings: ObservableObject {
     }
 
     @Published private(set) var service: ModelService?
+    @Published private(set) var pendingDirectService: ModelService?
     @Published private(set) var hasKey = false
     @Published private(set) var keyAccessError: String?
     @Published private(set) var isSavingAPIKey = false
@@ -146,6 +147,8 @@ final class AppSettings: ObservableObject {
             keyCache = nil
         }
         if stored != service { service = stored }
+        let pending = store.pendingDirectService
+        if pending != pendingDirectService { pendingDirectService = pending }
         if connectionChanged { connectionVersion = UUID() }
         if replyLanguage != store.replyLanguage { replyLanguage = store.replyLanguage }
         let present = store.hasKey
@@ -178,7 +181,11 @@ final class AppSettings: ObservableObject {
     }
 
     var lastMagpieSelection: MagpieSelection? { store.lastMagpieSelection }
-    var hasDirectService: Bool { store.directService != nil }
+    var savedDirectService: ModelService? { store.directService }
+
+    func hasDirectKey(for service: ModelService) -> Bool {
+        store.hasDirectKey(for: service)
+    }
 
     var serviceRevision: String { store.revision }
 
@@ -191,6 +198,34 @@ final class AppSettings: ObservableObject {
         keyCache = nil
         keyAccessError = nil
         connectionVersion = UUID()
+    }
+
+    func checkAndActivateDirectService(_ service: ModelService, key raw: String, for revision: String,
+                                       pending: ModelService?) async throws {
+        guard !isSavingAPIKey, checkState != .checking else { throw ConfigurationFailure.busy }
+        guard store.revision == revision, store.service?.usesMagpie == true,
+              store.pendingDirectService == pending, !service.usesMagpie else { throw ConfigurationFailure.changed }
+        let store = self.store
+        isSavingAPIKey = true
+        defer { isSavingAPIKey = false; reload() }
+        let key = try await Task.detached {
+            if !raw.isEmpty { return try ServiceStore.validatedAPIKey(raw) }
+            guard let saved = try store.readDirectKey(for: service, revision: revision) else {
+                throw ConfigurationFailure.missingKey
+            }
+            return saved
+        }.value
+        guard store.revision == revision, store.pendingDirectService == pending else { throw ConfigurationFailure.changed }
+        try await ConnectionTester.test(
+            client: client, service: service, apiKey: key, appName: AppInfo.name,
+            systemPrompt: systemPrompt, replyLanguage: resolvedReplyLanguage
+        )
+        try Task.checkCancellation()
+        try await Task.detached {
+            try store.activateCheckedDirectService(service, key: raw, for: revision, pending: pending)
+        }.value
+        keyCache = nil
+        keyAccessError = nil
     }
 
     #if DEBUG
