@@ -15,11 +15,11 @@ public enum SetupGuide {
         Please:
         1. Run `\(appName) config show` first. Preserve an existing working API key setup. If it shows a subscription, leave that setup available and ask which API key service and model I want to configure. Otherwise, ask only when the service or model is missing or I want a change.
         2. Run `\(appName) config schema` to learn every field, and check the service's official docs for the endpoint, request format and any parameters it needs. \(appName) is for quick everyday questions, so the answer should start fast: if the model can turn thinking off or down, set the lowest level in `body`, unless I ask for deeper reasoning.
-        3. Apply only the required non-secret changes together with `\(appName) config set field=value …`. Use the installed executable above for every command.
-        4. Never ask me to send you the API key, read it from my clipboard, or print or save it. If a key is needed, direct me to \(appName) Settings > General. Select API Key if a source picker is present, then click Edit for a saved configuration or Configure Manually for a new one. I paste the key there and choose Save & Check. Wait for me to finish. Reuse an existing working key.
+        3. Apply only the required non-secret changes. If `config show` reports that the key is managed by Magpie, use `\(appName) config stage field=value …` to leave the subscription active. Otherwise use `\(appName) config set field=value …`. Use the installed executable above for every command.
+        4. Never ask me to send you the API key, read it from my clipboard, or print or save it. When switching from a subscription or when a key is needed, direct me to \(appName) Settings > General. Select API Key if a source picker is present, then click Edit for a saved or prepared configuration or Configure Manually for a new one. I enter the key there if needed and choose Save & Check. Wait for me to finish. Reuse an existing working key.
         5. Read `\(appName) config show` again. Key record presence is not proof of readable credentials or a working connection; only a passed check for the current setup confirms success. Save & Check already sends one test request, so do not duplicate a successful check.
         6. On Keychain, authorization or permission errors, stop immediately and explain the error and the next user action in the app. Never repeatedly import keys, reset the configuration, delete Keychain items or weaken permissions to work around a failure.
-        7. For a network, HTTP or model error, use the existing diagnostic first. Make at most one cause-based correction and one retry with `\(appName) check --verbose`; then stop and report any remaining blocker. Finish with `\(appName) config show`, distinguishing saved configuration from a passed connection.
+        7. For a network, HTTP or model error, use the existing diagnostic first. Make at most one cause-based correction and one retry. If a subscription is still active, have me retry Save & Check in Settings. Otherwise retry with `\(appName) check --verbose`. Then stop and report any remaining blocker. Finish with `\(appName) config show`, distinguishing the active model from any prepared configuration.
 
         If you can't run commands, write out each one for me; I'll paste them into Terminal and send you the output.
         """
@@ -64,6 +64,7 @@ public enum SetupGuide {
 
         OTHER COMMANDS
           \(appName) config show        Current setup and whether it passed a check
+          \(appName) config stage …     Prepare non-secret settings while a subscription stays active
           \(appName) config reset       Remove the setup and the API key
           \(appName) check [--verbose]  Send a tiny real request; --verbose shows the request and the error
 

@@ -52,6 +52,7 @@ struct ModelSettings: View {
             }
         }
         .onAppear { settings.reload() }
+        .onChange(of: settings.pendingDirectService) { _, _ in showsServiceEditor = false }
         .task(id: refresh) { await discoverModels() }
     }
 
@@ -125,6 +126,18 @@ struct ModelSettings: View {
                         .disabled(busy)
                     if settings.hasKey { checkButton }
                 }
+            } else if activeMagpie != nil, let pending = settings.pendingDirectService ?? settings.savedDirectService {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(pending.model).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
+                        Text("Subscription stays active until this model passes its check.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Button("Edit") { showsServiceEditor = true }
+                        .accessibilityLabel("Edit API configuration")
+                        .disabled(busy)
+                }
             } else {
                 Text("Copy the prompt and paste it into your AI assistant.")
                     .font(.callout)
@@ -182,10 +195,7 @@ struct ModelSettings: View {
             }
         } else {
             choosingMagpie = false
-            if activeMagpie != nil {
-                if settings.hasDirectService { select(nil) }
-                else { choosingAPIKey = true }
-            }
+            choosingAPIKey = activeMagpie != nil
         }
     }
 
@@ -228,7 +238,7 @@ struct ModelSettings: View {
 
     private func copySetupPrompt() {
         let executable = Bundle.main.executablePath ?? "/Applications/\(AppInfo.name).app/Contents/MacOS/\(AppInfo.name)"
-        let current = settings.service.flatMap { $0.usesMagpie ? nil : $0 }
+        let current = settings.pendingDirectService ?? settings.savedDirectService
         let prompt = SetupGuide.prompt(appName: AppInfo.name, executable: executable, current: current)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(prompt, forType: .string)

@@ -9,6 +9,8 @@ struct DirectServiceEditor: View {
     @State private var current: ModelService?
     @State private var revision: String
     @State private var hasSavedKey: Bool
+    @State private var pending: ModelService?
+    @State private var checksBeforeSwitching: Bool
     @State private var provider: Provider?
     @State private var format: WireFormat
     @State private var baseURL: String
@@ -23,10 +25,14 @@ struct DirectServiceEditor: View {
         self.onClose = onClose
         self.copySetupPrompt = copySetupPrompt
         self.copied = copied
-        let current = settings.service.flatMap { $0.usesMagpie ? nil : $0 }
+        let switching = settings.service?.usesMagpie == true
+        let pending = switching ? settings.pendingDirectService : nil
+        let current = pending ?? settings.savedDirectService
         _current = State(initialValue: current)
+        _pending = State(initialValue: pending)
+        _checksBeforeSwitching = State(initialValue: switching)
         _revision = State(initialValue: settings.serviceRevision)
-        _hasSavedKey = State(initialValue: settings.hasKey)
+        _hasSavedKey = State(initialValue: current.map { settings.hasDirectKey(for: $0) } ?? false)
         let initial = current ?? Provider.openAI.service()
         let preset = initial.knownProvider.flatMap {
             $0.baseURL == initial.baseURL && $0.wireFormat == initial.format ? $0 : nil
@@ -84,7 +90,7 @@ struct DirectServiceEditor: View {
                 Button("Cancel", action: onClose).disabled(saving)
                 Button("Save & Check", action: save)
                     .disabled(saving || (key.isEmpty && !canKeepKey) || model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .help("Save the key to macOS Keychain and send a short test request")
+                    .help("Send a short test request and save the key in macOS Keychain")
             }
         }
         .onChange(of: provider) { _, preset in
@@ -124,11 +130,19 @@ struct DirectServiceEditor: View {
             Task {
                 defer { saving = false }
                 do {
-                    try await settings.saveDirectService(service, key: secret, for: revision)
+                    if checksBeforeSwitching {
+                        try await settings.checkAndActivateDirectService(service, key: secret, for: revision, pending: pending)
+                    } else {
+                        try await settings.saveDirectService(service, key: secret, for: revision)
+                    }
                     onClose()
-                    await settings.check(for: service)
+                    if !checksBeforeSwitching { await settings.check(for: service) }
                 } catch {
-                    self.error = APIKeyEditor.saveErrorMessage(for: error)
+                    if checksBeforeSwitching, !(error is KeychainError), !(error is ConfigurationFailure) {
+                        self.error = error.localizedDescription
+                    } else {
+                        self.error = APIKeyEditor.saveErrorMessage(for: error)
+                    }
                 }
             }
         } catch {
