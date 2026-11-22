@@ -81,9 +81,9 @@ Howler writes with one model service. The setup is short enough to hand to an AI
   <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General contains model setup, reply language, login and update preferences">
 </p>
 
-In **Settings › General**, select a provider, enter a model and paste your API key. Click **Edit** if you already have a saved configuration. Choose **Custom** to enter your own base URL and request format. Click **Save & Check**. The key goes directly into macOS Keychain.
+In **Settings › General**, click **Copy Setup Prompt** and paste it into an assistant that can run commands. The assistant configures the service and model. Enter the key in Howler.
 
-For help configuring service or request parameters, use **Copy Setup Prompt** and paste it into an assistant that can run commands. Enter the key in Howler.
+To set up the model yourself, click **Configure Manually**, or **Edit** if you already have a saved configuration. Select a provider and enter the model and API key. Choose **Custom** to enter your own base URL and request format. Click **Save & Check**. The key goes directly into macOS Keychain.
 
 Save & Check sends one test request with a 30-second connection deadline. A saved key record does not prove the key is readable or the service works. Keychain access failures keep their diagnostic code and stop the flow; they never automatically delete and recreate the old key. For other failures, the setup prompt allows one diagnosed correction and retry before reporting the remaining problem.
 

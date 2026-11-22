@@ -10,7 +10,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 用 `make dev` 启动开发版。确认菜单栏有 Dev，窗口标题完整显示为 Dev Settings，设置页显示短提交号，没有更新入口，且正式版的模型和快捷键未被继承。
 - [ ] 打开模型设置。未检测到本机模型时只显示接口密钥设置。检测到模型时可切换到 Subscription，切回后保留两边的配置。
 - [ ] 在订阅和接口密钥设置中检查模型。确认 Checking…、Ready 和 Check failed 都紧跟模型名称，与 Check 按钮同排。失败详情仍显示在下方。使用较长的模型名时，状态和按钮仍完整可见。
-- [ ] 直接在设置页选择接口服务商并保存。用 Custom 输入自定义地址和请求格式。确认更换服务商需要新密钥，Copy Setup Prompt 仍可用。
+- [ ] 没有接口密钥配置时，默认显示 Copy Setup Prompt 和 Configure Manually。点击 Configure Manually 后在页内展开服务商、模型和密钥字段，点 Cancel 返回。用 Custom 输入自定义地址和请求格式。确认切回 Subscription 保留原配置，更换服务商需要新密钥。
 
 - [ ] 打开 `Howler.dmg`：窗口中有 Howler 与 Applications 快捷方式，拖入后可推出磁盘映像
 - [ ] 安装后直接双击即可打开，没有 Gatekeeper 警告；`spctl --assess --type execute -vv /Applications/Howler.app` 显示 `source=Notarized Developer ID`

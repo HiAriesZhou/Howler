@@ -105,13 +105,12 @@ struct ModelSettings: View {
 
     private var apiKeySettings: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if settings.service == nil || choosingAPIKey || showsServiceEditor {
+            if showsServiceEditor {
                 DirectServiceEditor(settings: settings, onClose: {
                     showsServiceEditor = false
-                    choosingAPIKey = false
                 },
                                     copySetupPrompt: copySetupPrompt, copied: copied)
-            } else if let service = settings.service {
+            } else if let service = settings.service, !service.usesMagpie {
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
@@ -125,6 +124,19 @@ struct ModelSettings: View {
                         .accessibilityLabel("Edit API configuration")
                         .disabled(busy)
                     if settings.hasKey { checkButton }
+                }
+            } else {
+                Text("Copy the prompt and paste it into your AI assistant.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Spacer()
+                    Button(copied ? "Copied" : "Copy Setup Prompt", action: copySetupPrompt)
+                        .buttonStyle(.borderedProminent)
+                    Text("/")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    Button("Configure Manually") { showsServiceEditor = true }
                 }
             }
         }
