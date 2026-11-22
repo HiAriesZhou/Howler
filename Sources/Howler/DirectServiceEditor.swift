@@ -81,7 +81,7 @@ struct DirectServiceEditor: View {
                     .disabled(saving)
                 Spacer()
                 if saving { ProgressView().controlSize(.small) }
-                if current != nil { Button("Cancel", action: onClose).disabled(saving) }
+                Button("Cancel", action: onClose).disabled(saving)
                 Button("Save & Check", action: save)
                     .disabled(saving || (key.isEmpty && !canKeepKey) || model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .help("Save the key to macOS Keychain and send a short test request")
