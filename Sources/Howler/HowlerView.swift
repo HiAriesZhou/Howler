@@ -56,10 +56,11 @@ struct HowlerView: View {
                 .padding(.bottom, 8).padding(.trailing, 8)
             }
         }
+        // 让展开动画的图层包含透明留白，保证燃烧快照沿用窗口原点。
+        .padding(margins)
         .scaleEffect(unfolded ? 1 : 0.97, anchor: .top)
         .rotation3DEffect(.degrees(unfolded ? 0 : 10), axis: (x: 1, y: 0, z: 0), anchor: .top, perspective: 0.5)
         .opacity(unfolded ? 1 : 0)
-        .padding(margins)
         .environment(\.parchment, parchment)
         .environment(\.copyText, viewModel.copyText)
         .onAppear {
