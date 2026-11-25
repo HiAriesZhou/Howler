@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import XCTest
 import HowlerCore
 @testable import Howler
@@ -158,5 +159,49 @@ final class LetterLifecycleTests: XCTestCase {
         XCTAssertEqual(reopened.replyLanguage, "ja")
         settings.resetScreenshotHotKey()
         XCTAssertEqual(settings.screenshotHotKey, .screenshot)
+    }
+
+    func testBurningSnapshotDoesNotLeaveShadowOrScorchInMargins() throws {
+        _ = NSApplication.shared
+        let margins = EdgeInsets(
+            top: PanelController.margins.top,
+            leading: PanelController.margins.left,
+            bottom: PanelController.margins.bottom,
+            trailing: PanelController.margins.right
+        )
+        let size = NSSize(width: 240, height: 220)
+        // Paint the entire snapshot opaque (simulating paper + baked-in shadow in the margins).
+        let image = NSImage(size: size, flipped: false) { rect in
+            NSColor.black.withAlphaComponent(0.5).setFill()
+            rect.fill()
+            return true
+        }
+        let view = NSHostingView(rootView: BurningSnapshot(
+            image: image,
+            margins: margins,
+            start: Date().addingTimeInterval(-0.35)
+        ))
+        view.frame = NSRect(origin: .zero, size: size)
+        view.layoutSubtreeIfNeeded()
+        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+
+        let scale = CGFloat(bitmap.pixelsWide) / size.width
+
+        // Outer margins (top-left and bottom-right) must be clear of baked-in shadow and scorch.
+        let topLeft = try XCTUnwrap(bitmap.colorAt(x: Int(8 * scale), y: Int(8 * scale)))
+        XCTAssertLessThan(topLeft.alphaComponent, 0.05, "Top-left margin should be clear during burn")
+        let bottomRight = try XCTUnwrap(bitmap.colorAt(
+            x: bitmap.pixelsWide - Int(8 * scale),
+            y: bitmap.pixelsHigh - Int(8 * scale)
+        ))
+        XCTAssertLessThan(bottomRight.alphaComponent, 0.05, "Bottom-right margin should be clear during burn")
+
+        // Unburned top center of the paper remains visible.
+        let paperTopCenter = try XCTUnwrap(bitmap.colorAt(
+            x: bitmap.pixelsWide / 2,
+            y: Int((margins.top + 20) * scale)
+        ))
+        XCTAssertGreaterThan(paperTopCenter.alphaComponent, 0.4, "Unburned top of paper should remain visible")
     }
 }
