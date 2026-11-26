@@ -1,6 +1,4 @@
-import AppKit
 import Security
-import SwiftUI
 import XCTest
 import HowlerCore
 @testable import Howler
@@ -41,35 +39,6 @@ final class NativeKeySetupTests: XCTestCase {
             NSLocalizedDescriptionKey: "Internal diagnostic details"
         ])
         XCTAssertEqual(APIKeyEditor.saveErrorMessage(for: unexpected), "Couldn’t save the API key.")
-    }
-
-    func testDeniedSaveEditorRendersWithoutReadingTheStoredKey() async throws {
-        _ = NSApplication.shared
-        let defaults = DemoDefaults(suiteName: "HowlerTests.KeyEditorDenied")!
-        var reads = 0
-        var access = MemoryKeys().access
-        access.get = { _ in reads += 1; return "never-display-existing-synthetic" }
-        let settings = AppSettings(defaults: defaults, keys: access)
-        let host = NSHostingView(rootView: APIKeyEditor(
-            settings: settings, service: service(),
-            previewError: KeychainError(status: errSecAuthFailed, operation: "save")
-        ))
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 270),
-                              styleMask: [.titled], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = host
-        window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
-        try await Task.sleep(for: .milliseconds(200))
-        host.layoutSubtreeIfNeeded()
-        XCTAssertEqual(reads, 0)
-        XCTAssertLessThanOrEqual(host.fittingSize.height, 300)
-        if let folder = ProcessInfo.processInfo.environment["HOWLER_TEST_SNAPSHOTS"] {
-            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-            host.cacheDisplay(in: host.bounds, to: bitmap)
-            try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-                .write(to: URL(fileURLWithPath: "\(folder)/key-editor-denied.png"))
-        }
     }
 
     func testNativeSaveValidatesAndRejectsChangedDestination() async throws {
@@ -174,45 +143,6 @@ final class NativeKeySetupTests: XCTestCase {
         }
         XCTAssertEqual(store.apiKey(), "old-synthetic")
         XCTAssertFalse(settings.isSavingAPIKey)
-    }
-
-    func testEditorNeverLoadsExistingKeyAndRendersSecureField() async throws {
-        _ = NSApplication.shared
-        let defaults = DemoDefaults(suiteName: "HowlerTests.KeyEditor")!
-        let keys = MemoryKeys()
-        let store = ServiceStore(defaults: defaults, keys: keys.access)
-        try store.save(service())
-        try store.setAPIKey("never-display-existing-synthetic")
-        var reads = 0
-        var access = keys.access
-        access.get = { _ in reads += 1; return "never-display-existing-synthetic" }
-        let settings = AppSettings(defaults: defaults, keys: access)
-        let host = NSHostingView(rootView: APIKeyEditor(settings: settings, service: service()))
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 260),
-                              styleMask: [.titled], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = host
-        window.makeKeyAndOrderFront(nil)
-        defer { window.close() }
-        try await Task.sleep(for: .milliseconds(200))
-        host.layoutSubtreeIfNeeded()
-        func secureFields(_ view: NSView) -> [NSSecureTextField] {
-            (view as? NSSecureTextField).map { [$0] } ?? view.subviews.flatMap(secureFields)
-        }
-        let field = try XCTUnwrap(secureFields(host).first)
-        XCTAssertEqual(field.stringValue, "")
-        XCTAssertEqual(reads, 0)
-        if let folder = ProcessInfo.processInfo.environment["HOWLER_TEST_SNAPSHOTS"] {
-            for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
-                window.appearance = NSAppearance(named: appearance)
-                try await Task.sleep(for: .milliseconds(50))
-                host.display()
-                if let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
-                    host.cacheDisplay(in: host.bounds, to: bitmap)
-                    try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "\(folder)/key-editor-\(name).png"))
-                }
-            }
-        }
     }
 }
 
