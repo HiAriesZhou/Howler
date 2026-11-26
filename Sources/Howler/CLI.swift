@@ -5,7 +5,7 @@ import HowlerCore
 /// assistant (Settings › Copy Setup Prompt). It shares `ServiceStore` with the app and never
 /// prints the API key.
 ///
-///     Howler config schema | show | set field=value … | set api-key --stdin|--env NAME|--file PATH | reset
+///     Howler config schema | show | stage field=value … | set field=value … | set api-key --stdin|--env NAME|--file PATH | reset
 ///     Howler check [--verbose]
 enum CLI {
     private static let commands: Set<String> = ["config", "check", "help", "--help", "-h", "version", "--version"]
@@ -41,6 +41,7 @@ enum CLI {
           \(name) config schema                 Every field, with examples
           \(name) config show                   Current setup
           \(name) config set field=value …      Change the setup
+          \(name) config stage field=value …    Prepare API key settings while a subscription stays active
           \(name) config set api-key --stdin    Save the API key (also --env NAME, --file PATH)
           \(name) config reset                  Remove the setup and the API key
           \(name) check [--verbose]             Send a tiny real request
@@ -60,16 +61,23 @@ enum CLI {
             print(SetupGuide.schema(appName: name))
         case "show", nil:
             show(store)
+        case "stage":
+            let fields = Array(args.dropFirst())
+            guard !fields.isEmpty else { throw UsageError("Nothing to stage. See: \(name) config schema") }
+            let service = try ServiceConfig.apply(fields, to: store.pendingDirectService ?? store.directService)
+            try store.stageDirectService(service)
+            print("Prepared: \(service.summary)")
+            print("Subscription stays active. Open Settings > General > API Key > Edit, then Save & Check.")
         case "set":
             let fields = Array(args.dropFirst())
             if fields.first == "api-key" {
                 try setKey(Array(fields.dropFirst()), store: store)
             } else {
                 guard !fields.isEmpty else { throw UsageError("Nothing to set. See: \(name) config schema") }
-                let service = try ServiceConfig.apply(fields, to: store.service)
+                let service = try ServiceConfig.apply(fields, to: store.directService)
                 try store.save(service)
                 print("Saved: \(service.summary)")
-                print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General > API Key, then Save & Check.")
+                print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General, edit the model configuration, then Save & Check.")
             }
         case "reset":
             store.reset()
@@ -91,12 +99,15 @@ enum CLI {
             ("endpoint", service.endpointDescription),
             ("body", service.body.isEmpty ? "—" : JSONValue.compact(service.body)),
             ("headers", service.headers.isEmpty ? "—" : JSONValue.compact(service.headers.mapValues(JSONValue.string))),
-            ("api-key", store.hasKey ? "record present; access not verified" : "no record detected"),
+            ("api-key", service.usesMagpie ? "managed by Magpie" : store.hasKey ? "record present; access not verified" : "no record detected"),
             ("prompt", promptSummary(store)),
             ("check", checkSummary(store.lastCheck)),
         ]
         for (label, value) in rows {
             print(label.padding(toLength: 10, withPad: " ", startingAt: 0) + value)
+        }
+        if service.usesMagpie, let pending = store.pendingDirectService {
+            print("pending   \(pending.summary) (verify in Settings > General > API Key)")
         }
     }
 
@@ -153,7 +164,7 @@ enum CLI {
         }
         let key: String
         do {
-            guard let saved = try store.readAPIKey(for: service), !saved.isEmpty else {
+            guard let saved = service.usesMagpie ? "" : try store.readAPIKey(for: service) else {
                 throw ConfigurationFailure.missingKey
             }
             key = saved

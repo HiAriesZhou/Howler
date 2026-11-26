@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/app.config"
+APP_NAME="${1:-$APP_NAME}"
+BUNDLE_ID="${2:-$BUNDLE_ID}"
 
 cat <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

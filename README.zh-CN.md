@@ -73,13 +73,19 @@ v0.1.4 之前的版本是 ad-hoc 签名，如果被 Gatekeeper 拦截，可以�
 
 ## 配置模型
 
+Howler 检测到本机 Magpie 正在运行且有可用模型时，设置 → 通用会出现 **Subscription**。截图提问可选标有 **Images** 的模型。选 **API Key** 可使用自己的接口密钥。Howler 会记住两边的设置。焚信会清空 Howler 中的会话。Magpie 和模型服务商各自管理调用记录。
+
 Howler 只连接一个模型服务。配置步骤很少，可以直接交给 AI 助手完成。
 
 <p align="center">
   <img src="docs/images/settings.png" width="560" alt="Howler 设置分为 General、Prompt、Shortcut 三页；General 包含模型设置、回复语言、开机启动和更新选项">
 </p>
 
-打开 **Settings › General › Copy Setup Prompt**，把复制的提示词粘贴给 Claude Code、Codex 等能运行命令的 AI 助手，由它配置服务、模型和请求参数。然后回到 **General › API Key**，选择 **Add Key** 或 **Replace Key**，在密码输入框中粘贴密钥，点击 **Save & Check**。密钥直接存入 macOS 钥匙串，不要发到助手的聊天里。
+在 **设置 → 通用** 点击 **Copy Setup Prompt**，把提示词粘贴给能运行命令的助手，让它配置服务和模型。密钥在 Howler 里填写。
+
+配置新的接口密钥模型期间，当前订阅仍可使用。点击 **Save & Check** 后，只有连接检查通过才会切换到新模型。
+
+要自己配置，点 **Configure Manually**。已有配置时点 **Edit**。选择服务商，填写模型和接口密钥。使用自定义服务时，选 **Custom** 填写服务地址和请求格式。点击 **Save & Check** 后，密钥直接存入 macOS 钥匙串。
 
 Save & Check 只发送一次测试请求，连接检查最多等待 30 秒。有密钥记录不代表密钥可读取或服务可用。钥匙串访问失败会显示诊断错误码并停止流程，不会自动删除旧密钥再重建；其他错误最多进行一次有明确原因的修正和重试，仍失败就报告阻塞原因。
 
@@ -160,7 +166,9 @@ $H config show
 需要 Xcode 15.3+（Swift 5.10+）和 macOS 14+。唯一的第三方依赖是负责安装更新的 [Sparkle](https://github.com/sparkle-project/Sparkle)（版本固定在 `Package.swift`）。
 
 ```bash
-make test   # 单元测试：配置、请求、流式解析、附件、快捷键、书写节奏
+make test   # 快速核心测试，不构建应用、不运行 UI 测试或加载 Sparkle
+make test-app # 原生行为和交互测试（macOS）
+make test-all # 完整测试，包含发布工具夹具
 make app    # universal 构建，生成 build/Howler.zip，应用放在 build/stage.noindex（ad-hoc，或用 SIGN_IDENTITY 签名）
 make dmg    # 同一个应用打成 build/Howler.dmg，附 Applications 快捷方式
 make run    # 构建并打开

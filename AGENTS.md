@@ -4,11 +4,11 @@ Howler is a macOS 14+ menu bar app (Swift 5.10, SwiftPM). `HowlerCore` holds the
 
 ## Scope and public content
 
-- Agree on the task's scope and authorization before changing files. Permission to edit does not grant permission to commit, push, publish, install or change system settings.
+- Within the requested scope, ordinary edits, verification, commits, pushes, pull requests and merging ready PRs are authorized. State the scope and next milestone; a narrower user instruction wins. Obtain confirmation immediately before final release. Installing or replacing the app, accessing personal data or changing system settings requires task authorization.
 - Preserve existing changes. Work on a task branch; changes to the protected default branch go through a pull request.
 - This is a public, MIT-licensed repository. Keep documentation about the project, not the maintainer's machine or private workflow. Do not commit personal paths, private account or certificate details, credentials, user content, raw session logs or agent memory. Use synthetic fixtures and neutral placeholders; review screenshots before committing them.
 - Preserve required license notices and intentional public author attribution, including the website's avatar, homepage and social links. These are distinct from private credentials and user data.
-- Keep durable rules here and product usage in the two READMEs. Keep one-off handoffs, audit reports and task progress local. Preserve any existing `CLAUDE.md`; do not silently replace another tool's instructions.
+- Keep project constraints here, task commands and checks in `docs/agent-guide.md`, and product usage in the two READMEs. One-off handoffs, audit reports and progress stay local. Preserve existing tool instructions; do not create a root `CLAUDE.md`.
 
 ## Engineering boundaries
 
@@ -20,10 +20,7 @@ Howler is a macOS 14+ menu bar app (Swift 5.10, SwiftPM). `HowlerCore` holds the
 
 ## Commands
 
-- `make test`: unit tests (`swift test`).
-- `make app`: universal app in `build/stage.noindex/Howler.app` and `build/Howler.zip`. Set `SIGN_IDENTITY` for a Developer ID build; otherwise it is ad-hoc signed.
-- `make dmg`: builds the app and wraps it in `build/Howler.dmg`.
-- Debug demo: `swift build && HOWLER_DEMO=settings .build/debug/Howler`. The variants are listed at the top of `Sources/Howler/DemoMode.swift`. `HOWLER_DEMO_SNAPSHOT=out.png` saves the Settings window as a PNG without screen-recording permission.
+When reading `Makefile` or `Package.swift`, building, testing, running a demo, or preparing a pull request, read [docs/agent-guide.md](docs/agent-guide.md).
 
 ## Versions
 
@@ -48,11 +45,3 @@ manual retry instructions are in `docs/release-signing.md`. Do not bypass tap CI
 or merge automatically. Missing credentials or verification failures stop the
 Homebrew job; retry that job without republishing the app. The README install
 command is `brew install --cask hiarieszhou/tap/howler`; in-app updates remain with Sparkle.
-
-## Checks before a pull request
-
-- `make test`, then a signed `make app`. For user-visible changes, try the installed app.
-- Use the same Developer ID identity for installed-app checks so updates retain Keychain and privacy grants. Obtain the identity from the local signing environment; do not record its personal details here. Installing or replacing the app must be within the task's authorization.
-- Manual checks are listed in `ACCEPTANCE.md`. Add a line there for new behavior.
-- Record the tested version, environment and result without user data. Distinguish source inspection, fixture tests, CI results, real-service checks and human acceptance. An unchecked item is not a pass.
-- Review the diff and public content before a pull request. Documentation-only changes need link, consistency and privacy checks; they do not require rebuilding or reinstalling the app.

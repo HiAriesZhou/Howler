@@ -31,6 +31,9 @@ struct ServiceStore {
 
     private enum DefaultsKey {
         static let service = "service"
+        static let pendingDirectService = "pendingDirectService"
+        static let magpie = "magpieSelection"
+        static let lastMagpie = "lastMagpieSelection"
         static let check = "serviceCheck"
         /// Absent until the instructions are edited, so a better suggestion reaches everyone else.
         static let instructions = "systemPromptInstructions"
@@ -63,26 +66,138 @@ struct ServiceStore {
     }
 
     var service: ModelService? {
+        if let data = defaults.data(forKey: DefaultsKey.magpie),
+           let selection = try? JSONDecoder().decode(MagpieSelection.self, from: data) { return selection.service }
+        return directService
+    }
+
+    var directService: ModelService? {
         defaults.data(forKey: DefaultsKey.service).flatMap { try? JSONDecoder().decode(ModelService.self, from: $0) }
+    }
+
+    var pendingDirectService: ModelService? {
+        defaults.data(forKey: DefaultsKey.pendingDirectService)
+            .flatMap { try? JSONDecoder().decode(ModelService.self, from: $0) }
+    }
+
+    func stageDirectService(_ service: ModelService) throws {
+        try withDirectSetupLock {
+            guard self.service?.usesMagpie == true, !service.usesMagpie else { throw ConfigurationFailure.changed }
+            defaults.set(try JSONEncoder().encode(service), forKey: DefaultsKey.pendingDirectService)
+        }
+        announce()
+    }
+
+    func activateCheckedDirectService(_ service: ModelService, key raw: String, for revision: String,
+                                      pending: ModelService?) throws {
+        try withDirectSetupLock {
+            guard self.service?.usesMagpie == true, pendingDirectService == pending else {
+                throw ConfigurationFailure.changed
+            }
+            try saveDirectService(service, key: raw, for: revision, checked: true)
+        }
+    }
+
+    private func withDirectSetupLock<T>(_ operation: () throws -> T) throws -> T {
+        guard defaults === UserDefaults.standard else { return try operation() }
+        let lockURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(AppInfo.bundleIdentifier).direct-setup.lock")
+        let descriptor = open(lockURL.path, O_CREAT | O_RDWR | O_NOFOLLOW, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { throw ConfigurationFailure.busy }
+        defer { close(descriptor) }
+        guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else { throw ConfigurationFailure.busy }
+        defaults.synchronize()
+        defer { defaults.synchronize() }
+        return try operation()
+    }
+
+    func selectMagpie(_ selection: MagpieSelection?) throws {
+        if let selection {
+            let data = try JSONEncoder().encode(selection)
+            defaults.set(data, forKey: DefaultsKey.magpie)
+            defaults.set(data, forKey: DefaultsKey.lastMagpie)
+        } else {
+            if let active = defaults.data(forKey: DefaultsKey.magpie) {
+                defaults.set(active, forKey: DefaultsKey.lastMagpie)
+            }
+            defaults.removeObject(forKey: DefaultsKey.magpie)
+        }
+        finishChange()
+    }
+
+    var lastMagpieSelection: MagpieSelection? {
+        defaults.data(forKey: DefaultsKey.lastMagpie).flatMap { try? JSONDecoder().decode(MagpieSelection.self, from: $0) }
     }
 
     func save(_ service: ModelService) throws {
         let data = try JSONEncoder().encode(service)
-        let previous = self.service
+        save(service, data: data)
+    }
+
+    func saveDirectService(_ service: ModelService, key raw: String, for revision: String) throws {
+        try saveDirectService(service, key: raw, for: revision, checked: false)
+    }
+
+    private func saveDirectService(_ service: ModelService, key raw: String, for revision: String, checked: Bool) throws {
+        guard self.revision == revision, !service.usesMagpie else { throw ConfigurationFailure.changed }
+        let data = try JSONEncoder().encode(service)
+        let scope = Self.keyScope(for: service)
+        if raw.isEmpty {
+            guard scope == defaults.string(forKey: DefaultsKey.keyScope),
+                  let directService, Self.keyScope(for: directService) == scope,
+                  keys.exists(Self.keyAccount(for: service)) || hasLegacyKey(for: service) else {
+                throw ConfigurationFailure.missingKey
+            }
+        } else {
+            try keys.set(Self.validatedAPIKey(raw), Self.keyAccount(for: service))
+            defaults.set(UUID().uuidString, forKey: DefaultsKey.keyRevision)
+            guard self.revision == revision else { throw ConfigurationFailure.changed }
+        }
+        save(service, data: data, bindKey: !raw.isEmpty, checked: checked)
+    }
+
+    private func save(_ service: ModelService, data: Data, bindKey: Bool = false, checked: Bool = false) {
+        let previous = directService
+        if let active = self.service?.magpie, let encoded = try? JSONEncoder().encode(active) {
+            defaults.set(encoded, forKey: DefaultsKey.lastMagpie)
+        }
+        defaults.removeObject(forKey: DefaultsKey.magpie)
+        defaults.removeObject(forKey: DefaultsKey.pendingDirectService)
         invalidateCheck()
-        defer { finishChange() }
+        defer { finishChange(checked: checked) }
         if let previous, Self.keyScope(for: previous) != Self.keyScope(for: service) {
             defaults.removeObject(forKey: DefaultsKey.keyScope)
             keys.delete(Self.keyAccount(for: previous))
             removeLegacyKey(for: previous)
         }
         defaults.set(data, forKey: DefaultsKey.service)
+        if bindKey {
+            defaults.set(Self.keyScope(for: service), forKey: DefaultsKey.keyScope)
+            removeLegacyKey(for: service)
+        }
     }
 
     /// Checks presence via attributes only, which never triggers a keychain prompt.
     var hasKey: Bool {
-        guard let service, defaults.string(forKey: DefaultsKey.keyScope) == Self.keyScope(for: service) else { return false }
+        guard let service, !service.usesMagpie else { return false }
+        return hasDirectKey(for: service)
+    }
+
+    func hasDirectKey(for service: ModelService) -> Bool {
+        let scope = Self.keyScope(for: service)
+        guard directService.map(Self.keyScope(for:)) == scope,
+              defaults.string(forKey: DefaultsKey.keyScope) == scope else { return false }
         return keys.exists(Self.keyAccount(for: service)) || hasLegacyKey(for: service)
+    }
+
+    func readDirectKey(for service: ModelService, revision: String) throws -> String? {
+        let scope = Self.keyScope(for: service)
+        guard self.revision == revision, directService.map(Self.keyScope(for:)) == scope,
+              defaults.string(forKey: DefaultsKey.keyScope) == scope else { return nil }
+        let key = try keys.get(Self.keyAccount(for: service))
+            ?? (hasLegacyKey(for: service) ? keys.get(Self.legacyKeyAccount) : nil)
+        guard self.revision == revision else { return nil }
+        return key
     }
 
     func apiKey(for expected: ModelService? = nil) -> String? {
@@ -92,10 +207,8 @@ struct ServiceStore {
     /// A missing record is nil; an unreadable record retains its Keychain error.
     func readAPIKey(for expected: ModelService? = nil) throws -> String? {
         let revision = self.revision
-        guard let service, expected == nil || expected == service,
-              defaults.string(forKey: DefaultsKey.keyScope) == Self.keyScope(for: service) else { return nil }
-        let key = try keys.get(Self.keyAccount(for: service))
-            ?? (hasLegacyKey(for: service) ? keys.get(Self.legacyKeyAccount) : nil)
+        guard let service, !service.usesMagpie, expected == nil || expected == service else { return nil }
+        let key = try readDirectKey(for: service, revision: revision)
         // A concurrent config/key write must not pair a new key with an old destination.
         guard self.revision == revision, self.service == service else { return nil }
         return key
@@ -103,6 +216,7 @@ struct ServiceStore {
 
     func setAPIKey(_ raw: String, for expected: ModelService? = nil) throws {
         guard let service else { throw ServiceConfigError.missing(["format", "base-url", "model"]) }
+        guard !service.usesMagpie else { throw ConfigurationFailure.magpieKey }
         guard expected == nil || expected == service else { throw ConfigurationFailure.changed }
         let key = try Self.validatedAPIKey(raw)
         invalidateCheck()
@@ -188,7 +302,10 @@ struct ServiceStore {
 
     /// Removes the service, its key and the last check.
     func reset() {
-        let previous = service
+        let previous = directService
+        defaults.removeObject(forKey: DefaultsKey.magpie)
+        defaults.removeObject(forKey: DefaultsKey.lastMagpie)
+        defaults.removeObject(forKey: DefaultsKey.pendingDirectService)
         invalidateCheck()
         defer { finishChange() }
         defaults.removeObject(forKey: DefaultsKey.service)
@@ -258,15 +375,19 @@ struct ServiceStore {
         keys.delete(Self.legacyKeyAccount)
     }
 
-    private func finishChange() {
+    private func finishChange(checked: Bool = false) {
         // Fence snapshots taken between the first invalidation and the completed write.
-        invalidateCheck()
-        announce()
+        let revision = invalidateCheck()
+        if checked { recordCheck(passed: true, message: nil, for: revision) }
+        else { announce() }
     }
 
-    private func invalidateCheck() {
-        defaults.set(UUID().uuidString, forKey: DefaultsKey.revision)
+    @discardableResult
+    private func invalidateCheck() -> String {
+        let revision = UUID().uuidString
+        defaults.set(revision, forKey: DefaultsKey.revision)
         defaults.removeObject(forKey: DefaultsKey.check)
+        return revision
     }
 
     private func announce() {

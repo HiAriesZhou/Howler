@@ -55,7 +55,7 @@ public final class ChatClient: @unchecked Sendable {
                     let request = try RequestBuilder.streamingRequest(
                         service: service, apiKey: apiKey, messages: messages, options: options
                     )
-                    try await self.run(request, format: service.format) { text in
+                    try await self.run(request, format: service.format, local: service.usesMagpie) { text in
                         continuation.yield(text)
                     }
                     continuation.finish()
@@ -86,9 +86,10 @@ public final class ChatClient: @unchecked Sendable {
     private func run(
         _ request: URLRequest,
         format: WireFormat,
+        local: Bool,
         onText: @escaping (String) -> Void
     ) async throws {
-        let (bytes, response) = try await responseBytes(for: request)
+        let (bytes, response) = try await responseBytes(for: request, local: local)
         #if canImport(Darwin)
         defer { bytes.task.cancel() }
         #endif
@@ -138,14 +139,14 @@ public final class ChatClient: @unchecked Sendable {
     }
 
     #if canImport(Darwin)
-    private func responseBytes(for request: URLRequest) async throws -> (URLSession.AsyncBytes, URLResponse) {
-        try await session.bytes(for: request)
+    private func responseBytes(for request: URLRequest, local: Bool) async throws -> (URLSession.AsyncBytes, URLResponse) {
+        try await session.bytes(for: request, delegate: local ? RefuseRedirect() : nil)
     }
     #else
     /// swift-corelibs-foundation has no `URLSession.bytes(for:)`. The app ships on macOS only;
     /// this buffered path exists so the core library and its tests build and run on Linux.
-    private func responseBytes(for request: URLRequest) async throws -> (AsyncStream<UInt8>, URLResponse) {
-        let (data, response) = try await session.data(for: request)
+    private func responseBytes(for request: URLRequest, local: Bool) async throws -> (AsyncStream<UInt8>, URLResponse) {
+        let (data, response) = try await session.data(for: request, delegate: local ? RefuseRedirect() : nil)
         let bytes = AsyncStream<UInt8> { continuation in
             for byte in data { continuation.yield(byte) }
             continuation.finish()

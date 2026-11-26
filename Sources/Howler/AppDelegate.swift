@@ -128,8 +128,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setUpStatusItem() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let isDevelopment = AppInfo.developmentCommit != nil
+        let item = NSStatusBar.system.statusItem(withLength: isDevelopment ? NSStatusItem.variableLength : NSStatusItem.squareLength)
         item.button?.image = MenuBarMark.image()
+        if isDevelopment {
+            item.button?.title = "Dev"
+            item.button?.imagePosition = .imageLeading
+            item.button?.setAccessibilityLabel(AppInfo.name)
+        }
 
         let parts = Self.makeStatusMenu(showsUpdate: updater.isEnabled, target: self)
         let menu = parts.menu

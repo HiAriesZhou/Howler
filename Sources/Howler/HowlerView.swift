@@ -31,7 +31,7 @@ struct HowlerView: View {
     var body: some View {
         let parchment = Parchment.forScheme(viewModel.candlelit ? .dark : .light)
         ZStack(alignment: .top) {
-            shadow
+            SheetShadow()
             ZStack(alignment: .top) {
                 sheet(parchment)
                 if settings.isConfigured {
@@ -56,10 +56,11 @@ struct HowlerView: View {
                 .padding(.bottom, 8).padding(.trailing, 8)
             }
         }
+        // 让展开动画的图层包含透明留白，保证燃烧快照沿用窗口原点。
+        .padding(margins)
         .scaleEffect(unfolded ? 1 : 0.97, anchor: .top)
         .rotation3DEffect(.degrees(unfolded ? 0 : 10), axis: (x: 1, y: 0, z: 0), anchor: .top, perspective: 0.5)
         .opacity(unfolded ? 1 : 0)
-        .padding(margins)
         .environment(\.parchment, parchment)
         .environment(\.copyText, viewModel.copyText)
         .onAppear {
@@ -92,22 +93,6 @@ struct HowlerView: View {
     }
 
     // MARK: Sheet
-
-    /// Cast separately from the sheet so it can fade while the paper burns. The sheet's
-    /// own area is cut out, so holes burned in the paper show the desktop, not a backing.
-    private var shadow: some View {
-        ZStack {
-            DeckledSheet()
-                .fill(Color.black)
-                .shadow(color: .black.opacity(0.30), radius: 20, x: 0, y: 12)
-                .shadow(color: .black.opacity(0.14), radius: 1.5, x: 0, y: 1)
-            DeckledSheet()
-                .fill(Color.black)
-                .blendMode(.destinationOut)
-        }
-        .compositingGroup()
-        .allowsHitTesting(false)
-    }
 
     private func sheet(_ parchment: Parchment) -> some View {
         DeckledSheet()
@@ -430,5 +415,23 @@ private struct SetupPage: View {
             }
         }
         .padding(24)
+    }
+}
+
+/// Cast separately from the sheet so it can fade while the paper burns. The sheet's
+/// own area is cut out, so holes burned in the paper show the desktop, not a backing.
+struct SheetShadow: View {
+    var body: some View {
+        ZStack {
+            DeckledSheet()
+                .fill(Color.black)
+                .shadow(color: .black.opacity(0.30), radius: 20, x: 0, y: 12)
+                .shadow(color: .black.opacity(0.14), radius: 1.5, x: 0, y: 1)
+            DeckledSheet()
+                .fill(Color.black)
+                .blendMode(.destinationOut)
+        }
+        .compositingGroup()
+        .allowsHitTesting(false)
     }
 }

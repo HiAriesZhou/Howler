@@ -2,9 +2,11 @@ import Foundation
 
 enum ConfigurationFailure: LocalizedError {
     case missingKey, emptyKey, invalidKey, changed, busy
+    case magpieKey
 
     var errorDescription: String? {
         switch self {
+        case .magpieKey: "Magpie manages access to this model."
         case .missingKey: "No API key is set. Add one in Settings > General > API Key."
         case .emptyKey: "Paste an API key before saving."
         case .invalidKey: "The API key contains spaces or line breaks. Paste a single key."

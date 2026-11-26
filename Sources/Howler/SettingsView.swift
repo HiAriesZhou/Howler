@@ -83,7 +83,8 @@ struct GeneralPane: View {
                             Text("Deutsch").tag("de")
                             Text("Español").tag("es")
                         }
-                        .labelsHidden().frame(maxWidth: 150)
+                        .labelsHidden()
+                        .fixedSize()
                     }
                     Divider()
                     SettingsRow("Launch at login", detail: nil) {
@@ -310,7 +311,7 @@ struct VersionFootnote: View {
                     .accessibilityLabel("Update \(AppInfo.name) to \(version)")
                     .disabled(!canCheck)
             } else {
-                Text("\(AppInfo.name) \(AppInfo.version)")
+                Text(AppInfo.developmentCommit.map { "\(AppInfo.name) · \($0)" } ?? "\(AppInfo.name) \(AppInfo.version)")
                     .textSelection(.enabled)
             }
         }
