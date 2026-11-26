@@ -7,6 +7,7 @@ public enum ChatClientError: Error, Equatable, LocalizedError {
     case http(status: Int, message: String)
     case stream(String)
     case invalidResponse
+    case replyTooLarge
     /// The connection closed before the provider signalled the end of the reply.
     case incomplete
 
@@ -14,6 +15,7 @@ public enum ChatClientError: Error, Equatable, LocalizedError {
         switch self {
         case .http(_, let message): return message
         case .stream(let message): return message
+        case .replyTooLarge: return "The reply is larger than 8 MiB."
         case .invalidResponse: return "Unexpected response from server."
         case .incomplete: return "The connection closed before the reply finished; the answer may be incomplete."
         }
@@ -25,6 +27,7 @@ public enum ChatClientError: Error, Equatable, LocalizedError {
 /// Uses an ephemeral `URLSession` so nothing (requests, responses, cookies) is
 /// cached to disk, and never logs request or response content.
 public final class ChatClient: @unchecked Sendable {
+    private static let maximumReplyBytes = 8 * 1024 * 1024
     private let session: URLSession
 
     public init(session: URLSession? = nil) {
@@ -87,6 +90,9 @@ public final class ChatClient: @unchecked Sendable {
         onText: @escaping (String) -> Void
     ) async throws {
         let (bytes, response) = try await responseBytes(for: request, local: local)
+        #if canImport(Darwin)
+        defer { bytes.task.cancel() }
+        #endif
         guard let http = response as? HTTPURLResponse else { throw ChatClientError.invalidResponse }
 
         guard (200..<300).contains(http.statusCode) else {
@@ -102,11 +108,18 @@ public final class ChatClient: @unchecked Sendable {
         }
 
         var parser = SSEParser()
+        var replyByteCount = 0
         // Returns true when the provider signalled the end of the reply.
         func handle(_ event: SSEEvent) throws -> Bool {
             for delta in StreamDecoder.decode(event, format: format) {
                 switch delta {
-                case .text(let text): onText(text)
+                case .text(let text):
+                    let byteCount = text.utf8.count
+                    guard byteCount <= Self.maximumReplyBytes - replyByteCount else {
+                        throw ChatClientError.replyTooLarge
+                    }
+                    replyByteCount += byteCount
+                    onText(text)
                 case .done: return true
                 case .error(let message): throw ChatClientError.stream(message)
                 }
@@ -115,10 +128,11 @@ public final class ChatClient: @unchecked Sendable {
         }
 
         for try await byte in bytes {
-            if let event = parser.feed(byte), try handle(event) { return }
+            try Task.checkCancellation()
+            if let event = try parser.feed(byte), try handle(event) { return }
         }
         try Task.checkCancellation()
-        if let event = parser.finish(), try handle(event) { return }
+        if let event = try parser.finish(), try handle(event) { return }
         // Every supported provider ends a finished reply explicitly; a bare EOF means the
         // connection dropped and what arrived is only part of the answer.
         throw ChatClientError.incomplete

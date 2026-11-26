@@ -84,64 +84,7 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/Mac
 # The icon is rendered from source by scripts/icon.sh and committed.
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
-cat > "$APP/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleDisplayName</key>
-    <string>${APP_NAME}</string>
-    <key>CFBundleExecutable</key>
-    <string>${APP_NAME}</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleIdentifier</key>
-    <string>${BUNDLE_ID}</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>${APP_NAME}</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>${VERSION}</string>
-    <key>CFBundleVersion</key>
-    <string>${BUILD_NUMBER}</string>
-    <key>LSApplicationCategoryType</key>
-    <string>public.app-category.productivity</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>${MIN_MACOS}</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
-    <key>SUFeedURL</key>
-    <string>${SPARKLE_FEED_URL}</string>
-    <key>SUPublicEDKey</key>
-    <string>${SPARKLE_PUBLIC_KEY}</string>
-    <key>SUScheduledCheckInterval</key>
-    <integer>86400</integer>
-    <key>SUAllowsAutomaticUpdates</key>
-    <false/>
-    <!-- Shortcuts starts Capture and Explain by opening howler://capture. -->
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleURLName</key>
-            <string>${BUNDLE_ID}</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>howler</string>
-            </array>
-        </dict>
-    </array>
-</dict>
-</plist>
-PLIST
+bash "$ROOT/scripts/info-plist.sh" "$APP_NAME" "$BUNDLE_ID" > "$APP/Contents/Info.plist"
 if [[ -n "$COMMIT" ]]; then
     for key in SUFeedURL SUPublicEDKey SUScheduledCheckInterval SUAllowsAutomaticUpdates CFBundleURLTypes; do
         plutil -remove "$key" "$APP/Contents/Info.plist"
