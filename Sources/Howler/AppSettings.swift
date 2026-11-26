@@ -72,6 +72,7 @@ final class AppSettings: ObservableObject {
     private let store: ServiceStore
     /// The key read this session, so the keychain is queried once until the setup changes.
     private var keyCache: (revision: String, service: ModelService, key: String)?
+    private var observedKeyRevision: String?
     private var checkingRevision: String?
     private var observer: NSObjectProtocol?
 
@@ -140,10 +141,11 @@ final class AppSettings: ObservableObject {
         if demoMode { return }
         #endif
         let stored = store.service
-        var connectionChanged = stored != service
+        let keyRevision = store.keyRevision
+        let connectionChanged = stored != service || observedKeyRevision != keyRevision
+        observedKeyRevision = keyRevision
         if let cached = keyCache, cached.revision != store.keyRevision || cached.service != stored {
             // Reloading preferences must not cause a blocking Keychain prompt.
-            connectionChanged = true
             keyCache = nil
         }
         if stored != service { service = stored }

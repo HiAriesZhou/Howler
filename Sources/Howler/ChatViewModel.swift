@@ -228,9 +228,11 @@ final class ChatViewModel: ObservableObject {
 
     func withdraw(_ id: UUID) {
         guard input.isEmpty, attachment == nil, let task = queue.withdraw(id) else { return }
+        isAbsorbingPaste = true
         input = task.question
         attachment = task.attachment
         draftImageID = task.imageID
+        isAbsorbingPaste = false
         focusTick += 1
     }
 
