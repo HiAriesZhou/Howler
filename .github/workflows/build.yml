@@ -16,26 +16,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     outputs:
-      app: ${{ steps.filter.outputs.app }}
+      app: ${{ steps.scope.outputs.app }}
+      full: ${{ steps.scope.outputs.full }}
+      core: ${{ steps.scope.outputs.core }}
+      interaction: ${{ steps.scope.outputs.interaction }}
+      tooling: ${{ steps.scope.outputs.tooling }}
+      compile: ${{ steps.scope.outputs.compile }}
+      bundle: ${{ steps.scope.outputs.bundle }}
+      dmg: ${{ steps.scope.outputs.dmg }}
     steps:
-      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        id: filter
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          script: |
-            let app = true;
-            if (context.eventName === 'pull_request') {
-              const files = await github.paginate(github.rest.pulls.listFiles, {
-                ...context.repo, pull_number: context.issue.number, per_page: 100
-              });
-              // Build on empty/incomplete results and unknown paths, including renames.
-              if (files.length > 0 && files.length < 3000) {
-                const paths = files.flatMap(file => [file.filename, file.previous_filename].filter(Boolean));
-                app = paths.some(path => !(/^[^/]+\.md$/.test(path) || path.startsWith('docs/')));
-              }
-            }
-            core.setOutput('app', String(app));
+          fetch-depth: 0 # diff both PR merge-base/head and main before/after; include rename sources
+          persist-credentials: false
+      - name: Select verification scope
+        id: scope
+        run: node scripts/ci-scope.mjs --github
+      - name: Check CI selection rules
+        if: steps.scope.outputs.ci == 'true'
+        run: make test-ci
 
   build-app:
     needs: changes
@@ -53,12 +53,32 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Test
-        run: swift test
+      - name: Test core
+        if: needs.changes.outputs.full != 'true' && needs.changes.outputs.core == 'true' && needs.changes.outputs.interaction != 'true'
+        run: make test-core
 
-      # With the Developer ID secrets set, builds are signed (and tagged releases notarized);
-      # without them, as on forks, everything below falls back to an ad-hoc signature.
+      - name: Test app behavior
+        if: needs.changes.outputs.full != 'true' && needs.changes.outputs.interaction == 'true'
+        env:
+          CHECK_CORE: ${{ needs.changes.outputs.core }}
+        run: |
+          if [[ "$CHECK_CORE" == true ]]; then make test-core-app; else make test-app; fi
+
+      - name: Test full suite
+        if: needs.changes.outputs.full == 'true'
+        run: make test-all
+
+      - name: Test release tooling
+        if: needs.changes.outputs.full != 'true' && needs.changes.outputs.tooling == 'true'
+        run: make test-tooling
+
+      - name: Compile app
+        if: needs.changes.outputs.compile == 'true' && needs.changes.outputs.interaction != 'true' && needs.changes.outputs.bundle != 'true'
+        run: swift build --product Howler
+
+      # Only full/manual or tagged builds import signing credentials. Ordinary packaging checks are ad-hoc.
       - name: Import signing certificate
+        if: needs.changes.outputs.bundle == 'true' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
         env:
           CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -89,6 +109,7 @@ jobs:
           echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
 
       - name: Build app bundle
+        if: needs.changes.outputs.bundle == 'true'
         run: ./scripts/bundle.sh
 
       - name: Notarization credentials
@@ -114,6 +135,7 @@ jobs:
         run: ./scripts/notarize.sh app
 
       - name: Build disk image
+        if: needs.changes.outputs.dmg == 'true'
         run: ./scripts/dmg.sh
 
       - name: Notarize disk image
@@ -121,6 +143,7 @@ jobs:
         run: ./scripts/notarize.sh dmg
 
       - name: Inspect bundle
+        if: needs.changes.outputs.bundle == 'true'
         run: |
           source app.config
           plutil -p "build/stage.noindex/$APP_NAME.app/Contents/Info.plist"
@@ -129,6 +152,7 @@ jobs:
           ls -la build
 
       - uses: actions/upload-artifact@v4
+        if: needs.changes.outputs.bundle == 'true'
         with:
           name: Howler
           path: |
@@ -178,7 +202,7 @@ jobs:
               --title "$APP_NAME $GITHUB_REF_NAME" --notes-file "$NOTES" --latest
           fi
 
-  # Keep the required check present on docs-only PRs and detector failures.
+  # Keep the protected-branch check present on content-only PRs and detector failures.
   build:
     needs: [changes, build-app]
     if: always()

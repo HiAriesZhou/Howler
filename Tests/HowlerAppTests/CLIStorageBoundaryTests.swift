@@ -275,6 +275,8 @@ final class CLIStorageBoundaryTests: XCTestCase {
         for (args, expected) in [
             (["help"], Int32(0)), (["version"], 0), (["--version"], 0),
             (["config", "schema"], 0), (["config", "reset", "--help"], 0),
+            (["config", "stage", "--help"], 0), (["config", "stage"], 1),
+            (["config", "stage", "api-key", "--stdin"], 1), (["config", "stage", "model=bad model"], 1),
             (["config", "set", "api-key", "--help"], 0), (["check", "-h"], 0),
             (["config", "reset", "--unknown"], 1), (["config", "set", "model=bad model"], 1),
             (["config", "set", "headers={\"x-api-key\":\"synthetic\"}"], 1),
@@ -401,6 +403,76 @@ final class CLIStorageBoundaryTests: XCTestCase {
             XCTAssertEqual(retry.stderr, "")
             XCTAssertTrue(fixture.values.isEmpty)
             XCTAssertNil(fixture.defaults.object(forKey: "provider"))
+        }
+    }
+
+    func testStageAndSetUseTheirOwnDirectConfigurationWhileMagpieIsActive() throws {
+        let fixture = BoundaryFixture()
+        let store = fixture.store
+        let original = fixture.service()
+        let subscription = MagpieSelection(port: 3425, model: "sample/vision")
+        try store.save(original)
+        try store.setAPIKey("synthetic-original")
+        try store.selectMagpie(subscription)
+        let revision = store.revision
+        XCTAssertEqual(CLI.run(["Howler", "config", "stage", "preset=anthropic"], store: store), 0)
+        XCTAssertEqual(CLI.run(["Howler", "config", "stage", "model=prepared"], store: store), 0)
+        XCTAssertEqual(store.pendingDirectService, Provider.anthropic.service(model: "prepared"))
+        XCTAssertEqual(store.service, subscription.service)
+        XCTAssertEqual(store.revision, revision)
+        XCTAssertEqual(CLI.run(["Howler", "config", "set", "model=edited"], store: store), 0)
+        XCTAssertEqual(store.service, try ServiceConfig.apply(["model=edited"], to: original))
+        XCTAssertEqual(try store.readAPIKey(), "synthetic-original")
+        XCTAssertNil(store.pendingDirectService)
+    }
+
+    func testResetFailureRetainsSubscriptionAndDraftUntilRetry() throws {
+        let fixture = BoundaryFixture()
+        let store = fixture.store
+        try store.save(fixture.service())
+        try store.setAPIKey("synthetic-original")
+        let subscription = MagpieSelection(port: 3425, model: "sample/vision")
+        let candidate = fixture.service("b.example")
+        try store.selectMagpie(subscription)
+        try store.stageDirectService(candidate)
+        fixture.deletionFailures["api-key"] = errSecUserCanceled
+        XCTAssertThrowsError(try store.reset())
+        XCTAssertEqual(store.service, subscription.service)
+        XCTAssertEqual(store.pendingDirectService, candidate)
+        XCTAssertNil(store.lastCheck)
+        fixture.deletionFailures = [:]
+        try store.reset()
+        XCTAssertNil(store.service)
+        XCTAssertNil(store.pendingDirectService)
+        XCTAssertNil(store.lastMagpieSelection)
+        XCTAssertTrue(fixture.values.isEmpty)
+    }
+
+    func testFailedCandidateKeyOperationsKeepSubscriptionAndStagedService() throws {
+        for failWrite in [true, false] {
+            let fixture = BoundaryFixture()
+            let original = fixture.service()
+            let candidate = fixture.service("b.example")
+            let subscription = MagpieSelection(port: 3425, model: "sample/vision")
+            try fixture.store.save(original)
+            try fixture.store.setAPIKey("synthetic-original")
+            try fixture.store.selectMagpie(subscription)
+            try fixture.store.stageDirectService(candidate)
+            let originalKeys = fixture.values
+            var access = fixture.access
+            if failWrite {
+                access.set = { _, _ in throw KeychainError(status: errSecAuthFailed, operation: "write") }
+            } else {
+                fixture.deletionFailures[try XCTUnwrap(originalKeys.keys.first)] = errSecUserCanceled
+            }
+            let store = ServiceStore(defaults: fixture.defaults, keys: access)
+            XCTAssertThrowsError(try store.activateCheckedDirectService(candidate, key: "synthetic-candidate",
+                                                                        for: store.revision, pending: candidate))
+            XCTAssertEqual(store.service, subscription.service)
+            XCTAssertEqual(store.directService, original)
+            XCTAssertEqual(store.pendingDirectService, candidate)
+            XCTAssertEqual(fixture.values, originalKeys)
+            XCTAssertNil(store.lastCheck)
         }
     }
 

@@ -167,7 +167,13 @@ final class PanelController {
         viewModel.burn() // invalidate requests and clear content before the animation
         viewModel.setVisible(false)
         guard let snapshot else { finishHiding(); return }
-        panel.contentView = NSHostingView(rootView: BurningSnapshot(image: snapshot, start: Date()))
+        let margins = EdgeInsets(
+            top: Self.margins.top,
+            leading: Self.margins.left,
+            bottom: Self.margins.bottom,
+            trailing: Self.margins.right
+        )
+        panel.contentView = NSHostingView(rootView: BurningSnapshot(image: snapshot, margins: margins, start: Date()))
         let completion = DispatchWorkItem { [weak self] in self?.finishHiding() }
         burnCompletion = completion
         DispatchQueue.main.asyncAfter(deadline: .now() + BurnField.duration, execute: completion)
@@ -398,16 +404,46 @@ final class ClosureMenuItem: NSMenuItem {
 }
 
 /// A short-lived rendered image, never a live conversation model or a file on disk.
-private struct BurningSnapshot: View {
+struct BurningSnapshot: View {
     let image: NSImage
+    let margins: EdgeInsets
     let start: Date
+    private let field: BurnField
+    private let paperSize: CGSize
+
+    init(image: NSImage, margins: EdgeInsets, start: Date) {
+        self.image = image
+        self.margins = margins
+        self.start = start
+        let paperSize = CGSize(
+            width: max(1, image.size.width - margins.leading - margins.trailing),
+            height: max(1, image.size.height - margins.top - margins.bottom)
+        )
+        self.paperSize = paperSize
+        self.field = BurnField(size: paperSize)
+    }
+
     var body: some View {
         TimelineView(.animation) { timeline in
-            Image(nsImage: image)
-                .resizable()
-                .modifier(BurningLetter(field: BurnField(size: image.size),
-                                        progress: BurnField.progress(elapsed: timeline.date.timeIntervalSince(start))))
+            let progress = BurnField.progress(elapsed: timeline.date.timeIntervalSince(start))
+            ZStack(alignment: .top) {
+                // Fade the shadow out as the first flames catch so no outline lingers in the margins.
+                SheetShadow()
+                    .opacity(1 - min(max(progress * 3, 0), 1))
+                Color.clear
+                    .frame(width: paperSize.width, height: paperSize.height)
+                    .overlay(alignment: .topLeading) {
+                        Image(nsImage: image)
+                            .resizable()
+                            .frame(width: image.size.width, height: image.size.height)
+                            .offset(x: -margins.leading, y: -margins.top)
+                    }
+                    .clipShape(DeckledSheet())
+                    .modifier(BurningLetter(field: field, progress: progress))
+            }
+            .frame(width: paperSize.width, height: paperSize.height)
         }
+        .padding(margins)
         .frame(width: image.size.width, height: image.size.height)
         .accessibilityHidden(true)
     }

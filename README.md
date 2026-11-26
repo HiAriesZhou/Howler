@@ -73,13 +73,19 @@ Releases before v0.1.4 were ad-hoc signed. If Gatekeeper stops one of those, rig
 
 ## Set up a model
 
+When Howler detects models in a running local Magpie app, Settings → General offers **Subscription**. Pick a model marked **Images** for screenshots. You can switch to **API Key** to use your own provider key. Howler remembers both setups. Burning clears the letter in Howler. Magpie and its model provider manage their own records.
+
 Howler writes with one model service. The setup is short enough to hand to an AI assistant.
 
 <p align="center">
   <img src="docs/images/settings.png" width="560" alt="Howler Settings with General, Prompt and Shortcut tabs; General contains model setup, reply language, login and update preferences">
 </p>
 
-Open **Settings › General › Copy Setup Prompt** and paste it into Claude Code, Codex or another assistant that can run commands. It configures the service, model and request parameters. Then return to **General › API Key**, choose **Add Key** or **Replace Key**, paste the key into the secure field, and click **Save & Check**. The key goes directly into macOS Keychain; never send it in the assistant's chat.
+In **Settings › General**, click **Copy Setup Prompt** and paste it into an assistant that can run commands. The assistant configures the service and model. Enter the key in Howler.
+
+If you're using a subscription, Howler keeps it active while you set up a new API key model. **Save & Check** switches to the new model only after the check passes.
+
+To set up the model yourself, click **Configure Manually**, or **Edit** if you already have a saved configuration. Select a provider and enter the model and API key. Choose **Custom** to enter your own base URL and request format. Click **Save & Check**. The key goes directly into macOS Keychain.
 
 Save & Check sends one test request with a 30-second connection deadline. A saved key record does not prove the key is readable or the service works. Keychain access failures keep their diagnostic code and stop the flow; they never automatically delete and recreate the old key. For other failures, the setup prompt allows one diagnosed correction and retry before reporting the remaining problem.
 
@@ -160,7 +166,9 @@ Concealing the letter, clicking outside or opening Settings keeps the conversati
 Requires Xcode 15.3+ (Swift 5.10+) and macOS 14+. The one third-party dependency is [Sparkle](https://github.com/sparkle-project/Sparkle) (pinned in `Package.swift`), which installs updates.
 
 ```bash
-make test   # unit tests: config, requests, streaming, attachments, hotkeys, quill pacing
+make test   # fast core tests; no app, UI tests or Sparkle dependency
+make test-app # native behavior/interaction tests (macOS)
+make test-all # complete suite, including release-tool fixtures
 make app    # universal build → build/Howler.zip, app staged in build/stage.noindex (ad-hoc, or SIGN_IDENTITY)
 make dmg    # the same app in build/Howler.dmg, beside an Applications link
 make run    # build and open

@@ -5,7 +5,7 @@ import HowlerCore
 /// assistant (Settings › Copy Setup Prompt). It shares `ServiceStore` with the app and never
 /// prints the API key.
 ///
-///     Howler config schema | show | set field=value … | set api-key --stdin|--env NAME|--file PATH | reset
+///     Howler config schema | show | stage field=value … | set field=value … | set api-key --stdin|--env NAME|--file PATH | reset
 ///     Howler check [--verbose]
 enum CLI {
     private static let commands: Set<String> = ["config", "check", "help", "--help", "-h", "version", "--version"]
@@ -33,32 +33,38 @@ enum CLI {
                 break
             }
             let store = makeStore()
-            if case .set(let fields) = operation {
-                _ = try ServiceConfig.apply(fields, to: store.serviceForEditing)
-            }
             switch operation {
             case .reset:
                 try store.reset()
                 print("Removed the model service and its API key.")
-            default:
+            case .stage(let fields):
+                let service = try ServiceConfig.apply(fields, to: store.pendingDirectService ?? store.directService)
+                try store.stageDirectService(service)
+                print("Prepared: \(service.summary)")
+                print("Subscription stays active. Open Settings > General > API Key > Edit, then Save & Check.")
+            case .set(let fields):
+                // Validate against the direct configuration before migration can touch storage.
+                _ = try ServiceConfig.apply(fields, to: store.directServiceForEditing)
                 store.migrateLegacySetup()
-                switch operation {
-                case .show:
-                    show(store)
-                case .set(let fields):
-                    let service = try ServiceConfig.apply(fields, to: store.service)
-                    try store.save(service)
-                    print("Saved: \(service.summary)")
-                    print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General > API Key, then Save & Check.")
-                case .setKey(let key):
-                    try store.setAPIKey(key)
-                    print("API key saved in Keychain.")
-                    if store.service != nil { print("Next: \(name) check") }
-                case .check(let verbose):
-                    return check(verbose: verbose, store: store)
-                default:
-                    break
-                }
+                let service = try ServiceConfig.apply(fields, to: store.directService)
+                try store.save(service)
+                print("Saved: \(service.summary)")
+                print(store.hasKey ? "Next: \(name) check" : "Next: open Settings > General, edit the model configuration, then Save & Check.")
+            case .setKey(let key):
+                guard store.service?.usesMagpie != true else { throw ConfigurationFailure.magpieKey }
+                guard store.directServiceForEditing != nil else { throw ServiceConfigError.missing(["format", "base-url", "model"]) }
+                store.migrateLegacySetup()
+                try store.setAPIKey(key)
+                print("API key saved in Keychain.")
+                print("Next: \(name) check")
+            case .show:
+                store.migrateLegacySetup()
+                show(store)
+            case .check(let verbose):
+                store.migrateLegacySetup()
+                return check(verbose: verbose, store: store)
+            case .help, .version, .schema:
+                break
             }
             return 0
         } catch {
@@ -75,6 +81,7 @@ enum CLI {
           \(name) config schema                 Every field, with examples
           \(name) config show                   Current setup
           \(name) config set field=value …      Change the setup
+          \(name) config stage field=value …    Prepare API key settings while a subscription stays active
           \(name) config set api-key --stdin    Save the API key (also --env NAME, --file PATH)
           \(name) config reset                  Remove the setup and the API key
           \(name) check [--verbose]             Send a tiny real request
@@ -90,7 +97,7 @@ enum CLI {
 
     private enum Operation {
         case help, version, schema, show, reset
-        case set([String])
+        case set([String]), stage([String])
         case setKey(String)
         case check(Bool)
     }
@@ -127,10 +134,10 @@ enum CLI {
                 case "show": return .show
                 default: return .reset
                 }
-            case "set":
-                guard !fields.isEmpty else { throw UsageError("Nothing to set. See: \(name) config schema") }
+            case "set", "stage":
+                guard !fields.isEmpty else { throw UsageError("Nothing to \(action). See: \(name) config schema") }
                 if fields.count == 1 && isHelp(fields[0]) { return .help }
-                if fields.first == "api-key" {
+                if action == "set", fields.first == "api-key" {
                     if fields.count == 2 && isHelp(fields[1]) { return .help }
                     return .setKey(try ServiceStore.validatedAPIKey(readKey(Array(fields.dropFirst()))))
                 }
@@ -138,7 +145,7 @@ enum CLI {
                     _ = try ServiceConfig.apply(fields, to: nil)
                 } catch ServiceConfigError.missing {
                 }
-                return .set(fields)
+                return action == "set" ? .set(fields) : .stage(fields)
             default:
                 throw UsageError(usage)
             }
@@ -163,12 +170,15 @@ enum CLI {
             ("endpoint", service.endpointDescription),
             ("body", service.body.isEmpty ? "—" : JSONValue.compact(service.body)),
             ("headers", service.headers.isEmpty ? "—" : JSONValue.compact(service.headers.mapValues(JSONValue.string))),
-            ("api-key", store.hasKey ? "record present; access not verified" : "no record detected"),
+            ("api-key", service.usesMagpie ? "managed by Magpie" : store.hasKey ? "record present; access not verified" : "no record detected"),
             ("prompt", promptSummary(store)),
             ("check", checkSummary(store.lastCheck)),
         ]
         for (label, value) in rows {
             print(label.padding(toLength: 10, withPad: " ", startingAt: 0) + value)
+        }
+        if service.usesMagpie, let pending = store.pendingDirectService {
+            print("pending   \(pending.summary) (verify in Settings > General > API Key)")
         }
     }
 
@@ -224,7 +234,7 @@ enum CLI {
         }
         let key: String
         do {
-            guard let saved = try store.readAPIKey(for: service), !saved.isEmpty else {
+            guard let saved = service.usesMagpie ? "" : try store.readAPIKey(for: service) else {
                 throw ConfigurationFailure.missingKey
             }
             key = saved

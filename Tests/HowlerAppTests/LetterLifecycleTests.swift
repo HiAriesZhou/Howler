@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import XCTest
 import HowlerCore
 @testable import Howler
@@ -158,5 +159,96 @@ final class LetterLifecycleTests: XCTestCase {
         XCTAssertEqual(reopened.replyLanguage, "ja")
         settings.resetScreenshotHotKey()
         XCTAssertEqual(settings.screenshotHotKey, .screenshot)
+    }
+
+    func testOpeningBurnFrameKeepsTheWaxSealInPlace() async throws {
+        try XCTSkipIf(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        _ = NSApplication.shared
+        let defaults = try XCTUnwrap(DemoDefaults(suiteName: "HowlerTests.BurnPosition"))
+        let settings = AppSettings(defaults: defaults, keys: MemoryKeys().access)
+        settings.useDemoService(.anthropic)
+        let controller = PanelController(settings: settings, openSettings: {})
+        defer { controller.conceal() }
+        for cycle in 1...3 {
+            controller.show()
+            try await Task.sleep(nanoseconds: 650_000_000)
+            let originalFrame = controller.panel.frame
+            let liveSeal = try waxSealCenter(in: controller.panel)
+
+            controller.panel.cancelOperation(nil)
+
+            XCTAssertTrue(controller.isVisible, "应显示燃烧动画")
+            XCTAssertEqual(controller.panel.frame, originalFrame, "第 \(cycle) 次燃烧")
+            let burningSeal = try waxSealCenter(in: controller.panel)
+            XCTAssertEqual(burningSeal.x, liveSeal.x, accuracy: 2, "第 \(cycle) 次燃烧")
+            XCTAssertEqual(burningSeal.y, liveSeal.y, accuracy: 2, "第 \(cycle) 次燃烧")
+            try await waitUntil("燃烧结束后窗口应隐藏") { !controller.isVisible }
+        }
+    }
+
+    private func waxSealCenter(in panel: NSPanel) throws -> CGPoint {
+        let content = try XCTUnwrap(panel.contentView)
+        content.layoutSubtreeIfNeeded()
+        let bitmap = try XCTUnwrap(content.bitmapImageRepForCachingDisplay(in: content.bounds))
+        content.cacheDisplay(in: content.bounds, to: bitmap)
+        let scale = CGFloat(bitmap.pixelsWide) / content.bounds.width
+        var count = 0
+        var sum = CGPoint.zero
+        for y in 0..<Int(100 * scale) {
+            for x in 0..<Int(125 * scale) {
+                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB),
+                      color.alphaComponent > 0.9, color.redComponent > color.greenComponent * 2,
+                      color.redComponent > color.blueComponent * 2 else { continue }
+                sum.x += CGFloat(x)
+                sum.y += CGFloat(y)
+                count += 1
+            }
+        }
+        let sampleCount = try XCTUnwrap(count > 0 ? count : nil, "应能在纸张左上角找到火漆印")
+        return CGPoint(x: sum.x / CGFloat(sampleCount) / scale, y: sum.y / CGFloat(sampleCount) / scale)
+    }
+
+    func testBurningSnapshotDoesNotLeaveShadowOrScorchInMargins() throws {
+        _ = NSApplication.shared
+        let margins = EdgeInsets(
+            top: PanelController.margins.top,
+            leading: PanelController.margins.left,
+            bottom: PanelController.margins.bottom,
+            trailing: PanelController.margins.right
+        )
+        let size = NSSize(width: 240, height: 220)
+        // Paint the entire snapshot opaque (simulating paper + baked-in shadow in the margins).
+        let image = NSImage(size: size, flipped: false) { rect in
+            NSColor.black.withAlphaComponent(0.5).setFill()
+            rect.fill()
+            return true
+        }
+        let view = NSHostingView(rootView: BurningSnapshot(
+            image: image,
+            margins: margins,
+            start: Date().addingTimeInterval(-0.35)
+        ))
+        view.frame = NSRect(origin: .zero, size: size)
+        view.layoutSubtreeIfNeeded()
+        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+
+        let scale = CGFloat(bitmap.pixelsWide) / size.width
+
+        // Outer margins (top-left and bottom-right) must be clear of baked-in shadow and scorch.
+        let topLeft = try XCTUnwrap(bitmap.colorAt(x: Int(8 * scale), y: Int(8 * scale)))
+        XCTAssertLessThan(topLeft.alphaComponent, 0.05, "Top-left margin should be clear during burn")
+        let bottomRight = try XCTUnwrap(bitmap.colorAt(
+            x: bitmap.pixelsWide - Int(8 * scale),
+            y: bitmap.pixelsHigh - Int(8 * scale)
+        ))
+        XCTAssertLessThan(bottomRight.alphaComponent, 0.05, "Bottom-right margin should be clear during burn")
+
+        // Unburned top center of the paper remains visible.
+        let paperTopCenter = try XCTUnwrap(bitmap.colorAt(
+            x: bitmap.pixelsWide / 2,
+            y: Int((margins.top + 20) * scale)
+        ))
+        XCTAssertGreaterThan(paperTopCenter.alphaComponent, 0.4, "Unburned top of paper should remain visible")
     }
 }

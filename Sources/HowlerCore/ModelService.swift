@@ -3,6 +3,11 @@ import Foundation
 /// The one model service Howler writes with: how to reach it and what to ask for.
 /// The API key is not part of it; it lives in the Keychain.
 public struct ModelService: Codable, Equatable, Sendable {
+    public internal(set) var magpie: MagpieSelection?
+    public var usesMagpie: Bool {
+        guard let magpie else { return false }
+        return self == magpie.service
+    }
     public var format: WireFormat
     /// Base of the API, e.g. `https://api.deepseek.com`; the format adds the endpoint path.
     public var baseURL: URL

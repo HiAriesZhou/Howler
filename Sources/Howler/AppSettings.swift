@@ -45,6 +45,7 @@ final class AppSettings: ObservableObject {
     }
 
     @Published private(set) var service: ModelService?
+    @Published private(set) var pendingDirectService: ModelService?
     @Published private(set) var hasKey = false
     @Published private(set) var keyAccessError: String?
     @Published private(set) var isSavingAPIKey = false
@@ -148,6 +149,8 @@ final class AppSettings: ObservableObject {
             keyCache = nil
         }
         if stored != service { service = stored }
+        let pending = store.pendingDirectService
+        if pending != pendingDirectService { pendingDirectService = pending }
         if connectionChanged { connectionVersion = UUID() }
         if replyLanguage != store.replyLanguage { replyLanguage = store.replyLanguage }
         let present = store.hasKey
@@ -171,7 +174,60 @@ final class AppSettings: ObservableObject {
         #if DEBUG
         if demoMode { return true }
         #endif
-        return service != nil && hasKey
+        return service?.usesMagpie == true || (service != nil && hasKey)
+    }
+
+    func selectMagpie(_ selection: MagpieSelection?) throws {
+        try store.selectMagpie(selection)
+        reload()
+    }
+
+    var lastMagpieSelection: MagpieSelection? { store.lastMagpieSelection }
+    var savedDirectService: ModelService? { store.directService }
+
+    func hasDirectKey(for service: ModelService) -> Bool {
+        store.hasDirectKey(for: service)
+    }
+
+    var serviceRevision: String { store.revision }
+
+    func saveDirectService(_ service: ModelService, key: String, for revision: String) async throws {
+        guard !isSavingAPIKey, checkState != .checking else { throw ConfigurationFailure.busy }
+        let store = self.store
+        isSavingAPIKey = true
+        defer { isSavingAPIKey = false; reload() }
+        try await Task.detached { try store.saveDirectService(service, key: key, for: revision) }.value
+        keyCache = nil
+        keyAccessError = nil
+        connectionVersion = UUID()
+    }
+
+    func checkAndActivateDirectService(_ service: ModelService, key raw: String, for revision: String,
+                                       pending: ModelService?) async throws {
+        guard !isSavingAPIKey, checkState != .checking else { throw ConfigurationFailure.busy }
+        guard store.revision == revision, store.service?.usesMagpie == true,
+              store.pendingDirectService == pending, !service.usesMagpie else { throw ConfigurationFailure.changed }
+        let store = self.store
+        isSavingAPIKey = true
+        defer { isSavingAPIKey = false; reload() }
+        let key = try await Task.detached {
+            if !raw.isEmpty { return try ServiceStore.validatedAPIKey(raw) }
+            guard let saved = try store.readDirectKey(for: service, revision: revision) else {
+                throw ConfigurationFailure.missingKey
+            }
+            return saved
+        }.value
+        guard store.revision == revision, store.pendingDirectService == pending else { throw ConfigurationFailure.changed }
+        try await ConnectionTester.test(
+            client: client, service: service, apiKey: key, appName: AppInfo.name,
+            systemPrompt: systemPrompt, replyLanguage: resolvedReplyLanguage
+        )
+        try Task.checkCancellation()
+        try await Task.detached {
+            try store.activateCheckedDirectService(service, key: raw, for: revision, pending: pending)
+        }.value
+        keyCache = nil
+        keyAccessError = nil
     }
 
     #if DEBUG
@@ -188,6 +244,7 @@ final class AppSettings: ObservableObject {
 
     func apiKey() -> String? {
         guard let service, service == store.service else { return nil }
+        if service.usesMagpie { return "" }
         let revision = store.keyRevision
         if let keyCache, keyCache.revision == revision, keyCache.service == service { return keyCache.key }
         do {
@@ -236,8 +293,8 @@ final class AppSettings: ObservableObject {
         do {
             // Explicit checks read afresh, even if a previous conversation cached a key.
             guard let key = try await Task.detached(operation: {
-                try store.readAPIKey(for: service)
-            }).value, !key.isEmpty else { throw ConfigurationFailure.missingKey }
+                service.usesMagpie ? "" : try store.readAPIKey(for: service)
+            }).value else { throw ConfigurationFailure.missingKey }
             guard revision == store.revision else { return }
             keyCache = (store.keyRevision, service, key)
             keyAccessError = nil
@@ -284,13 +341,14 @@ final class AppSettings: ObservableObject {
 
     /// Missing data means the default; JSON null means deliberately disabled.
     private static func loadShortcut(_ action: ShortcutAction, from defaults: UserDefaults) -> HotKeyCombo? {
-        guard let data = defaults.data(forKey: action.defaultsKey) else { return action.standard }
+        let fallback = AppInfo.developmentCommit == nil ? action.standard : nil
+        guard let data = defaults.data(forKey: action.defaultsKey) else { return fallback }
         do {
             let value = try JSONDecoder().decode(HotKeyCombo?.self, from: data)
-            if let value, !value.isValid { return action.standard }
+            if let value, !value.isValid { return fallback }
             return value
         } catch {
-            return action.standard
+            return fallback
         }
     }
 

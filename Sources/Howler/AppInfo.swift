@@ -20,6 +20,10 @@ enum AppInfo {
         string(for: "CFBundleVersion")
     }
 
+    static var developmentCommit: String? {
+        string(for: "HowlerDevelopmentCommit")
+    }
+
     private static func string(for key: String) -> String? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String, !value.isEmpty else {
             return nil

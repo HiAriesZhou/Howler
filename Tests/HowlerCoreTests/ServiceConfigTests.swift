@@ -172,7 +172,7 @@ final class ServiceConfigTests: XCTestCase {
         )
         XCTAssertTrue(prompt.contains("command line: /Applications/Howler.app/Contents/MacOS/Howler\n"))
         XCTAssertTrue(prompt.contains("Current setup: deepseek-flash · api.deepseek.com · Chat Completions"))
-        XCTAssertTrue(prompt.contains("Settings > General > API Key"))
+        XCTAssertTrue(prompt.contains("Settings > General. Select API Key if a source picker is present"))
         XCTAssertTrue(prompt.contains("stop immediately"))
         XCTAssertTrue(prompt.contains("at most one cause-based correction"))
         XCTAssertFalse(prompt.contains("pbpaste |"))

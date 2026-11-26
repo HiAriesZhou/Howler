@@ -7,6 +7,12 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ## 1. 安装与启动 / Install & launch
 
+- [ ] 用 `make dev` 启动开发版。确认菜单栏有 Dev，窗口标题完整显示为 Dev Settings，设置页显示短提交号，没有更新入口，且正式版的模型和快捷键未被继承。
+- [ ] 打开模型设置。未检测到本机模型时只显示接口密钥设置。检测到模型时可切换到 Subscription，切回后保留两边的配置。
+- [ ] 在订阅和接口密钥设置中检查模型。确认 Checking…、Ready 和 Check failed 都紧跟模型名称，与 Check 按钮同排。失败详情仍显示在下方。使用较长的模型名时，状态和按钮仍完整可见。
+- [ ] 没有接口密钥配置时，默认显示 Copy Setup Prompt 和 Configure Manually。点击 Configure Manually 后在页内展开服务商、模型和密钥字段，点 Cancel 返回。用 Custom 输入自定义地址和请求格式。确认切回 Subscription 保留原配置，更换服务商需要新密钥。
+- [ ] 使用订阅时，用配置提示词准备接口配置，再填密钥并点 Save & Check。准备配置、取消编辑和检查失败后，原订阅仍能回复。检查成功后才切换模型，状态显示 Ready。手动配置也遵循同样的切换规则。
+
 - [ ] 打开 `Howler.dmg`：窗口中有 Howler 与 Applications 快捷方式，拖入后可推出磁盘映像
 - [ ] 安装后直接双击即可打开，没有 Gatekeeper 警告；`spctl --assess --type execute -vv /Applications/Howler.app` 显示 `source=Notarized Developer ID`
 - [ ] 菜单栏出现图标；**Dock 中没有图标**；⌘Tab 中不出现
@@ -23,6 +29,7 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 - [ ] 中文输入法：可正常输入拼音选词；选词过程中按 Esc 只取消组字，不关闭信纸
 - [ ] ⌘V / ⌘C / ⌘A / ⌘Z 在输入框中可用
 - [ ] Esc 或右下角火焰烧掉信纸并立即清空；火焰不遮挡页脚或正文；点击纸外或阴影只交出焦点，回答继续；其他应用中的 Esc 不影响信纸
+- [ ] 连续呼出信纸并按 Esc 至少三次。每次燃烧开始时，纸边、火漆印和正文都留在原位。
 - [ ] 燃烧中再按 ⌥H：立即出现一张新的空白信纸
 - [ ] 从菜单或火漆印打开 Settings：信纸直接收起并保留会话；从菜单打开信纸只唤回，不反向收起
 - [ ] 多显示器：在鼠标所在屏幕上弹出
@@ -166,6 +173,8 @@ Run on macOS 14+ with the released `Howler.dmg` (or `Howler.zip`). Mark each ite
 
 ## 4. 各服务真实流式 / Per-service real streaming
 
+- [ ] 在设置选择本机 Magpie 图片模型，用合成截图提问。回答途中点焚信，再开新信。检查取消记录、新信内容、用量日志及图片缓存。切回原服务后确认原配置可用。
+
 对每个预设：用 `config set preset=…` 写入并保存 Key、`check` 通过后，呼出面板，发送下列提示词。
 For each preset: `config set preset=…`, save a key, pass `check`, open the panel, send the prompts below.
 
@@ -215,3 +224,8 @@ For each preset: `config set preset=…`, save a key, pass `check`, open the pan
 - [ ] 推送不一致的 tag：CI 的 “Publish release” 步骤失败并说明原因
 
 - [ ] 旧截图开关关闭的配置升级后迁移为空快捷键；重新录入或恢复默认后重启，不会被旧开关再次停用
+
+## 9. 官网 / Website
+
+- [ ] 在桌面和窄屏浏览器中检查中英文、深浅色：首页余烬信使完整显示，背景透明，下载按钮可用，无横向溢出；点击演示链接能到达信纸区域，书写、燃烧和语言切换正常
+- [ ] 书写、告别、思考形态分别出现在羊皮纸、阅后即焚、模型配置介绍的角落；桌面和窄屏下均不遮挡正文、截图或控件
