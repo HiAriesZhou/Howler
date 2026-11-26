@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/icon.png" width="128" alt="Howler's icon: a crimson wax seal cut with an H, a raven quill, and parchment burning from below">
+  <img src="site/assets/og-letter-spirit.png" width="720" alt="Howler: Burn after reading. The letter spirit holds a quill and a sealed letter.">
 </p>
 
 <h1 align="center">Howler</h1>
