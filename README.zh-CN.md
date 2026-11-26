@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/icon.png" width="128" alt="Howler 图标：刻着 H 的深红火漆、一支渡鸦羽毛笔，羊皮纸从下方燃起">
+  <img src="site/assets/og-letter-spirit.png" width="720" alt="Howler：阅后即焚。信纸精灵拿着羽毛笔和一封盖着火漆印的信。">
 </p>
 
 <h1 align="center">Howler</h1>
