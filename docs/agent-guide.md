@@ -5,9 +5,9 @@ Read this guide when building, testing, running a demo, or preparing a pull requ
 ## Commands
 
 - `make check`: choose checks from the branch diff and local edits (`BASE=<ref>` overrides `origin/main`). Node.js 20+ is required for this command and CI scope checks.
-- `make check-plan`: print those commands without running them. While developing, run the relevant test class with `swift test --filter ClassName`, or `./scripts/test-core.sh --filter ClassName` for core-only tests. Run broader checks remotely when reviewing a pull request. Local GUI launches and live provider tests are opt-in.
+- `make check-plan`: print those commands without running them. While developing, run the relevant test class with `swift test --filter ClassName`, or `./scripts/test-core.sh --filter ClassName` for core-only tests. Run broader checks remotely when reviewing a pull request.
 - `make test` / `make test-core`: fast core tests; excludes the app, AppKit and Sparkle, using `.build/core-tests`.
-- `make test-app`: app and interaction tests on macOS, excluding release-tool fixtures.
+- `make test-app`: app logic and state tests on macOS, excluding release-tool fixtures. Automated tests must not launch or activate the app, create desktop windows, or use real provider accounts.
 - `make test-tooling`: release/signing/Homebrew fixture tests, without UI interaction tests or real publication.
 - `make test-all`: all tests (`swift test`); use for full validation or release preparation.
 - `make test-ci`: change-classifier regression tests; no native build.
@@ -23,7 +23,7 @@ Read this guide when building, testing, running a demo, or preparing a pull requ
 - Pure icon-rendering Swift changes need a compile check, not interaction tests. A mixed SwiftUI file may contain event/state behavior: treat it as an interaction change unless that behavior is demonstrably unaffected.
 - Build, dependency, bundle identity or release tooling changes need the relevant fixture tests and packaging checks. Signed universal builds and full release checks remain required before a release; do not sign and create a DMG for every PR.
 - Use the same Developer ID identity for installed-app checks so updates retain Keychain and privacy grants. Obtain the identity from the local signing environment; do not record its personal details here. Installing or replacing the app must be within the task's authorization.
-- Manual checks are listed in `ACCEPTANCE.md`. Add a line there for new behavior.
+- Manual checks are listed in `ACCEPTANCE.md`. Use them for desktop interactions, with authorization before launching the app locally. Add a line there for new behavior.
 - Record the tested version, environment and result without user data. Distinguish source inspection, fixture tests, CI results, real-service checks and human acceptance. An unchecked item is not a pass.
 - Review the diff and public content before a pull request. Documentation-only changes need link, consistency and privacy checks; they do not require rebuilding or reinstalling the app.
 
@@ -45,4 +45,4 @@ The shared classifier is `scripts/ci-scope.mjs`; `make check` uses it locally, i
 
 Unknown paths or unavailable/incomplete CI diffs request full checks. Ordinary app code changes do not import signing credentials, build a universal archive or make a DMG. The required `build` status remains present even when native jobs are skipped, and it rejects a failed/cancelled required job. This avoids a pending required check on content-only PRs without relaxing branch protection. Main pushes use the same scope selection instead of always rebuilding.
 
-`swift test` / `make test-all` remain available explicitly; no existing test is removed or failure ignored. A full result and a selected suite result must be reported separately. Do not classify a mixed interaction file as cosmetic just because the intended change is visual.
+Report full and selected suite results separately. Do not classify a mixed interaction file as cosmetic just because the intended change is visual.
